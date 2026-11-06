@@ -1,0 +1,8 @@
+braintree==4.48.0
+openai
+pytest
+python-dotenv
+# live demo (demo/); httpx is for its tests
+fastapi==0.162.0
+uvicorn==0.54.0
+httpx

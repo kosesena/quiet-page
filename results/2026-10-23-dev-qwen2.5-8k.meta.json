@@ -1,0 +1,40 @@
+{
+ "reconstructed": true,
+ "note": "written after the run from the results file, git history and the local Ollama; start/end times are not known exactly",
+ "date": "2026-10-23",
+ "rows": 39,
+ "status": {
+  "ok": 39
+ },
+ "rail": "fake",
+ "selection": {
+  "split": "dev",
+  "conditions": [
+   "cap",
+   "counterfoil",
+   "none"
+  ],
+  "repeats": 1
+ },
+ "code": {
+  "commit_that_added_file": "82b97c646a68bfef06de9f6cd183a39c3c93dbcf"
+ },
+ "machine": {
+  "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "arch": "arm64",
+  "python": "3.14.5",
+  "cpu": "Apple M2 Pro",
+  "memory_gb": 16,
+  "container": false
+ },
+ "model": {
+  "model": "qwen2.5-8k",
+  "endpoint_host": "localhost:11434",
+  "digest": "549cb8bdb307e953a4d1b1256c337baf2356d44c32e0d586e5b9a866c53feed6",
+  "parameters_now": "num_ctx                        8192\ntemperature                    0",
+  "family": "qwen2",
+  "parameter_size": "7.6B",
+  "quantization": "Q4_K_M",
+  "caveat": "parameters are the model's current Modelfile; hermes3-8k/qwen3-8k got num_predict caps on 2026-10-24 before their runs, llama3.1-8k ran without one"
+ }
+}

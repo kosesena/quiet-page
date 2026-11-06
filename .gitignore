@@ -1,0 +1,20 @@
+
+# Codex packs its references as zips too; the PNGs next to them are the same images
+*.blend1
+*.pyc
+.DS_Store
+.coverage
+.env
+.hypothesis/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+astropods/.ast/
+coverage.xml
+docs/gorseller/karakterler/**/*.zip
+htmlcov/
+marka-dis/
+mutants/
+results/smoke/

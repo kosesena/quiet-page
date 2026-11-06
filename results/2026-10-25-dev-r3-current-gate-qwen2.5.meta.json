@@ -1,0 +1,54 @@
+{
+ "started_at": "2026-10-25T12:51:02+00:00",
+ "argv": [
+  "--model",
+  "qwen2.5",
+  "--split",
+  "dev",
+  "--repeats",
+  "3",
+  "--out",
+  "results/2026-10-25-dev-r3-current-gate-qwen2.5.jsonl"
+ ],
+ "selection": {
+  "split": "dev",
+  "ids": "",
+  "conditions": [
+   "counterfoil",
+   "cap",
+   "none"
+  ],
+  "repeats": 3
+ },
+ "rail": "fake",
+ "machine": {
+  "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "arch": "arm64",
+  "python": "3.14.5",
+  "cpu": "Apple M2 Pro",
+  "memory_gb": 16,
+  "container": false
+ },
+ "code": {
+  "commit": "f6bf6be8f9fd8d2b5ecea19b7e500b85eca3477b",
+  "dirty": true
+ },
+ "model": {
+  "model": "qwen2.5-8k",
+  "endpoint_host": "localhost:11434",
+  "temperature": 0.0,
+  "seed": 7,
+  "reasoning_effort": null,
+  "ollama_version": "0.24.0",
+  "parameters": "num_ctx                        8192\ntemperature                    0",
+  "family": "qwen2",
+  "parameter_size": "7.6B",
+  "quantization": "Q4_K_M",
+  "digest": "549cb8bdb307e953a4d1b1256c337baf2356d44c32e0d586e5b9a866c53feed6"
+ },
+ "finished_at": "2026-10-25T13:04:34+00:00",
+ "rows": 117,
+ "status": {
+  "ok": 117
+ }
+}

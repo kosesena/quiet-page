@@ -1,0 +1,35 @@
+{
+ "reconstructed": true,
+ "note": "written after the run from the results file, git history and the local Ollama; start/end times are not known exactly",
+ "date": "2026-10-24",
+ "rows": 117,
+ "status": {
+  "ok": 117
+ },
+ "rail": "fake",
+ "selection": {
+  "split": "dev",
+  "conditions": [
+   "cap",
+   "counterfoil",
+   "none"
+  ],
+  "repeats": 3
+ },
+ "code": {
+  "commit_that_added_file": "fefeb46cec4fdcbb8ccaa4a7dbe78b648fd74850"
+ },
+ "machine": {
+  "where": "Astropods container on this Mac (ast project start), model calls through the gateway",
+  "host_machine": {
+   "cpu": "Apple M2 Pro",
+   "memory_gb": 16,
+   "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O"
+  }
+ },
+ "model": {
+  "model": "gpt-5-6-sol",
+  "endpoint_host": "aig.astropods.ai",
+  "provider_route": "Astro AI Gateway (Astropods) → Amazon Bedrock"
+ }
+}

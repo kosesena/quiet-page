@@ -1,0 +1,55 @@
+{
+ "started_at": "2026-10-25T15:05:58+00:00",
+ "argv": [
+  "--model",
+  "llama3.1",
+  "--split",
+  "dev",
+  "--repeats",
+  "3",
+  "--out",
+  "results/2026-10-25-dev-r3-current-gate-llama3.1.jsonl"
+ ],
+ "selection": {
+  "split": "dev",
+  "ids": "",
+  "conditions": [
+   "counterfoil",
+   "cap",
+   "none"
+  ],
+  "repeats": 3
+ },
+ "rail": "fake",
+ "machine": {
+  "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "arch": "arm64",
+  "python": "3.14.5",
+  "cpu": "Apple M2 Pro",
+  "memory_gb": 16,
+  "container": false
+ },
+ "code": {
+  "commit": "f6bf6be8f9fd8d2b5ecea19b7e500b85eca3477b",
+  "dirty": true
+ },
+ "model": {
+  "model": "llama3.1-8k",
+  "endpoint_host": "localhost:11434",
+  "temperature": 0.0,
+  "seed": 7,
+  "reasoning_effort": null,
+  "ollama_version": "0.24.0",
+  "parameters": "stop                           \"<|start_header_id|>\"\nstop                           \"<|end_header_id|>\"\nstop                           \"<|eot_id|>\"\ntemperature                    0\nnum_ctx                        8192",
+  "family": "llama",
+  "parameter_size": "8.0B",
+  "quantization": "Q4_K_M",
+  "digest": "c965e8852e7ea2382200b9e0c4aeb5accfcb978595229616abf8875739365b84"
+ },
+ "finished_at": "2026-10-25T18:26:11+00:00",
+ "rows": 117,
+ "status": {
+  "ok": 108,
+  "model_error": 9
+ }
+}

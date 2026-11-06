@@ -1,0 +1,7 @@
+# Checks run in CI (.github/workflows/tests.yml) and docs/quality.md. Pinned so a tool release cannot turn CI red.
+-r requirements.txt
+ruff==0.17.2
+mypy==2.4.0
+pytest-cov==7.1.0
+hypothesis==6.170.9
+pip-audit==2.10.1

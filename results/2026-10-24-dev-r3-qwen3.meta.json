@@ -1,0 +1,54 @@
+{
+ "started_at": "2026-10-24T16:22:24+00:00",
+ "argv": [
+  "--model",
+  "qwen3",
+  "--split",
+  "dev",
+  "--repeats",
+  "3",
+  "--out",
+  "results/2026-10-24-dev-r3-qwen3.jsonl"
+ ],
+ "selection": {
+  "split": "dev",
+  "ids": "",
+  "conditions": [
+   "counterfoil",
+   "cap",
+   "none"
+  ],
+  "repeats": 3
+ },
+ "rail": "fake",
+ "machine": {
+  "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "arch": "arm64",
+  "python": "3.14.5",
+  "cpu": "Apple M2 Pro",
+  "memory_gb": 16,
+  "container": false
+ },
+ "code": {
+  "commit": "6f30a4a9b663daf88c645b870db3635384acc6c3",
+  "dirty": false
+ },
+ "model": {
+  "model": "qwen3-8k",
+  "endpoint_host": "localhost:11434",
+  "temperature": 0.0,
+  "seed": 7,
+  "reasoning_effort": null,
+  "ollama_version": "0.24.0",
+  "parameters": "num_ctx                        8192\nnum_predict                    2048\nrepeat_penalty                 1\nstop                           \"<|im_start|>\"\nstop                           \"<|im_end|>\"\ntemperature                    0\ntop_k                          20\ntop_p                          0.95",
+  "family": "qwen3",
+  "parameter_size": "8.2B",
+  "quantization": "Q4_K_M",
+  "digest": "63dd7fdfd9663a9a28fd63fc6c1e862f13c0d7b18aa81d4f91329aa2037be652"
+ },
+ "finished_at": "2026-10-24T18:58:06+00:00",
+ "rows": 117,
+ "status": {
+  "ok": 117
+ }
+}

@@ -1,0 +1,48 @@
+{
+ "note": "written after the run: the container printed result rows (CFROW) to its log, not this file; times come from the rows, spend from `ast billing get` before and after",
+ "started_at": "2026-10-26T14:58:57+00:00",
+ "finished_about": "2026-10-26T15:24:03.100000+00:00",
+ "duration_minutes": 25.1,
+ "rows": 117,
+ "status": {
+  "ok": 117
+ },
+ "rail": "fake",
+ "selection": {
+  "split": "dev",
+  "conditions": [
+   "counterfoil",
+   "cap",
+   "none"
+  ],
+  "repeats": 3
+ },
+ "argv_in_container": [
+  "--model",
+  "astropods",
+  "--split",
+  "dev",
+  "--conditions",
+  "counterfoil,cap,none",
+  "--repeats",
+  "3"
+ ],
+ "code": {
+  "commit": "f57090ac8038c21013429176b136a1406e2d86a2",
+  "gate": "same gate code as the 25 Oct current-gate runs (8c30644); later commits only add counterfoil/worst_case.py and formatting"
+ },
+ "machine": {
+  "where": "Astropods container on this Mac (ast project start), model calls through the gateway",
+  "host_machine": {
+   "cpu": "Apple M2 Pro",
+   "memory_gb": 16,
+   "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O"
+  }
+ },
+ "model": {
+  "model": "claude-sonnet-5",
+  "endpoint_host": "aig.astropods.ai",
+  "provider_route": "Astro AI Gateway (Astropods) \u2192 Amazon Bedrock"
+ },
+ "cost_usd_approx": 1.54
+}

@@ -1,0 +1,48 @@
+{
+ "started_at": "2026-10-25T08:01:59+00:00",
+ "argv": [
+  "--model",
+  "worst-case",
+  "--split",
+  "all",
+  "--repeats",
+  "1",
+  "--out",
+  "results/2026-10-25-all-worst-case.jsonl"
+ ],
+ "selection": {
+  "split": "all",
+  "ids": "",
+  "conditions": [
+   "counterfoil",
+   "cap",
+   "none"
+  ],
+  "repeats": 1
+ },
+ "rail": "fake",
+ "machine": {
+  "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "arch": "arm64",
+  "python": "3.14.5",
+  "cpu": "Apple M2 Pro",
+  "memory_gb": 16,
+  "container": false
+ },
+ "code": {
+  "commit": "548d2f621d78a8b8cdbded70078528927899220d",
+  "dirty": false
+ },
+ "model": {
+  "model": "worst-case-agent",
+  "endpoint_host": "worst-case",
+  "temperature": null,
+  "seed": null,
+  "reasoning_effort": null
+ },
+ "finished_at": "2026-10-25T08:02:00+00:00",
+ "rows": 66,
+ "status": {
+  "ok": 66
+ }
+}

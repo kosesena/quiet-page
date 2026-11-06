@@ -1,0 +1,64 @@
+# Tool configuration only; the app is installed from requirements.txt, not as a package.
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+# tools/ and spikes/ are Blender scripts and throwaway experiments; dashboard/ is TypeScript.
+extend-exclude = ["tools", "spikes", "astropods", "dashboard"]
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.ruff.lint]
+# pyflakes, pycodestyle, isort, bugbear, pyupgrade, simplify, bandit (S) and blind-except
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "S", "BLE"]
+ignore = ["E501"]                            # the formatter wraps code; long comments and strings may stay
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]       # asserts and fixture tokens are what tests are made of
+"docs/senaryolar/validate.py" = ["S101"]     # a checker script: its asserts are the checks
+"counterfoil/runmeta.py" = ["S310"]          # urlopen only on a localhost Ollama endpoint
+"counterfoil/paypal.py" = ["S310"]           # urlopen only on the fixed https PayPal sandbox host
+
+[tool.mypy]
+python_version = "3.13"
+files = ["counterfoil"]
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = ["braintree", "braintree.*"]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["counterfoil"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+[tool.mutmut]
+# docs/quality.md: HYPOTHESIS_PROFILE=mutation mutmut run
+paths_to_mutate = ["counterfoil/gateway.py"]
+# the rest of the package is copied unmutated (copying the whole folder would overwrite the mutated gateway.py)
+also_copy = [
+    "counterfoil/__init__.py",
+    "counterfoil/agents.py",
+    "counterfoil/baselines.py",
+    "counterfoil/evaluate.py",
+    "counterfoil/llm.py",
+    "counterfoil/money.py",
+    "counterfoil/rail.py",
+    "counterfoil/runmeta.py",
+    "counterfoil/scenarios.py",
+    "counterfoil/store.py",
+    "counterfoil/views.py",
+    "pytest.ini",
+    "docs/senaryolar",
+    "results",
+    "demo",
+    "scripts",
+]
+pytest_add_cli_args = ["-p", "no:cacheprovider"]

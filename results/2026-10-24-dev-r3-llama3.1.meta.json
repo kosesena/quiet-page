@@ -1,0 +1,47 @@
+{
+ "reconstructed": true,
+ "note": "written after the run from the results file, its file times, git history and the local Ollama; the run started before rows carried their start time",
+ "date": "2026-10-24",
+ "started_about": "2026-10-24T12:29:16+00:00",
+ "finished_about": "2026-10-24T16:06:34+00:00",
+ "argv_likely": ["--model", "llama3.1", "--split", "dev", "--repeats", "3", "--out", "results/2026-10-24-dev-r3-llama3.1.jsonl"],
+ "rows": 117,
+ "status": {
+  "ok": 108,
+  "model_error": 9
+ },
+ "rail": "fake",
+ "selection": {
+  "split": "dev",
+  "conditions": [
+   "cap",
+   "counterfoil",
+   "none"
+  ],
+  "repeats": 3
+ },
+ "code": {
+  "main_at_start": "d38b6fa",
+  "caveat": "main's head when the results file was created; the run's working tree is not recorded"
+ },
+ "machine": {
+  "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "arch": "arm64",
+  "python": "3.14.5",
+  "cpu": "Apple M2 Pro",
+  "memory_gb": 16,
+  "container": false
+ },
+ "model": {
+  "model": "llama3.1-8k",
+  "endpoint_host": "localhost:11434",
+  "ollama_version": "0.24.0",
+  "digest": "c965e8852e7ea2382200b9e0c4aeb5accfcb978595229616abf8875739365b84",
+  "parent_model": "llama3.1:8b",
+  "parameters_now": "stop \"<|start_header_id|>\"\nstop \"<|end_header_id|>\"\nstop \"<|eot_id|>\"\ntemperature 0\nnum_ctx 8192",
+  "family": "llama",
+  "parameter_size": "8.0B",
+  "quantization": "Q4_K_M",
+  "caveat": "ran without a num_predict cap (hermes3-8k and qwen3-8k got one before their runs)"
+ }
+}
