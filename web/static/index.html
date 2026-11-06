@@ -138,7 +138,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(stage.clientWidth, stage.clientHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.95;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 stage.appendChild(renderer.domElement);
 const labels = new CSS2DRenderer(); labels.setSize(stage.clientWidth, stage.clientHeight);
@@ -146,14 +146,14 @@ Object.assign(labels.domElement.style, { position: "absolute", top: 0, left: 0, 
 stage.appendChild(labels.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1e1c1b);
+scene.background = new THREE.Color(0xc9bfb1);
 const camera = new THREE.PerspectiveCamera(30, stage.clientWidth / stage.clientHeight, 0.1, 200);
 camera.position.set(9, 7.5, 10);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.minDistance = 3; controls.maxDistance = 25; controls.maxPolarAngle = Math.PI * 0.47;
 
-scene.add(new THREE.HemisphereLight(0xfff1df, 0x3a3027, 0.55));
-const key = new THREE.DirectionalLight(0xffe2c0, 1.1); key.position.set(6, 10, 5); key.castShadow = true;
+scene.add(new THREE.HemisphereLight(0xfff6ea, 0x8a7a6a, 1.25));
+const key = new THREE.DirectionalLight(0xfff0dc, 2.0); key.position.set(6, 10, 5); key.castShadow = true;
 key.shadow.mapSize.set(2048, 2048); key.shadow.camera.left = -8; key.shadow.camera.right = 8; key.shadow.camera.top = 8; key.shadow.camera.bottom = -8; key.shadow.radius = 6;
 scene.add(key);
 const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.35 }));
@@ -233,7 +233,7 @@ new GLTFLoader().load("/static/quiet-page.glb?v=" + Date.now(), (gltf) => {
   // Blender's lamp powers don't translate to three's units; keep the positions, use warm lights of our own
   for (const L of glbLights) {
     const pos = L.getWorldPosition(new THREE.Vector3()); L.parent?.remove(L);
-    const warm = new THREE.PointLight(0xffc27a, 3.2, 4.0, 2); warm.position.copy(pos); scene.add(warm);
+    const warm = new THREE.PointLight(0xffc27a, 1.6, 4.0, 2); warm.position.copy(pos); scene.add(warm);
   }
   gateArm = named.Gate_Arm || null; gateLight = named.Gate_Light || null;
   alarm = named.SandboxBox_Alarm || null; if (alarm) alarm.visible = false;

@@ -75,8 +75,8 @@ def mat(name, hexc, rough=0.65, emit=None, emit_strength=0.0, alpha=1.0, metal=0
 
 M = {
     "white": mat("M_White", "#d8cfc2", 0.7),  # warm greige (no pure white)
-    "platform": mat("M_Platform", "#3a3633", 0.8),
-    "offwhite": mat("M_OffWhite", "#3b2c22", 0.7),  # shelf backs (dark)
+    "platform": mat("M_Platform", "#8a7a6a", 0.8),  # warm taupe base
+    "offwhite": mat("M_OffWhite", "#5a4030", 0.7),  # shelf backs (dark walnut)
     "wood": mat("M_Wood", "#d9c7ad", 0.7),
     "wood_dark": mat("M_WoodDark", "#a88a6a", 0.7),
     "grey": mat("M_Grey", "#c9c9c7", 0.6),
@@ -85,23 +85,23 @@ M = {
     "green": mat("M_MutedGreen", "#6b8a74", 0.7),
     "green_dark": mat("M_MutedGreenDark", "#4f6a57", 0.7),
     "walnut": mat("M_Walnut", "#6e4b34", 0.55),
-    "wall_green": mat("M_WallForest", "#22362f", 0.85),
-    "wall_espresso": mat("M_WallEspresso", "#2e2a27", 0.85),
-    "dark_cabinet": mat("M_DarkCabinet", "#2b2624", 0.6),
+    "wall_green": mat("M_WallSage", "#7e9478", 0.85),  # muted sage
+    "wall_espresso": mat("M_WallCream", "#eadbc4", 0.9),  # warm cream plaster
+    "dark_cabinet": mat("M_DarkCabinet", "#5a3e2b", 0.6),  # dark walnut
     "counter_top": mat("M_CounterTopWalnut", "#4a3426", 0.35),
-    "dark_grey": mat("M_DarkGrey", "#3b3d40", 0.6),
+    "dark_grey": mat("M_DarkGrey", "#5a4a3e", 0.6),
     "oak_edge_d": mat("M_DeskLeg", "#4f3828", 0.55),
     "holiday_red": mat("M_HolidayRed", "#a8322d", 0.45),
     "fir": mat("M_Fir", "#2d4f3c", 0.85),
     "fir_light": mat("M_FirLight", "#3b6249", 0.85),
     "gold": mat("M_Gold", "#d4a94f", 0.25, metal=0.8),
-    "fairy": mat("M_FairyLight", "#ffd08a", 0.3, emit="#ffc766", emit_strength=7.0),
+    "fairy": mat("M_FairyLight", "#ffd08a", 0.3, emit="#ffc766", emit_strength=3.5),  # daytime: subtler
     "pot_cream": mat("M_PotCream", "#e9e2d4", 0.6),
     "pot_char": mat("M_PotCharcoal", "#45484d", 0.6),
     "slate": mat("M_ChalkSlate", "#2f3534", 0.85),
     "chalk": mat("M_Chalk", "#e9e1cc", 0.9),
     "brass": mat("M_ShadeOchre", "#c99a5b", 0.45, metal=0.2),
-    "bulb": mat("M_WarmBulb", "#ffe2b0", 0.3, emit="#ffb46b", emit_strength=12.0),  # ~2700K
+    "bulb": mat("M_WarmBulb", "#ffe2b0", 0.3, emit="#ffb46b", emit_strength=6.0),  # ~2700K, daytime
     "leaf": mat("M_Leaf", "#5e8560", 0.75),
     "leaf_light": mat("M_LeafLight", "#7b9d6f", 0.75),
     "soil": mat("M_Soil", "#4a3a2c", 0.95),
@@ -297,7 +297,7 @@ def plank_image(px=1024, tile=4.0, plank_w=0.18, plank_l=1.4):
     offs = rng_.uniform(0, plank_l, n_rows)
     col = np.floor((U + offs[row]) / plank_l).astype(int)
     tone = rng_.uniform(-0.07, 0.07, (n_rows, 64))
-    base = np.array([0.30, 0.19, 0.11])  # linear-ish medium-dark oak
+    base = np.array([0.397, 0.224, 0.102])  # linear of #A9825A honey oak
     t = 1.0 + tone[row, col % 64]
     grain = 1.0 + 0.04 * np.sin(U * 38 + np.sin(V * 9 + row) * 2.0) + 0.02 * np.sin(U * 140 + row * 3)
     img = base[None, None, :] * (t * grain)[..., None]
@@ -848,7 +848,7 @@ for side, x, img in (("L", -0.975, "ad-1-latte.png"), ("R", 0.975, "ad-3-matcha.
 # --- warm LED halos behind the ad screens (+ subtle one behind the menu board)
 import numpy as np  # bundled with Blender
 
-M["led_gold"] = mat("M_LEDGold", "#ffc766", 0.3, emit="#ffc766", emit_strength=3.0)
+M["led_gold"] = mat("M_LEDGold", "#ffc766", 0.3, emit="#ffc766", emit_strength=1.5)
 
 
 def rounded_rect_points(w, h, r, seg=6):
@@ -922,7 +922,7 @@ def glow_material(name, plane_w, plane_h, inner_w, inner_h, peak, px=256):
     ekey = "Emission Color" if "Emission Color" in bsdf.inputs else "Emission"
     nt.links.new(tex.outputs["Color"], bsdf.inputs[ekey])
     nt.links.new(tex.outputs["Alpha"], bsdf.inputs["Alpha"])
-    bsdf.inputs["Emission Strength"].default_value = 1.2
+    bsdf.inputs["Emission Strength"].default_value = 0.6
     for attr, val in (("surface_render_method", "BLENDED"), ("blend_method", "BLEND")):
         try:
             setattr(m, attr, val)
@@ -1005,7 +1005,7 @@ M["velvet_rust"] = mat("M_VelvetRust", "#a5573a", 0.85)
 M["rug_in"] = mat("M_RugInner", "#e8ddcb", 0.95)
 M["rug_out"] = mat("M_RugBorder", "#c4a789", 0.95)
 M["brass_m"] = mat("M_Brass", "#c9a35f", 0.35, metal=0.7)
-M["lampshade"] = mat("M_ReadingShade", "#f3e6cc", 0.6, emit="#ffbf80", emit_strength=1.2)
+M["lampshade"] = mat("M_ReadingShade", "#f3e6cc", 0.6, emit="#ffbf80", emit_strength=0.6)
 NOOK_X, NOOK_Y, NOOK_ROT = 6.05, -3.15, 40  # quiet front-right corner, chairs face the camera
 nook = empty("ReadingNook", c_rn, (NOOK_X, NOOK_Y, 0), rot_z=NOOK_ROT)
 cyl("ReadingNook_RugBorder", c_rn, 1.12, 0.008, (0, -0.1, 0.004), M["rug_out"], segs=48,
@@ -1488,7 +1488,7 @@ sphere("Wreath_BowKnot", c_wr, 0.022, (0, -0.065, -0.19), M["holiday_red"], pare
 # ================================================================ 15. Wall details (oak / walnut / brass)
 c_wd = make_coll("WallDetails")
 wd = empty("WallDetails", c_wd)
-M["led_warm"] = mat("M_LEDWarm", "#ffd9a0", 0.3, emit="#ffc27a", emit_strength=3.5)
+M["led_warm"] = mat("M_LEDWarm", "#ffd9a0", 0.3, emit="#ffc27a", emit_strength=1.75)
 BW_X0, BW_X1, BW_H = -4.5, 4.5, 2.7
 SL_W, SL_D, SL_P = 0.04, 0.025, 0.075
 SL_Y = WALL_FRONT - SL_D / 2
@@ -1504,9 +1504,11 @@ def slat_run(tag, x0, x1, z0, z1, mat_a, mat_b):
 
 # back wall: full-height oak slats either side of the screens, a low band beneath them
 SCREEN_X = 1.32  # |x| covered by menu + ad screens (left ad edge at -1.215)
-slat_run("L", BW_X0 + 0.05, -SCREEN_X - 0.05, 0.0, 2.6, M["oak"], M["walnut"])
-slat_run("R", SCREEN_X + 0.05, BW_X1 - 0.05, 0.0, 2.6, M["oak"], M["walnut"])
-slat_run("C", -SCREEN_X, SCREEN_X, 0.0, 1.22, M["oak"], M["walnut"])
+M["slat_oak"] = mat("M_SlatOak", "#d9c7a8", 0.6)
+M["slat_oak2"] = mat("M_SlatOakAccent", "#c4ab84", 0.6)
+slat_run("L", BW_X0 + 0.05, -SCREEN_X - 0.05, 0.0, 2.6, M["slat_oak"], M["slat_oak2"])
+slat_run("R", SCREEN_X + 0.05, BW_X1 - 0.05, 0.0, 2.6, M["slat_oak"], M["slat_oak2"])
+slat_run("C", -SCREEN_X, SCREEN_X, 0.0, 1.22, M["slat_oak"], M["slat_oak2"])
 box("BackWall_SlatCapC", c_wd, (2 * SCREEN_X + 0.02, 0.05, 0.03), (0, WALL_FRONT - 0.025, 1.235),
     M["walnut"], bevel=0.006, parent=wd)
 for sx in (-1, 1):  # warm uplight strip tucked under the top of the side slat runs
@@ -1529,7 +1531,7 @@ box("Crown_Right", c_wd, (0.1, RW_Y1 - RW_Y0 + 0.04, 0.05), (RW_X - 0.02, -1.3, 
 for tag, xf, y0, y1, sgn in (("Left", LW_X, LW_Y0, LW_Y1, 1), ("Right", RW_X, RW_Y0, RW_Y1, -1)):
     L = y1 - y0
     yc = (y0 + y1) / 2
-    box(f"Wainscot_{tag}", c_wd, (0.02, L, 1.1), (xf + sgn * 0.01, yc, 0.55), M["walnut"],
+    box(f"Wainscot_{tag}", c_wd, (0.02, L, 1.1), (xf + sgn * 0.01, yc, 0.55), M["oak"],
         bevel=0.0, parent=wd)
     box(f"Wainscot_{tag}Rail", c_wd, (0.045, L + 0.02, 0.04), (xf + sgn * 0.022, yc, 1.12),
         M["oak"], bevel=0.008, parent=wd)
@@ -1770,12 +1772,13 @@ world = bpy.data.worlds.new("QuietWorld")
 scene.world = world
 world.use_nodes = True
 bg = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
-bg.inputs["Color"].default_value = (*hexcol("#1e1c1b"), 1)
-bg.inputs["Strength"].default_value = 1.0  # dark charcoal backdrop, low ambient
+bg.inputs["Color"].default_value = (*hexcol("#cfc6b8"), 1)
+bg.inputs["Strength"].default_value = 0.85  # soft warm-grey daylight ambient
 
 sun_d = bpy.data.lights.new("Sun_Key", "SUN")
-sun_d.energy = 1.1
-sun_d.angle = math.radians(16)
+sun_d.energy = 2.5
+sun_d.color = (1.0, 0.96, 0.9)  # warm white, from front-left
+sun_d.angle = math.radians(12)
 sun = bpy.data.objects.new("Sun_Key", sun_d)
 sun.rotation_euler = (math.radians(42), math.radians(0), math.radians(-35))
 link(sun, c_env)
@@ -1793,7 +1796,7 @@ def tag_light(ob):
 tag_light(sun)
 for i, bpos in enumerate(BULBS):
     pd = bpy.data.lights.new(f"PendantLamp_Light{i}", "POINT")
-    pd.energy = 55
+    pd.energy = 28
     pd.color = WARM_2700K
     pd.shadow_soft_size = 0.06
     po = bpy.data.objects.new(f"PendantLamp_Light{i}", pd)
@@ -1801,7 +1804,7 @@ for i, bpos in enumerate(BULBS):
     link(po, c_env)
     tag_light(po)
 nd = bpy.data.lights.new("ReadingLamp_Light", "POINT")
-nd.energy = 45
+nd.energy = 22
 nd.color = WARM_2700K
 nd.shadow_soft_size = 0.08
 no = bpy.data.objects.new("ReadingLamp_Light", nd)
@@ -1810,7 +1813,7 @@ link(no, c_env)
 tag_light(no)
 for lname, lpos, lpow in EXTRA_LIGHTS:
     ld = bpy.data.lights.new(lname, "POINT")
-    ld.energy = lpow * 1.8
+    ld.energy = lpow * 0.9
     ld.color = WARM_2700K
     ld.shadow_soft_size = 0.06
     lo = bpy.data.objects.new(lname, ld)
@@ -1819,7 +1822,7 @@ for lname, lpos, lpow in EXTRA_LIGHTS:
     tag_light(lo)
 
 area_d = bpy.data.lights.new("Area_Fill", "AREA")
-area_d.energy = 260
+area_d.energy = 450
 area_d.size = 12
 area = bpy.data.objects.new("Area_Fill", area_d)
 area.location = (-7.5, -8.0, 9.0)
@@ -1860,7 +1863,7 @@ try:
     scene.view_settings.look = "None"
 except Exception:
     pass
-scene.view_settings.exposure = 0.35
+scene.view_settings.exposure = 0.0
 try:
     ee = scene.eevee
     ee.taa_render_samples = 64
@@ -1887,7 +1890,7 @@ try:
         gl.glare_type = "BLOOM"
     elif "Type" in gl.inputs:
         gl.inputs["Type"].default_value = "Bloom"
-    for key, val in (("Threshold", 0.9), ("Strength", 0.45), ("Size", 0.55)):
+    for key, val in (("Threshold", 1.4), ("Strength", 0.2), ("Size", 0.5)):
         if key in gl.inputs:
             gl.inputs[key].default_value = val
     ng.links.new(rl.outputs["Image"], gl.inputs["Image"])
@@ -2012,7 +2015,7 @@ def render_to(path, loc, target, lens):
 if DO_RENDER:
     # preview-only ground far below so the floating slab casts a soft shadow
     # (added after the GLB export and removed before the final save)
-    gm = mat("M_PreviewGround", "#2a2826", 0.95)
+    gm = mat("M_PreviewGround", "#b9b0a3", 0.95)
     bmg = bmesh.new()
     bmesh.ops.create_grid(bmg, x_segments=1, y_segments=1, size=400)
     ground = finish_mesh(bmg, "Preview_Ground", c_env, gm, (0, 0, -1.1), None)
