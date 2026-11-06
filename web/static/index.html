@@ -14,7 +14,7 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, "Segoe UI", Inter, system-ui, sans-serif; }
-  #stage { position: relative; height: 58vh; min-height: 360px; background: radial-gradient(120% 90% at 50% 30%, #fbfaf7 0%, #ece8df 100%); }
+  #stage { position: relative; height: 66vh; min-height: 420px; background: radial-gradient(120% 90% at 50% 30%, #fbfaf7 0%, #ece8df 100%); }
   #stage canvas { display: block; }
   .tag { position: absolute; top: 14px; left: 14px; padding: 6px 12px; border-radius: 999px; background: #fff; font: 600 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; box-shadow: 0 1px 4px rgba(0,0,0,.08); z-index: 2; }
   .tag.right { left: auto; right: 14px; color: var(--muted); }
@@ -145,7 +145,7 @@ stage.appendChild(labels.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf1eee8);
-const camera = new THREE.PerspectiveCamera(32, stage.clientWidth / stage.clientHeight, 0.1, 200);
+const camera = new THREE.PerspectiveCamera(30, stage.clientWidth / stage.clientHeight, 0.1, 200);
 camera.position.set(9, 7.5, 10);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.minDistance = 3; controls.maxDistance = 25; controls.maxPolarAngle = Math.PI * 0.47;
@@ -238,7 +238,7 @@ function focus(name, instant = false) {
   // look from the overview camera's side, so close-ups stay on the open front of the café
   const base = named.Platform ? new THREE.Box3().setFromObject(named.Platform).getCenter(new THREE.Vector3()) : c;
   const dir = overviewCam ? overviewCam.clone().sub(base).normalize() : new THREE.Vector3(0.62, 0.55, 0.72).normalize();
-  camGoal.target = c; camGoal.pos = (name === "Platform" && overviewCam) ? overviewCam.clone() : c.clone().add(dir.multiplyScalar(dist));
+  camGoal.target = c; camGoal.pos = (name === "Platform" && overviewCam) ? base.clone().add(overviewCam.clone().sub(base).multiplyScalar(0.72)) : c.clone().add(dir.multiplyScalar(dist));
   if (instant) { camera.position.copy(camGoal.pos); controls.target.copy(c); }
   for (const [n, { lo }] of Object.entries(labelObjs)) lo.visible = n === name || (name === "Platform" && OVERVIEW_LABELS.includes(n));
 }
