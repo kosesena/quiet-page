@@ -321,8 +321,11 @@ def bookshelf(tag, x, y, rot=0.0):
 
 
 # tall shelves line the right edge beside the reading nook, books facing in (-X)
-bookshelf("A", 3.86, -1.22)
-bookshelf("B", 4.88, -1.22)
+# RightWall: short wall on the right edge (front two-thirds), tall shelves flat against it
+c_rw = make_coll("RightWall")
+box("RightWall", c_rw, (0.06, 4.05, 2.2), (5.42, -1.025, 1.1), M["white"], bevel=0.012)
+bookshelf("A", 5.22, -2.15, -90)  # books face into the room (-X)
+bookshelf("B", 5.22, -1.23, -90)
 
 # ================================================================ 3. Counter
 c_ct = make_coll("Counter")
@@ -753,7 +756,7 @@ plant("VultrVM", (-4.05, 3.2, 0), 0.8)
 plant("Corner", (-5.05, 0.05, 0), 1.55, pot="pot_cream", s=1.3)
 plant("BackRight", (5.05, 3.0, 0), 1.1, pot="pot_char", s=1.1)
 plant("BackLeft", (-3.45, 3.2, 0), 0.65, pot="pot_cream", s=0.8)
-plant("Divider", (3.15, -1.2, 0), 1.75, pot="pot_cream", s=1.35)  # tall plant at the divider end
+plant("Divider", (3.05, -0.7, 0), 1.6, pot="pot_cream", s=1.3)  # tall plant at the divider end
 
 # (no bar stools: normal cafe seating lives in CafeTables)
 
@@ -952,7 +955,7 @@ M["rug_in"] = mat("M_RugInner", "#e8ddcb", 0.95)
 M["rug_out"] = mat("M_RugBorder", "#c4a789", 0.95)
 M["brass_m"] = mat("M_Brass", "#c9a35f", 0.35, metal=0.7)
 M["lampshade"] = mat("M_ReadingShade", "#f3e6cc", 0.6, emit="#ffbf80", emit_strength=1.2)
-NOOK_X, NOOK_Y, NOOK_ROT = 4.1, -2.55, 40  # quiet front-right corner, chairs face the camera
+NOOK_X, NOOK_Y, NOOK_ROT = 3.85, -2.35, 40  # quiet front-right corner, chairs face the camera
 nook = empty("ReadingNook", c_rn, (NOOK_X, NOOK_Y, 0), rot_z=NOOK_ROT)
 cyl("ReadingNook_RugBorder", c_rn, 0.84, 0.008, (0, -0.1, 0.004), M["rug_out"], segs=48,
     parent=nook)
@@ -1007,8 +1010,8 @@ NOOK_LAMP = (NOOK_X - 0.32 * math.sin(_a), NOOK_Y + 0.32 * math.cos(_a), 1.30)
 
 # --- ReadingDivider: waist-high double-sided bookshelf + tall plant, closing the nook off
 c_dv = make_coll("ReadingDivider")
-dv = empty("ReadingDivider", c_dv, (3.15, -2.35, 0), rot_z=90)  # runs along Y
-DW, DD, DH = 1.8, 0.34, 0.92
+dv = empty("ReadingDivider", c_dv, (4.1, -0.7, 0))  # low divider along the nook's north side
+DW, DD, DH = 1.8, 0.34, 0.85
 for sx in (-1, 1):
     box(f"Divider_End{sx}", c_dv, (0.03, DD, DH), (sx * (DW / 2 - 0.015), 0, DH / 2),
         M["walnut"], bevel=0.006, parent=dv)
@@ -1221,7 +1224,7 @@ EXTRA_LIGHTS.append(("LoungeLamp_Light", (LC_X + 0.13, LC_Y + 0.1, 0.62), 10))
 
 # --- BookOfTheDay: free-standing digital totem at the nook's front-left edge, facing camera
 c_bd = make_coll("BookOfTheDay")
-bd = empty("BookOfTheDay", c_bd, (2.72, -2.0, 0), rot_z=40)  # outside the divider, at the nook edge, facing camera
+bd = empty("BookOfTheDay", c_bd, (2.85, -1.75, 0), rot_z=40)  # at the nook opening  # outside the divider, at the nook edge, facing camera
 box("BookOfTheDay_Base", c_bd, (0.36, 0.26, 0.045), (0, 0, 0.0225), M["walnut"], bevel=0.012,
     parent=bd)
 cyl("BookOfTheDay_Pole", c_bd, 0.018, 0.52, (0, 0.02, 0.3), M["brass_m"], segs=10, parent=bd)
@@ -1333,12 +1336,12 @@ for k, (w, d, h, dx, rib) in enumerate(((0.26, 0.2, 0.14, -0.22, "brand_green"),
 # ================================================================ 14. Holiday season
 # --- HolidayTree: stylized layered fir, baubles, spiral fairy lights, star
 c_ht = make_coll("HolidayTree")
-TREE_X, TREE_Y = 5.08, -1.85
+TREE_X, TREE_Y = 5.08, -3.0  # inner corner by the RightWall
 ht = empty("HolidayTree", c_ht, (TREE_X, TREE_Y, 0))
 box("HolidayTree_Crate", c_ht, (0.36, 0.36, 0.26), (0, 0, 0.13), M["walnut"], bevel=0.012,
     parent=ht)
 cyl("HolidayTree_Trunk", c_ht, 0.04, 0.12, (0, 0, 0.32), M["wood_dark"], segs=10, parent=ht)
-LAYERS = ((0.42, 0.36, 0.36), (0.38, 0.62, 0.34), (0.3, 0.86, 0.32), (0.21, 1.08, 0.3),
+LAYERS = ((0.38, 0.36, 0.36), (0.38, 0.62, 0.34), (0.3, 0.86, 0.32), (0.21, 1.08, 0.3),
           (0.13, 1.28, 0.26))  # (radius, base z, height)
 for i, (r, zb, h) in enumerate(LAYERS):
     cyl(f"HolidayTree_Layer{i}", c_ht, r, h, (0, 0, zb + h / 2), M["fir"] if i % 2 == 0 else
@@ -1408,7 +1411,7 @@ def drape(tag, a, b, sag, n_swags, spacing=0.12):
 
 
 drape("Wall", (-3.15, WALL_FRONT - 0.02, 2.62), (3.15, WALL_FRONT - 0.02, 2.62), 0.14, 6)
-drape("Shelves", (3.42, -1.41, 1.84), (5.3, -1.41, 1.84), 0.08, 3, 0.1)
+drape("Shelves", (5.04, -2.6, 1.84), (5.04, -0.78, 1.84), 0.08, 3, 0.1)
 
 # --- Wreath on the back wall at the entrance end (left)
 c_wr = make_coll("Wreath")
@@ -1856,7 +1859,7 @@ if DO_RENDER:
     render_to(os.path.join(OUT, "preview-seating.png"), (0.5, -5.8, 4.4), (-0.2, 1.0, 0.6), 19)
     render_to(os.path.join(OUT, "preview-merch.png"), (-1.05, -0.45, 1.65), (-2.55, 1.3, 0.85), 38)
     render_to(os.path.join(OUT, "preview-holiday.png"), (6.6, -5.2, 2.6), (3.7, -1.4, 1.1), 26)
-    render_to(os.path.join(OUT, "preview-nook.png"), (6.9, -5.6, 2.3), (4.15, -2.1, 0.6), 30)
+    render_to(os.path.join(OUT, "preview-nook.png"), (2.4, -6.2, 2.5), (4.2, -1.9, 0.8), 30)
     render_to(os.path.join(OUT, "preview-gate.png"), (0.75, 1.05, 1.5), (0.5, 2.15, 1.12), 40)
     aim(cam, *OVERVIEW)
     bpy.data.objects.remove(ground)
