@@ -74,9 +74,9 @@ def mat(name, hexc, rough=0.65, emit=None, emit_strength=0.0, alpha=1.0, metal=0
 
 
 M = {
-    "white": mat("M_White", "#f4f3f0", 0.7),
-    "platform": mat("M_Platform", "#fbfaf8", 0.75),
-    "offwhite": mat("M_OffWhite", "#e8e5df", 0.7),
+    "white": mat("M_White", "#d8cfc2", 0.7),  # warm greige (no pure white)
+    "platform": mat("M_Platform", "#3a3633", 0.8),
+    "offwhite": mat("M_OffWhite", "#3b2c22", 0.7),  # shelf backs (dark)
     "wood": mat("M_Wood", "#d9c7ad", 0.7),
     "wood_dark": mat("M_WoodDark", "#a88a6a", 0.7),
     "grey": mat("M_Grey", "#c9c9c7", 0.6),
@@ -85,6 +85,12 @@ M = {
     "green": mat("M_MutedGreen", "#6b8a74", 0.7),
     "green_dark": mat("M_MutedGreenDark", "#4f6a57", 0.7),
     "walnut": mat("M_Walnut", "#6e4b34", 0.55),
+    "wall_green": mat("M_WallForest", "#22362f", 0.85),
+    "wall_espresso": mat("M_WallEspresso", "#2e2a27", 0.85),
+    "dark_cabinet": mat("M_DarkCabinet", "#2b2624", 0.6),
+    "counter_top": mat("M_CounterTopWalnut", "#4a3426", 0.35),
+    "dark_grey": mat("M_DarkGrey", "#3b3d40", 0.6),
+    "oak_edge_d": mat("M_DeskLeg", "#4f3828", 0.55),
     "holiday_red": mat("M_HolidayRed", "#a8322d", 0.45),
     "fir": mat("M_Fir", "#2d4f3c", 0.85),
     "fir_light": mat("M_FirLight", "#3b6249", 0.85),
@@ -123,7 +129,7 @@ M = {
     "blue_led": mat("M_StatusBlue", "#2f7bff", 0.3, emit="#2f7bff", emit_strength=6.0),
     "amber": mat("M_GateAmber", "#e07a1f", 0.3, emit="#ff7a0a", emit_strength=2.2),
     "screen": mat("M_Screen", "#26303d", 0.25, emit="#8fb4d9", emit_strength=0.6),
-    "cup": mat("M_Cup", "#ffffff", 0.4),
+    "cup": mat("M_Cup", "#ebe4d8", 0.4),
     "coffee": mat("M_Coffee", "#5a3b28", 0.3),
 }
 
@@ -277,6 +283,51 @@ c_plat = make_coll("Platform")
 platform = rounded_slab("Platform", c_plat, 16.0, 10.0, PLAT_T, 0.8, (0, 0, -PLAT_T / 2),
                         M["platform"], edge_bevel=0.06)
 
+# --- oak plank floor (generated texture, planar UVs, 4 m tile)
+import numpy as np
+
+
+def plank_image(px=1024, tile=4.0, plank_w=0.18, plank_l=1.4):
+    rng_ = np.random.default_rng(5)
+    v = (np.arange(px) + 0.5) / px * tile
+    u = (np.arange(px) + 0.5) / px * tile
+    U, V = np.meshgrid(u, v)
+    row = np.floor(V / plank_w).astype(int)
+    n_rows = int(np.ceil(tile / plank_w)) + 1
+    offs = rng_.uniform(0, plank_l, n_rows)
+    col = np.floor((U + offs[row]) / plank_l).astype(int)
+    tone = rng_.uniform(-0.07, 0.07, (n_rows, 64))
+    base = np.array([0.30, 0.19, 0.11])  # linear-ish medium-dark oak
+    t = 1.0 + tone[row, col % 64]
+    grain = 1.0 + 0.04 * np.sin(U * 38 + np.sin(V * 9 + row) * 2.0) + 0.02 * np.sin(U * 140 + row * 3)
+    img = base[None, None, :] * (t * grain)[..., None]
+    seam_v = (V % plank_w) < 0.006
+    seam_u = ((U + offs[row]) % plank_l) < 0.006
+    img[seam_v | seam_u] *= 0.55
+    rgba = np.ones((px, px, 4), dtype=np.float32)
+    rgba[..., :3] = np.clip(img, 0, 1) ** (1 / 2.2)  # store as sRGB
+    im = bpy.data.images.new("QuietPage_OakFloor", px, px, alpha=False)
+    im.pixels.foreach_set(rgba.ravel())
+    im.pack()
+    return im
+
+
+m_floor = bpy.data.materials.new("M_OakFloor")
+m_floor.use_nodes = True
+_nt = m_floor.node_tree
+_bsdf = next(n for n in _nt.nodes if n.type == "BSDF_PRINCIPLED")
+_tex = _nt.nodes.new("ShaderNodeTexImage")
+_tex.image = plank_image()
+_nt.links.new(_tex.outputs["Color"], _bsdf.inputs["Base Color"])
+_bsdf.inputs["Roughness"].default_value = 0.55
+floor = rounded_slab("Floor", c_plat, 15.7, 9.7, 0.006, 0.65, (0, 0, -0.0025), m_floor,
+                     edge_bevel=0.002)
+floor.data.materials[0] = m_floor
+_uv = floor.data.uv_layers.new(name="UVMap")
+for lp in floor.data.loops:
+    co = floor.data.vertices[lp.vertex_index].co
+    _uv.data[lp.index].uv = (co.x / 4.0, co.y / 4.0)
+
 # ================================================================ 2. Shelves
 c_sh = make_coll("Shelves")
 shelves = empty("Shelves", c_sh)
@@ -286,13 +337,13 @@ BOOK_COLS = [M["green"], M["rust"], M["navy"], M["cream"]]
 def bookshelf(tag, x, y, rot=0.0):
     root = empty(f"Shelf_{tag}", c_sh, (x, y, 0), rot_z=rot, parent=shelves)
     W, D, H, T = 0.92, 0.34, 1.86, 0.035
-    box(f"Shelf_{tag}_SideL", c_sh, (T, D, H), (-W / 2 + T / 2, 0, H / 2), M["white"], parent=root)
-    box(f"Shelf_{tag}_SideR", c_sh, (T, D, H), (W / 2 - T / 2, 0, H / 2), M["white"], parent=root)
+    box(f"Shelf_{tag}_SideL", c_sh, (T, D, H), (-W / 2 + T / 2, 0, H / 2), M["walnut"], parent=root)
+    box(f"Shelf_{tag}_SideR", c_sh, (T, D, H), (W / 2 - T / 2, 0, H / 2), M["walnut"], parent=root)
     box(f"Shelf_{tag}_Back", c_sh, (W - 2 * T, 0.02, H - 0.02), (0, D / 2 - 0.01, H / 2),
         M["offwhite"], bevel=0.004, parent=root)
     levels = [0.06, 0.50, 0.94, 1.38, H - T / 2]
     for i, z in enumerate(levels):
-        box(f"Shelf_{tag}_Board{i}", c_sh, (W - 2 * T + 0.002, D, T), (0, 0, z), M["white"],
+        box(f"Shelf_{tag}_Board{i}", c_sh, (W - 2 * T + 0.002, D, T), (0, 0, z), M["walnut"],
             parent=root)
     # books on the 4 lower compartments
     for li, z0 in enumerate(levels[:-1]):
@@ -323,7 +374,7 @@ def bookshelf(tag, x, y, rot=0.0):
 # tall shelves line the right edge beside the reading nook, books facing in (-X)
 # RightWall: short wall on the right edge (front two-thirds), tall shelves flat against it
 c_rw = make_coll("RightWall")
-box("RightWall", c_rw, (0.06, 5.8, 2.2), (7.92, -1.3, 1.1), M["white"], bevel=0.012)
+box("RightWall", c_rw, (0.06, 5.8, 2.2), (7.92, -1.3, 1.1), M["wall_espresso"], bevel=0.012)
 bookshelf("A", 7.72, -3.4, -90)  # books face into the room (-X)
 bookshelf("B", 7.72, -2.48, -90)
 
@@ -333,8 +384,8 @@ COUNTER_Y = 3.55
 counter = empty("Counter", c_ct, (0.0, COUNTER_Y, 0))
 CT_W, CT_D, CT_H = 6.0, 0.62, 1.0
 box("Counter_Body", c_ct, (CT_W, CT_D - 0.06, CT_H - 0.05), (0, 0.03, (CT_H - 0.05) / 2),
-    M["white"], bevel=0.02, parent=counter)
-box("Counter_Top", c_ct, (CT_W + 0.06, CT_D + 0.04, 0.05), (0, 0, CT_H - 0.025), M["wood"],
+    M["dark_cabinet"], bevel=0.02, parent=counter)
+box("Counter_Top", c_ct, (CT_W + 0.06, CT_D + 0.04, 0.05), (0, 0, CT_H - 0.025), M["counter_top"],
     bevel=0.012, parent=counter)
 box("Counter_Kick", c_ct, (CT_W - 0.04, 0.02, 0.08), (0, -CT_D / 2 + 0.035, 0.04),
     M["grey"], bevel=0.004, parent=counter)
@@ -412,13 +463,13 @@ box("PaymentTerminal_Keys", c_pt, (0.075, 0.06, 0.004), (0, -0.045, 0.042), M["g
 c_od = make_coll("OrderDesk")
 od = empty("OrderDesk", c_od, (-4.6, -1.4, 0))
 DK_W, DK_D, DK_H = 2.0, 0.65, 0.76
-box("OrderDesk_Top", c_od, (DK_W, DK_D, 0.045), (0, 0, DK_H - 0.0225), M["wood"], bevel=0.01,
+box("OrderDesk_Top", c_od, (DK_W, DK_D, 0.045), (0, 0, DK_H - 0.0225), M["walnut"], bevel=0.01,
     parent=od)
 for sx in (-1, 1):
     box(f"OrderDesk_Leg{'L' if sx < 0 else 'R'}", c_od, (0.045, DK_D - 0.06, DK_H - 0.045),
-        (sx * (DK_W / 2 - 0.06), 0, (DK_H - 0.045) / 2), M["white"], bevel=0.008, parent=od)
+        (sx * (DK_W / 2 - 0.06), 0, (DK_H - 0.045) / 2), M["oak_edge_d"], bevel=0.008, parent=od)
 box("OrderDesk_Modesty", c_od, (DK_W - 0.16, 0.02, 0.34), (0, -DK_D / 2 + 0.06, DK_H - 0.22),
-    M["white"], bevel=0.006, parent=od)
+    M["walnut"], bevel=0.006, parent=od)
 box("OrderDesk_InboxTray", c_od, (0.36, 0.28, 0.015), (-0.22, -0.02, DK_H + 0.0075),
     M["grey"], bevel=0.004, parent=od)
 for i in range(5):  # stack of envelopes / papers
@@ -436,7 +487,7 @@ cyl("OrderDesk_Pen", c_od, 0.006, 0.14, (0.36, -0.06, DK_H + 0.006), M["navy"], 
 c_sb = make_coll("SandboxBox")
 sb = empty("SandboxBox", c_sb, (-2.9, -1.45, 0))
 PL_H, G = 0.36, 0.6
-box("SandboxBox_Plinth", c_sb, (0.72, 0.72, PL_H), (0, 0, PL_H / 2), M["white"], bevel=0.02,
+box("SandboxBox_Plinth", c_sb, (0.72, 0.72, PL_H), (0, 0, PL_H / 2), M["dark_grey"], bevel=0.02,
     parent=sb)
 box("SandboxBox_Glass", c_sb, (G - 0.01, G - 0.01, G - 0.01), (0, 0, PL_H + G / 2),
     M["glass"], bevel=0.0, parent=sb)
@@ -584,7 +635,7 @@ def logo_disc(name, coll, r, depth, loc, parent=None, rot=(90, 0, 0)):
 
 # --- back wall behind the counter (carries menu board + logo sign)
 c_bw = make_coll("BackWall")
-box("BackWall", c_bw, (9.0, 0.06, 2.7), (0.0, 4.73, 1.35), M["white"], bevel=0.015)
+box("BackWall", c_bw, (9.0, 0.06, 2.7), (0.0, 4.73, 1.35), M["wall_green"], bevel=0.015)
 WALL_FRONT = 4.7
 
 # --- Logo_Sign: ~45 cm disc on the counter's centre walnut panel (front, facing -Y)
@@ -634,8 +685,8 @@ pl = empty("PendantLamps", c_pl)
 RAIL_Z, RAIL_Y = 2.66, COUNTER_Y  # high enough to project above the menu in Cam_Overview
 for i, x in enumerate((-2.9, 2.9)):
     box(f"PendantLamps_Arm{i}", c_pl, (0.03, WALL_FRONT - RAIL_Y + 0.03, 0.03),
-        (x, (WALL_FRONT + RAIL_Y) / 2, RAIL_Z), M["white"], bevel=0.008, parent=pl)
-box("PendantLamps_Rail", c_pl, (5.83, 0.03, 0.03), (0.0, RAIL_Y, RAIL_Z), M["white"],
+        (x, (WALL_FRONT + RAIL_Y) / 2, RAIL_Z), M["graphite"], bevel=0.008, parent=pl)
+box("PendantLamps_Rail", c_pl, (5.83, 0.03, 0.03), (0.0, RAIL_Y, RAIL_Z), M["graphite"],
     bevel=0.008, parent=pl)
 BULBS = []
 for i, x in enumerate((-2.3, -0.9, 0.9, 2.3)):
@@ -896,7 +947,7 @@ face_plane("MenuBoard_HaloGlow", bpy.data.collections["MenuBoard"], gw, gh, (0, 
 # --- PickupCorner: raised hand-off ledge at the counter end next to the Gate
 c_pk = make_coll("PickupCorner")
 pk = empty("PickupCorner", c_pk, (CT_W / 2 + 0.18, COUNTER_Y, 0))  # far end, after the espresso section
-box("PickupCorner_Cabinet", c_pk, (0.3, 0.5, 1.06), (0, 0, 0.53), M["white"], bevel=0.015,
+box("PickupCorner_Cabinet", c_pk, (0.3, 0.5, 1.06), (0, 0, 0.53), M["dark_cabinet"], bevel=0.015,
     parent=pk)
 box("PickupCorner_Panel", c_pk, (0.012, 0.42, 0.76), (0.152, 0, 0.5), M["walnut"],
     bevel=0.004, parent=pk)
@@ -1039,9 +1090,9 @@ ls = empty("ReadingNook_LowShelf", c_rn, (0.0, 0.78, 0), parent=nook)
 LW, LD, LH = 0.6, 0.26, 0.5
 for sx in (-1, 1):
     box(f"LowShelf_Side{sx}", c_rn, (0.025, LD, LH), (sx * (LW / 2 - 0.0125), 0, LH / 2),
-        M["white"], parent=ls)
+        M["walnut"], parent=ls)
 for i, z in enumerate((0.03, 0.25, LH - 0.0125)):
-    box(f"LowShelf_Board{i}", c_rn, (LW, LD, 0.025), (0, 0, z), M["white"], parent=ls)
+    box(f"LowShelf_Board{i}", c_rn, (LW, LD, 0.025), (0, 0, z), M["walnut"], parent=ls)
 for row, z0 in enumerate((0.0425, 0.2625)):
     xcur = -LW / 2 + 0.035
     k = 0
@@ -1129,7 +1180,7 @@ for k, (dx, dy, dz) in enumerate(((0, 0, 0.2), (0.03, 0.02, 0.24), (-0.025, -0.0
     sphere(f"CommunalTable_Sprig{k}", c_ct2, 0.03, (0.75 + dx, dy, TT + dz), M["leaf_light"],
            parent=ctab, segs=10, rings=6)
 CROW_Z = 2.66
-box("CommunalTable_CeilingRail", c_ct2, (2.0, 0.03, 0.03), (0, 0, CROW_Z), M["white"],
+box("CommunalTable_CeilingRail", c_ct2, (2.0, 0.03, 0.03), (0, 0, CROW_Z), M["graphite"],
     bevel=0.008, parent=ctab)
 for i, lx in enumerate((-0.8, 0.0, 0.8)):
     hanging_lamp(f"CommunalTable_Lamp{i}", c_ct2, lx, 0, CROW_Z, 1.62, ctab)
@@ -1139,7 +1190,7 @@ for i, lx in enumerate((-0.8, 0.0, 0.8)):
 c_bq = make_coll("Banquette")
 BQ_X, BQ_Y = -7.5, 1.8
 bq = empty("Banquette", c_bq, (BQ_X, BQ_Y, 0))
-box("Banquette_SideWall", c_bq, (0.06, 4.5, 2.2), (-0.42, 0, 1.1), M["white"], bevel=0.012,
+box("Banquette_SideWall", c_bq, (0.06, 4.5, 2.2), (-0.42, 0, 1.1), M["wall_espresso"], bevel=0.012,
     parent=bq)
 box("Banquette_Plinth", c_bq, (0.5, 3.0, 0.1), (-0.13, 0, 0.05), M["walnut"], bevel=0.01,
     parent=bq)
@@ -1719,11 +1770,11 @@ world = bpy.data.worlds.new("QuietWorld")
 scene.world = world
 world.use_nodes = True
 bg = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
-bg.inputs["Color"].default_value = (*hexcol("#e3e4e2"), 1)
-bg.inputs["Strength"].default_value = 0.65
+bg.inputs["Color"].default_value = (*hexcol("#1e1c1b"), 1)
+bg.inputs["Strength"].default_value = 1.0  # dark charcoal backdrop, low ambient
 
 sun_d = bpy.data.lights.new("Sun_Key", "SUN")
-sun_d.energy = 3.6
+sun_d.energy = 1.1
 sun_d.angle = math.radians(16)
 sun = bpy.data.objects.new("Sun_Key", sun_d)
 sun.rotation_euler = (math.radians(42), math.radians(0), math.radians(-35))
@@ -1742,7 +1793,7 @@ def tag_light(ob):
 tag_light(sun)
 for i, bpos in enumerate(BULBS):
     pd = bpy.data.lights.new(f"PendantLamp_Light{i}", "POINT")
-    pd.energy = 32
+    pd.energy = 55
     pd.color = WARM_2700K
     pd.shadow_soft_size = 0.06
     po = bpy.data.objects.new(f"PendantLamp_Light{i}", pd)
@@ -1750,7 +1801,7 @@ for i, bpos in enumerate(BULBS):
     link(po, c_env)
     tag_light(po)
 nd = bpy.data.lights.new("ReadingLamp_Light", "POINT")
-nd.energy = 28
+nd.energy = 45
 nd.color = WARM_2700K
 nd.shadow_soft_size = 0.08
 no = bpy.data.objects.new("ReadingLamp_Light", nd)
@@ -1759,7 +1810,7 @@ link(no, c_env)
 tag_light(no)
 for lname, lpos, lpow in EXTRA_LIGHTS:
     ld = bpy.data.lights.new(lname, "POINT")
-    ld.energy = lpow
+    ld.energy = lpow * 1.8
     ld.color = WARM_2700K
     ld.shadow_soft_size = 0.06
     lo = bpy.data.objects.new(lname, ld)
@@ -1768,7 +1819,7 @@ for lname, lpos, lpow in EXTRA_LIGHTS:
     tag_light(lo)
 
 area_d = bpy.data.lights.new("Area_Fill", "AREA")
-area_d.energy = 900
+area_d.energy = 260
 area_d.size = 12
 area = bpy.data.objects.new("Area_Fill", area_d)
 area.location = (-7.5, -8.0, 9.0)
@@ -1809,7 +1860,7 @@ try:
     scene.view_settings.look = "None"
 except Exception:
     pass
-scene.view_settings.exposure = 0.0
+scene.view_settings.exposure = 0.35
 try:
     ee = scene.eevee
     ee.taa_render_samples = 64
@@ -1836,7 +1887,7 @@ try:
         gl.glare_type = "BLOOM"
     elif "Type" in gl.inputs:
         gl.inputs["Type"].default_value = "Bloom"
-    for key, val in (("Threshold", 1.2), ("Strength", 0.35), ("Size", 0.5)):
+    for key, val in (("Threshold", 0.9), ("Strength", 0.45), ("Size", 0.55)):
         if key in gl.inputs:
             gl.inputs[key].default_value = val
     ng.links.new(rl.outputs["Image"], gl.inputs["Image"])
@@ -1961,7 +2012,7 @@ def render_to(path, loc, target, lens):
 if DO_RENDER:
     # preview-only ground far below so the floating slab casts a soft shadow
     # (added after the GLB export and removed before the final save)
-    gm = mat("M_PreviewGround", "#bfc0be", 0.95)
+    gm = mat("M_PreviewGround", "#2a2826", 0.95)
     bmg = bmesh.new()
     bmesh.ops.create_grid(bmg, x_segments=1, y_segments=1, size=400)
     ground = finish_mesh(bmg, "Preview_Ground", c_env, gm, (0, 0, -1.1), None)
