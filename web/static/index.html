@@ -136,7 +136,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(stage.clientWidth, stage.clientHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.95;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 stage.appendChild(renderer.domElement);
 const labels = new CSS2DRenderer(); labels.setSize(stage.clientWidth, stage.clientHeight);
@@ -150,8 +150,8 @@ camera.position.set(9, 7.5, 10);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.minDistance = 3; controls.maxDistance = 25; controls.maxPolarAngle = Math.PI * 0.47;
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0xd9d2c3, 1.25));
-const key = new THREE.DirectionalLight(0xfff4e6, 2.2); key.position.set(6, 10, 5); key.castShadow = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd9d2c3, 1.0));
+const key = new THREE.DirectionalLight(0xfff1e0, 1.8); key.position.set(6, 10, 5); key.castShadow = true;
 key.shadow.mapSize.set(2048, 2048); key.shadow.camera.left = -8; key.shadow.camera.right = 8; key.shadow.camera.top = 8; key.shadow.camera.bottom = -8; key.shadow.radius = 6;
 scene.add(key);
 const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.16 }));
@@ -172,6 +172,7 @@ const LABELS = {
 const labelObjs = {};
 const OVERVIEW_LABELS = ["VultrVM", "SandboxBox", "Gate"];
 let overviewCam = null;
+const glbLights = [];
 let gateArm = null, gateLight = null, alarm = null, adFaces = [], bookFace = null, alarmOn = false, armTarget = 0;
 
 // screen textures drawn on canvases so the ads rotate and the book changes daily
@@ -204,9 +205,14 @@ new GLTFLoader().load("/static/quiet-page.glb", (gltf) => {
   root.traverse((o) => {
     if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
     if (o.name) named[o.name] = o;
-    if (o.isLight) { o.castShadow = false; o.intensity *= 0.002; } // Blender watts → three's units, roughly
+    if (o.isLight) glbLights.push(o);
   });
   scene.add(root);
+  // Blender's lamp powers don't translate to three's units; keep the positions, use warm lights of our own
+  for (const L of glbLights) {
+    const pos = L.getWorldPosition(new THREE.Vector3()); L.parent?.remove(L);
+    const warm = new THREE.PointLight(0xffc98a, 2.2, 3.2, 2); warm.position.copy(pos); scene.add(warm);
+  }
   gateArm = named.Gate_Arm || null; gateLight = named.Gate_Light || null;
   alarm = named.SandboxBox_Alarm || null; if (alarm) alarm.visible = false;
   adFaces = ["AdScreen_L_Face", "AdScreen_R_Face"].map((n) => named[n]).filter(Boolean);
@@ -234,11 +240,11 @@ const camGoal = { pos: null, target: null };
 function focus(name, instant = false) {
   const o = named[name] || named.Platform; if (!o) return;
   const box = new THREE.Box3().setFromObject(o); const c = box.getCenter(new THREE.Vector3()); const s = box.getSize(new THREE.Vector3()).length();
-  const dist = name === "Platform" ? 15 : Math.max(4.2, s * 2.4);
+  const dist = (name === "Platform" ? 15 : Math.max(4.2, s * 2.4)) * Math.max(1.0, 1.4 / camera.aspect);
   // look from the overview camera's side, so close-ups stay on the open front of the café
   const base = named.Platform ? new THREE.Box3().setFromObject(named.Platform).getCenter(new THREE.Vector3()) : c;
   const dir = overviewCam ? overviewCam.clone().sub(base).normalize() : new THREE.Vector3(0.62, 0.55, 0.72).normalize();
-  camGoal.target = c; camGoal.pos = (name === "Platform" && overviewCam) ? base.clone().add(overviewCam.clone().sub(base).multiplyScalar(0.72)) : c.clone().add(dir.multiplyScalar(dist));
+  camGoal.target = c; camGoal.pos = (name === "Platform" && overviewCam) ? base.clone().add(overviewCam.clone().sub(base).multiplyScalar(Math.max(1.0, 1.75 / camera.aspect))) : c.clone().add(dir.multiplyScalar(dist));
   if (instant) { camera.position.copy(camGoal.pos); controls.target.copy(c); }
   for (const [n, { lo }] of Object.entries(labelObjs)) lo.visible = n === name || (name === "Platform" && OVERVIEW_LABELS.includes(n));
 }
