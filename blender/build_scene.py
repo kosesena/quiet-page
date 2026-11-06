@@ -85,6 +85,8 @@ M = {
     "green": mat("M_MutedGreen", "#6b8a74", 0.7),
     "green_dark": mat("M_MutedGreenDark", "#4f6a57", 0.7),
     "walnut": mat("M_Walnut", "#6e4b34", 0.55),
+    "pot_cream": mat("M_PotCream", "#e9e2d4", 0.6),
+    "pot_char": mat("M_PotCharcoal", "#45484d", 0.6),
     "slate": mat("M_ChalkSlate", "#2f3534", 0.85),
     "chalk": mat("M_Chalk", "#e9e1cc", 0.9),
     "brass": mat("M_ShadeOchre", "#c99a5b", 0.45, metal=0.2),
@@ -313,25 +315,25 @@ def bookshelf(tag, x, y):
     return root
 
 
-bookshelf("A", 3.45, 3.3)
-bookshelf("B", 4.47, 3.3)
+bookshelf("A", 3.78, 3.3)
+bookshelf("B", 4.8, 3.3)
 
 # ================================================================ 3. Counter
 c_ct = make_coll("Counter")
 COUNTER_Y = 2.3
 counter = empty("Counter", c_ct, (0.0, COUNTER_Y, 0))
-CT_W, CT_D, CT_H = 4.8, 0.62, 1.0
+CT_W, CT_D, CT_H = 6.0, 0.62, 1.0
 box("Counter_Body", c_ct, (CT_W, CT_D - 0.06, CT_H - 0.05), (0, 0.03, (CT_H - 0.05) / 2),
     M["white"], bevel=0.02, parent=counter)
 box("Counter_Top", c_ct, (CT_W + 0.06, CT_D + 0.04, 0.05), (0, 0, CT_H - 0.025), M["wood"],
     bevel=0.012, parent=counter)
 box("Counter_Kick", c_ct, (CT_W - 0.04, 0.02, 0.08), (0, -CT_D / 2 + 0.035, 0.04),
     M["grey"], bevel=0.004, parent=counter)
-for i, xx in enumerate((-2.04, -1.36, -0.68, 0.0, 0.68, 1.36, 2.04)):  # seven walnut panels
+for i, xx in enumerate([-2.72 + 0.68 * k for k in range(9)]):  # nine walnut panels
     box(f"Counter_Panel{i}", c_ct, (0.62, 0.014, 0.76), (xx, -CT_D / 2 + 0.03, 0.5),
         M["walnut"], bevel=0.006, parent=counter)
 # espresso machine (local to counter)
-em = empty("Counter_Espresso", c_ct, (1.6, 0.08, CT_H), parent=counter)
+em = empty("Counter_Espresso", c_ct, (2.0, 0.1, CT_H), parent=counter)
 box("Espresso_Body", c_ct, (0.42, 0.34, 0.36), (0, 0.02, 0.18), M["graphite"], bevel=0.03,
     parent=em)
 box("Espresso_Top", c_ct, (0.44, 0.36, 0.03), (0, 0.02, 0.375), M["steel"], bevel=0.008,
@@ -355,12 +357,39 @@ def cup(name, loc, parent):
     return root
 
 
-cup("Cup_1", (1.05, -0.08, CT_H), counter)
-cup("Cup_2", (1.21, -0.12, CT_H), counter)
+cup("Cup_1", (2.42, -0.05, CT_H), counter)
+cup("Cup_2", (2.58, -0.1, CT_H), counter)
+# grinder + cup stack: espresso section (right), against the back
+gr = empty("Counter_Grinder", c_ct, (1.55, 0.12, CT_H), parent=counter)
+box("Grinder_Body", c_ct, (0.16, 0.2, 0.28), (0, 0, 0.14), M["graphite"], bevel=0.02, parent=gr)
+cyl("Grinder_Hopper", c_ct, 0.075, 0.16, (0, 0, 0.36), M["glass"], segs=16, parent=gr, r2=0.045)
+cyl("Grinder_Beans", c_ct, 0.06, 0.07, (0, 0, 0.31), M["coffee"], segs=16, parent=gr)
+for k in range(4):
+    cyl(f"Counter_CupStack{k}", c_ct, 0.04, 0.05, (2.45, 0.18, CT_H + 0.025 + k * 0.045),
+        M["cup"], segs=14, parent=counter, r2=0.045)
+box("Counter_KnockBox", c_ct, (0.16, 0.16, 0.12), (1.3, 0.14, CT_H + 0.06), M["steel"],
+    bevel=0.01, parent=counter)
 
 # ================================================================ 8. PaymentTerminal
 c_pt = make_coll("PaymentTerminal")
-pt = empty("PaymentTerminal", c_pt, (-1.5, COUNTER_Y - 0.14, CT_H), rot_z=-12)
+c_rg = make_coll("Register")
+rg = empty("Register", c_rg, (0.0, COUNTER_Y + 0.05, CT_H))
+box("Register_Drawer", c_rg, (0.42, 0.38, 0.1), (0, 0.02, 0.05), M["graphite"], bevel=0.012,
+    parent=rg)
+box("Register_DrawerFront", c_rg, (0.36, 0.01, 0.05), (0, -0.173, 0.05), M["hood"], bevel=0.004,
+    parent=rg)
+cyl("Register_Stand", c_rg, 0.022, 0.2, (0, 0.06, 0.2), M["steel"], segs=10, parent=rg)
+box("Register_Screen", c_rg, (0.36, 0.025, 0.25), (0, 0.075, 0.36), M["graphite"], bevel=0.01,
+    parent=rg, rot=(18, 0, 0))
+box("Register_ScreenGlow", c_rg, (0.32, 0.004, 0.21), (0, 0.091, 0.365), M["screen"], bevel=0.0,
+    parent=rg, rot=(18, 0, 0))  # faces Milo (+Y)
+box("Register_CustomerDisplay", c_rg, (0.16, 0.015, 0.1), (0, -0.0, 0.53), M["graphite"],
+    bevel=0.006, parent=rg, rot=(-15, 0, 0))
+box("Register_CustomerGlow", c_rg, (0.14, 0.003, 0.08), (0, -0.009, 0.53), M["screen"],
+    bevel=0.0, parent=rg, rot=(-15, 0, 0))
+box("Register_CardReader", c_rg, (0.07, 0.1, 0.02), (-0.27, -0.05, 0.01), M["graphite"],
+    bevel=0.006, parent=rg)
+pt = empty("PaymentTerminal", c_pt, (0.6, COUNTER_Y - 0.17, CT_H), rot_z=-14)  # 'Braintree' card reader beside the Gate POS
 box("PaymentTerminal_Base", c_pt, (0.12, 0.16, 0.02), (0, 0, 0.01), M["graphite"], bevel=0.006,
     parent=pt)
 box("PaymentTerminal_Body", c_pt, (0.1, 0.17, 0.035), (0, 0.0, 0.04), M["graphite"],
@@ -450,30 +479,61 @@ status = box("VultrVM_Status", c_vm, (0.022, 0.012, VH - 0.18),
 box("VultrVM_StatusTop", c_vm, (VW - 0.1, VD - 0.1, 0.012), (0, 0, VH + 0.046), M["blue_led"],
     bevel=0.003, parent=vm)
 
-# ================================================================ 7. Gate
+def face_plane(name, coll, w, h, loc, material, parent=None):
+    """Plane in local XZ facing -Y with clean 0-1 UVs (u = left->right, v = bottom->top)."""
+    bm = bmesh.new()
+    vs = [bm.verts.new(c) for c in ((-w / 2, 0, -h / 2), (w / 2, 0, -h / 2),
+                                    (w / 2, 0, h / 2), (-w / 2, 0, h / 2))]
+    f = bm.faces.new(vs)
+    bm.normal_update()
+    if f.normal.y > 0:
+        f.normal_flip()
+    uv = bm.loops.layers.uv.new("UVMap")
+    for lp in f.loops:
+        co = lp.vert.co
+        lp[uv].uv = ((co.x + w / 2) / w, (co.z + h / 2) / h)
+    return finish_mesh(bm, name, coll, material, loc, parent)
+
+
+# ================================================================ 7. Gate (countertop POS terminal)
+# The Counterfoil gate *is* the POS card terminal: the web page draws the live result
+# (green tick / amber hold / red block) on Gate_Screen.
 c_gt = make_coll("Gate")
-gate = empty("Gate", c_gt, (-2.05, 1.35, 0))  # arm centre (x~-1.5) lines up with PaymentTerminal
-POST_H = 1.02
-box("Gate_Base", c_gt, (0.32, 0.32, 0.04), (0, 0, 0.02), M["grey"], bevel=0.012, parent=gate)
-box("Gate_Post", c_gt, (0.2, 0.2, POST_H), (0, 0, POST_H / 2), M["white"], bevel=0.03,
-    parent=gate)
-box("Gate_Stripe", c_gt, (0.205, 0.205, 0.04), (0, 0, POST_H - 0.18), M["graphite"],
-    bevel=0.006, parent=gate)
-ARM_Z = POST_H - 0.12
-arm = empty("Gate_Arm", c_gt, (0.1, 0, ARM_Z), parent=gate)  # pivot: rotate about local Y
-cyl("Gate_Arm_Hub", c_gt, 0.06, 0.05, (0.0, 0, 0), M["graphite"], parent=arm, rot=(90, 0, 0))
-ARM_L = 1.05
-box("Gate_Arm_Bar", c_gt, (ARM_L, 0.045, 0.045), (ARM_L / 2, 0, 0), M["white"], bevel=0.015,
-    parent=arm)
-for i in range(3):
-    box(f"Gate_Arm_Band{i}", c_gt, (0.08, 0.05, 0.05), (0.3 + i * 0.3, 0, 0), M["amber"],
-        bevel=0.012, parent=arm)
-arm["rotate_axis"] = "local Y (negative = arm down)"
-gl = empty("Gate_Light", c_gt, (0, 0, POST_H), parent=gate)
-cyl("Gate_Light_Base", c_gt, 0.07, 0.025, (0, 0, 0.0125), M["graphite"], parent=gl)
-sphere("Gate_Light_Dome", c_gt, 0.06, (0, 0, 0.025), M["amber"], parent=gl, cut_below=0.0)
+gate = empty("Gate", c_gt, (0.4, COUNTER_Y - 0.2, CT_H), rot_z=-14)  # customer side of the Register
+cyl("Gate_Base", c_gt, 0.055, 0.014, (0, 0, 0.007), M["graphite"], segs=24, parent=gate)
+cyl("Gate_Swivel", c_gt, 0.018, 0.06, (0, 0, 0.044), M["steel"], segs=12, parent=gate)
+gbody = empty("Gate_Body", c_gt, (0, 0, 0.155), parent=gate)
+gbody.rotation_euler = (math.radians(-14), 0, 0)  # leans back, screen faces the customer (-Y)
+box("Gate_Shell", c_gt, (0.11, 0.026, 0.18), (0, 0, 0), M["graphite"], bevel=0.012, segs=3,
+    parent=gbody)
+box("Gate_Keypad", c_gt, (0.085, 0.004, 0.02), (0, -0.0135, -0.073), M["grey"], bevel=0.0,
+    parent=gbody)
+M["gate_screen"] = mat("M_GateScreen", "#151a20", 0.3, emit="#1f2a36", emit_strength=1.0)
+face_plane("Gate_Screen", c_gt, 0.09, 0.14, (0, -0.0136, 0.012), M["gate_screen"], gbody)
+gl = empty("Gate_Light", c_gt, (0.04, 0, 0.092), parent=gbody)
+sphere("Gate_Light_LED", c_gt, 0.006, (0, 0, 0), M["amber"], parent=gl, segs=10, rings=6)
 
-
+# --- Ledger: open accounting book on a small walnut stand next to the POS (decorative)
+c_lg = make_coll("Ledger")
+lg = empty("Ledger", c_lg, (0.98, COUNTER_Y - 0.12, CT_H), rot_z=-10)
+box("Ledger_StandBase", c_lg, (0.3, 0.2, 0.02), (0, 0, 0.01), M["walnut"], bevel=0.005,
+    parent=lg)
+box("Ledger_StandRest", c_lg, (0.03, 0.12, 0.07), (0, 0.05, 0.045), M["walnut"], bevel=0.005,
+    parent=lg)
+bk = empty("Ledger_Book", c_lg, (0, 0.0, 0.075), parent=lg)
+bk.rotation_euler = (math.radians(28), 0, 0)  # tilted toward the customer
+box("Ledger_Cover", c_lg, (0.34, 0.23, 0.012), (0, 0, 0), M["green_dark"], bevel=0.004,
+    parent=bk)
+for sx in (-1, 1):
+    pg = empty(f"Ledger_Page{sx}", c_lg, (sx * 0.083, 0, 0.012), parent=bk)
+    pg.rotation_euler = (0, math.radians(-sx * 5), 0)
+    box(f"Ledger_PageBlock{sx}", c_lg, (0.158, 0.215, 0.012), (0, 0, 0), M["paper"],
+        bevel=0.002, segs=1, parent=pg)
+    for k in range(9):
+        box(f"Ledger_Rule{sx}_{k}", c_lg, (0.13, 0.0025, 0.0012),
+            (0.0, -0.085 + k * 0.021, 0.0066), M["grey"], bevel=0.0, parent=pg)
+    box(f"Ledger_Margin{sx}", c_lg, (0.0022, 0.19, 0.0012), (-sx * 0.045, 0, 0.0068),
+        M["rust"], bevel=0.0, parent=pg)
 
 # ================================================================ 11. Logo + coffeehouse ambience
 LOGO_PATH = os.path.join(os.path.dirname(OUT), "brand", "logo-1024.png")
@@ -515,7 +575,7 @@ def logo_disc(name, coll, r, depth, loc, parent=None, rot=(90, 0, 0)):
 
 # --- back wall behind the counter (carries menu board + logo sign)
 c_bw = make_coll("BackWall")
-box("BackWall", c_bw, (5.7, 0.06, 2.7), (0.0, 3.48, 1.35), M["white"], bevel=0.015)
+box("BackWall", c_bw, (6.5, 0.06, 2.7), (0.0, 3.48, 1.35), M["white"], bevel=0.015)
 WALL_FRONT = 3.45
 
 # --- Logo_Sign: ~45 cm disc on the counter's centre walnut panel (front, facing -Y)
@@ -563,13 +623,13 @@ finish_mesh(_bm, "MenuBoard_Image", c_mb, m_menu, (0, -0.022, 0), mb)
 c_pl = make_coll("PendantLamps")
 pl = empty("PendantLamps", c_pl)
 RAIL_Z, RAIL_Y = 2.66, COUNTER_Y  # high enough to project above the menu in Cam_Overview
-for i, x in enumerate((-2.2, 2.2)):
+for i, x in enumerate((-2.9, 2.9)):
     box(f"PendantLamps_Arm{i}", c_pl, (0.03, WALL_FRONT - RAIL_Y + 0.03, 0.03),
         (x, (WALL_FRONT + RAIL_Y) / 2, RAIL_Z), M["white"], bevel=0.008, parent=pl)
-box("PendantLamps_Rail", c_pl, (4.43, 0.03, 0.03), (0.0, RAIL_Y, RAIL_Z), M["white"],
+box("PendantLamps_Rail", c_pl, (5.83, 0.03, 0.03), (0.0, RAIL_Y, RAIL_Z), M["white"],
     bevel=0.008, parent=pl)
 BULBS = []
-for i, x in enumerate((-1.8, -0.6, 0.6, 1.8)):
+for i, x in enumerate((-2.3, -0.9, 0.9, 2.3)):
     cyl(f"PendantLamps_Cord{i}", c_pl, 0.004, RAIL_Z - 1.67, (x, RAIL_Y, (RAIL_Z + 1.67) / 2), M["graphite"],
         segs=6, parent=pl)
     sphere(f"PendantLamps_Shade{i}", c_pl, 0.12, (x, RAIL_Y, 1.60), M["brass"], parent=pl,
@@ -578,48 +638,115 @@ for i, x in enumerate((-1.8, -0.6, 0.6, 1.8)):
            segs=12, rings=8)
     BULBS.append((x, RAIL_Y, 1.56))
 
-# --- PastryCase on the counter
+# --- PastryCase: large 2-shelf display left of the register, filled with desserts
 c_pc = make_coll("PastryCase")
-pc = empty("PastryCase", c_pc, (0.45, COUNTER_Y - 0.02, 1.0))
-box("PastryCase_Base", c_pc, (0.42, 0.28, 0.03), (0, 0, 0.015), M["walnut"], bevel=0.006,
+PC_W, PC_D, PC_H = 1.3, 0.5, 0.52
+pc = empty("PastryCase", c_pc, (-1.35, COUNTER_Y - 0.02, 1.0))
+box("PastryCase_Base", c_pc, (PC_W, PC_D, 0.06), (0, 0, 0.03), M["walnut"], bevel=0.01,
     parent=pc)
-box("PastryCase_Glass", c_pc, (0.4, 0.26, 0.2), (0, 0, 0.13), M["glass"], bevel=0.0,
-    parent=pc)
-box("PastryCase_Lid", c_pc, (0.42, 0.28, 0.012), (0, 0, 0.236), M["walnut"], bevel=0.004,
-    parent=pc)
-cr = capsule("PastryCase_Croissant", c_pc, 0.026, 0.11, (-0.12, 0.04, 0.056), M["pastry"],
-             parent=pc, rot=(0, 90, 20), sy=0.8)
-cyl("PastryCase_MuffinCup", c_pc, 0.028, 0.035, (-0.03, -0.05, 0.048), M["glaze"], segs=14,
-    parent=pc, r2=0.033)
-sphere("PastryCase_MuffinTop", c_pc, 0.036, (-0.03, -0.05, 0.065), M["pastry_dark"],
-       parent=pc, cut_below=0.0, segs=14, rings=8)
-sphere("PastryCase_Bun", c_pc, 0.036, (0.065, 0.045, 0.052), M["pastry"], parent=pc,
-       scale=(1, 1, 0.62), segs=14, rings=8)
-torus("PastryCase_Donut", c_pc, 0.026, 0.013, (0.13, -0.045, 0.044), M["glaze"], parent=pc,
-      rot=(0, 0, 0))
+box("PastryCase_Back", c_pc, (PC_W, 0.02, PC_H), (0, PC_D / 2 - 0.01, PC_H / 2 + 0.03),
+    M["walnut"], bevel=0.006, parent=pc)
+for sx in (-1, 1):
+    box(f"PastryCase_Side{sx}", c_pc, (0.012, PC_D, PC_H), (sx * (PC_W / 2 - 0.006), 0,
+        PC_H / 2 + 0.03), M["glass"], bevel=0.0, parent=pc)
+box("PastryCase_Glass", c_pc, (PC_W - 0.02, PC_D - 0.04, 0.012), (0, 0.0, PC_H + 0.03),
+    M["glass"], bevel=0.0, parent=pc)  # top glass
+box("PastryCase_GlassFront", c_pc, (PC_W - 0.02, 0.012, PC_H + 0.05),
+    (0, -PC_D / 2 + 0.1, PC_H / 2 + 0.03), M["glass"], bevel=0.0, parent=pc, rot=(-14, 0, 0))
+box("PastryCase_Shelf", c_pc, (PC_W - 0.04, PC_D - 0.12, 0.012), (0, 0.04, 0.3), M["glass"],
+    bevel=0.0, parent=pc)
+box("PastryCase_TopTrim", c_pc, (PC_W, PC_D, 0.02), (0, 0, PC_H + 0.045), M["walnut"],
+    bevel=0.006, parent=pc)
+M["cake"] = mat("M_CakeSponge", "#e8c898", 0.7)
+M["cake_cream"] = mat("M_CakeCream", "#f6ecdc", 0.6)
+M["choc"] = mat("M_Chocolate", "#5a3826", 0.45)
+M["cookie"] = mat("M_Cookie", "#c98f55", 0.75)
+L1, L2 = 0.06, 0.306  # shelf heights
+
+
+def tray(name, x, z, w=0.26):
+    box(name, c_pc, (w, 0.2, 0.008), (x, 0.03, z + 0.004), M["white"], bevel=0.002, segs=1,
+        parent=pc)
+
+
+def cake_slice(name, x, y, z, rot):
+    bm = bmesh.new()
+    pts = [(0, 0), (0.1, -0.035), (0.1, 0.035)]
+    vb = [bm.verts.new((px, py, 0)) for px, py in pts]
+    vt = [bm.verts.new((px, py, 0.07)) for px, py in pts]
+    bm.faces.new(vb[::-1]); bm.faces.new(vt)
+    for i in range(3):
+        j = (i + 1) % 3
+        bm.faces.new((vb[i], vb[j], vt[j], vt[i]))
+    ob = finish_mesh(bm, name, c_pc, M["cake"], (x, y, z), pc, 30, (0, 0, rot))
+    box(f"{name}_Frost", c_pc, (0.1, 0.07, 0.012), (x + 0.05 * math.cos(math.radians(rot)),
+        y + 0.05 * math.sin(math.radians(rot)), z + 0.076), M["cake_cream"], bevel=0.004,
+        parent=pc, rot=(0, 0, rot))
+    box(f"{name}_Layer", c_pc, (0.098, 0.071, 0.01), (x + 0.05 * math.cos(math.radians(rot)),
+        y + 0.05 * math.sin(math.radians(rot)), z + 0.035), M["choc"], bevel=0.0,
+        parent=pc, rot=(0, 0, rot))
+
+
+# lower shelf: croissants | muffins | cookies
+tray("PastryCase_Tray0", -0.42, L1)
+for k in range(3):
+    capsule(f"PastryCase_Croissant{k}", c_pc, 0.028, 0.13, (-0.48 + k * 0.06, 0.03 + (k % 2) * 0.04,
+            L1 + 0.035), M["pastry"], parent=pc, rot=(0, 90, 30 - k * 20), sy=0.8)
+tray("PastryCase_Tray1", -0.05, L1)
+for k in range(4):
+    mx, my = -0.1 + (k % 2) * 0.1, -0.02 + (k // 2) * 0.1
+    cyl(f"PastryCase_MuffinCup{k}", c_pc, 0.028, 0.04, (mx, my, L1 + 0.028), M["glaze"],
+        segs=14, parent=pc, r2=0.034)
+    sphere(f"PastryCase_MuffinTop{k}", c_pc, 0.038, (mx, my, L1 + 0.048),
+           M["pastry_dark"] if k % 2 else M["choc"], parent=pc, cut_below=0.0, segs=14, rings=8)
+tray("PastryCase_Tray2", 0.32, L1, 0.3)
+for k in range(5):
+    cyl(f"PastryCase_Cookie{k}", c_pc, 0.038, 0.012, (0.24 + (k % 3) * 0.08,
+        -0.01 + (k // 3) * 0.09, L1 + 0.014 + (k // 3) * 0.0), M["cookie"], segs=16, parent=pc)
+# upper shelf: cinnamon buns | cake slices | glazed donuts
+tray("PastryCase_Tray3", -0.4, L2)
+for k in range(3):
+    bx = -0.48 + k * 0.08
+    torus(f"PastryCase_CinnamonBun{k}", c_pc, 0.026, 0.016, (bx, 0.04, L2 + 0.024),
+          M["pastry"], parent=pc, rot=(0, 0, 0))
+    sphere(f"PastryCase_CinnamonTop{k}", c_pc, 0.025, (bx, 0.04, L2 + 0.03), M["glaze"],
+           parent=pc, scale=(1, 1, 0.45), segs=12, rings=6)
+tray("PastryCase_Tray4", 0.0, L2)
+for k in range(3):
+    cake_slice(f"PastryCase_Cake{k}", -0.09 + k * 0.08, 0.02, L2 + 0.008, 90 + (k - 1) * 12)
+tray("PastryCase_Tray5", 0.38, L2)
+for k in range(3):
+    torus(f"PastryCase_Donut{k}", c_pc, 0.028, 0.014, (0.3 + k * 0.08, 0.03, L2 + 0.022),
+          M["glaze"] if k != 1 else M["choc"], parent=pc, rot=(0, 0, 0))
 
 # --- Plants: one by the shelves, one by the VultrVM
 c_pt2 = make_coll("Plants")
 plants = empty("Plants", c_pt2)
 
 
-def plant(tag, loc, h):
-    root = empty(f"Plant_{tag}", c_pt2, loc, parent=plants)
-    cyl(f"Plant_{tag}_Pot", c_pt2, 0.1, 0.28, (0, 0, 0.14), M["rust"], segs=18, parent=root,
-        r2=0.135)
-    cyl(f"Plant_{tag}_Soil", c_pt2, 0.125, 0.01, (0, 0, 0.27), M["soil"], segs=18,
+def plant(tag, loc, h, pot="rust", parent=None, coll=None, s=1.0):
+    coll = coll or c_pt2
+    root = empty(f"Plant_{tag}", coll, loc, parent=parent or plants)
+    cyl(f"Plant_{tag}_Pot", coll, 0.1 * s, 0.28 * s, (0, 0, 0.14 * s), M[pot], segs=18,
+        parent=root, r2=0.135 * s)
+    cyl(f"Plant_{tag}_Soil", coll, 0.125 * s, 0.01, (0, 0, 0.27 * s), M["soil"], segs=18,
         parent=root)
     leaves = [(0, 0, 0.42, 0.16), (0.08, 0.03, 0.62, 0.13), (-0.07, -0.04, 0.68, 0.12),
               (0.02, 0.05, 0.86, 0.11), (-0.03, -0.02, 0.98, 0.09)]
+    base = 0.3 * s
     for i, (x, y, z, r) in enumerate(leaves):
-        z = 0.3 + (z - 0.3) * (h - 0.3) / 0.7
-        sphere(f"Plant_{tag}_Leaf{i}", c_pt2, r, (x, y, z),
+        z = base + (z - 0.3) * (h - base) / 0.7
+        sphere(f"Plant_{tag}_Leaf{i}", coll, r * s, (x * s, y * s, z),
                M["leaf"] if i % 2 == 0 else M["leaf_light"], parent=root,
                scale=(1, 1, 1.15), segs=14, rings=8)
+    return root
 
 
-plant("Shelves", (5.1, 2.65, 0), 1.05)
+plant("Shelves", (3.3, 2.95, 0), 1.05)
 plant("VultrVM", (-4.05, 3.2, 0), 0.8)
+plant("Corner", (-5.05, 0.05, 0), 1.55, pot="pot_cream", s=1.3)
+plant("FrontRight", (5.1, -1.45, 0), 1.1, pot="pot_char", s=1.1)
+plant("BackLeft", (-3.45, 3.2, 0), 0.65, pot="pot_cream", s=0.8)
 
 # (no bar stools: normal cafe seating lives in CafeTables)
 
@@ -644,22 +771,6 @@ def image_mat(name, path, emissive=1.0, rough=0.4):
     bsdf.inputs["Emission Strength"].default_value = emissive
     bsdf.inputs["Roughness"].default_value = rough
     return m
-
-
-def face_plane(name, coll, w, h, loc, material, parent=None):
-    """Plane in local XZ facing -Y with clean 0-1 UVs (u = left->right, v = bottom->top)."""
-    bm = bmesh.new()
-    vs = [bm.verts.new(c) for c in ((-w / 2, 0, -h / 2), (w / 2, 0, -h / 2),
-                                    (w / 2, 0, h / 2), (-w / 2, 0, h / 2))]
-    f = bm.faces.new(vs)
-    bm.normal_update()
-    if f.normal.y > 0:
-        f.normal_flip()
-    uv = bm.loops.layers.uv.new("UVMap")
-    for lp in f.loops:
-        co = lp.vert.co
-        lp[uv].uv = ((co.x + w / 2) / w, (co.z + h / 2) / h)
-    return finish_mesh(bm, name, coll, material, loc, parent)
 
 
 BRAND = os.path.join(os.path.dirname(OUT), "brand")
@@ -774,10 +885,10 @@ face_plane("MenuBoard_HaloGlow", bpy.data.collections["MenuBoard"], gw, gh, (0, 
 
 # --- PickupCorner: raised hand-off ledge at the counter end next to the Gate
 c_pk = make_coll("PickupCorner")
-pk = empty("PickupCorner", c_pk, (-CT_W / 2 - 0.18, COUNTER_Y, 0))
+pk = empty("PickupCorner", c_pk, (CT_W / 2 + 0.18, COUNTER_Y, 0))  # far end, after the espresso section
 box("PickupCorner_Cabinet", c_pk, (0.3, 0.5, 1.06), (0, 0, 0.53), M["white"], bevel=0.015,
     parent=pk)
-box("PickupCorner_Panel", c_pk, (0.012, 0.42, 0.76), (-0.152, 0, 0.5), M["walnut"],
+box("PickupCorner_Panel", c_pk, (0.012, 0.42, 0.76), (0.152, 0, 0.5), M["walnut"],
     bevel=0.004, parent=pk)
 box("PickupCorner_Ledge", c_pk, (0.34, 0.54, 0.04), (0, 0, 1.08), M["walnut"], bevel=0.008,
     parent=pk)
@@ -903,34 +1014,173 @@ for row, z0 in enumerate((0.0425, 0.2625)):
         k += 1
 
 
-# --- CafeTables: two small tables with two chairs each, between counter and nook
-c_cf = make_coll("CafeTables")
-cafe = empty("CafeTables", c_cf)
+# ================================================================ 13. Seating groups
+M["oak"] = mat("M_Oak", "#b08660", 0.5)
+M["oak_edge"] = mat("M_OakEdge", "#6f4d33", 0.55)
+M["leather"] = mat("M_LeatherBrown", "#6b4128", 0.32)
+M["leather_dark"] = mat("M_LeatherSeam", "#4a2c1b", 0.4)
+M["fabric_green"] = mat("M_FabricGreen", "#2e4a3e", 0.97)
+M["fabric_button"] = mat("M_FabricButton", "#22372e", 0.9)
+M["ceramic"] = mat("M_CeramicSage", "#a9b8a0", 0.35)
+M["laptop"] = mat("M_LaptopAlu", "#b9bcc1", 0.3, metal=0.6)
+M["art_sage"] = mat("M_ArtSage", "#8fa58a", 0.9)
+M["art_terra"] = mat("M_ArtTerracotta", "#c67a55", 0.9)
+M["art_navy"] = mat("M_ArtNavy", "#3d4c6b", 0.9)
+EXTRA_LIGHTS = []  # (name, location, power) recreated as warm point lights below
 
 
-def cafe_chair(name, loc, rot_z, parent):
-    root = empty(name, c_cf, loc, rot_z=rot_z, parent=parent)
-    box(f"{name}_Seat", c_cf, (0.4, 0.4, 0.04), (0, 0, 0.46), M["walnut"], bevel=0.012,
+def wood_chair(name, coll, loc, rot_z, parent):
+    root = empty(name, coll, loc, rot_z=rot_z, parent=parent)
+    box(f"{name}_Seat", coll, (0.42, 0.42, 0.045), (0, 0, 0.455), M["oak"], bevel=0.015,
         parent=root)
-    box(f"{name}_Back", c_cf, (0.4, 0.03, 0.3), (0, 0.185, 0.66), M["walnut"], bevel=0.012,
-        parent=root, rot=(-6, 0, 0))
     for sx in (-1, 1):
         for sy in (-1, 1):
-            cyl(f"{name}_Leg{sx}{sy}", c_cf, 0.013, 0.44, (sx * 0.17, sy * 0.17, 0.22),
-                M["graphite"], segs=8, parent=root)
+            cyl(f"{name}_Leg{sx}{sy}", coll, 0.017, 0.44, (sx * 0.175, sy * 0.175, 0.22),
+                M["oak_edge"], segs=8, parent=root, r2=0.014)
+        cyl(f"{name}_Post{sx}", coll, 0.015, 0.4, (sx * 0.175, 0.185, 0.68), M["oak_edge"],
+            segs=8, parent=root)
+    box(f"{name}_Rail", coll, (0.4, 0.03, 0.09), (0, 0.19, 0.82), M["oak"], bevel=0.012,
+        parent=root)
+    box(f"{name}_Rail2", coll, (0.36, 0.022, 0.04), (0, 0.19, 0.66), M["oak"], bevel=0.008,
+        parent=root)
+    return root
 
 
-for ti, (tx, ty) in enumerate(((1.0, 0.8), (2.6, 0.8), (1.0, -0.75), (2.6, -0.75))):
-    t = empty(f"CafeTable_{ti}", c_cf, (tx, ty, 0), parent=cafe)
-    cyl(f"CafeTable_{ti}_Base", c_cf, 0.2, 0.02, (0, 0, 0.01), M["graphite"], segs=24, parent=t)
-    cyl(f"CafeTable_{ti}_Stem", c_cf, 0.025, 0.72, (0, 0, 0.38), M["brass_m"], segs=10, parent=t)
-    cyl(f"CafeTable_{ti}_Top", c_cf, 0.32, 0.03, (0, 0, 0.745), M["white"], segs=32, parent=t)
-    cyl(f"CafeTable_{ti}_Cup", c_cf, 0.033, 0.07, (0.08, 0.05, 0.795), M["cup"], segs=14,
-        parent=t, r2=0.038)
-    cyl(f"CafeTable_{ti}_Coffee", c_cf, 0.034, 0.003, (0.08, 0.05, 0.828), M["coffee"],
-        segs=14, parent=t)
-    cafe_chair(f"CafeChair_{ti}A", (-0.5, 0, 0), 90, t)   # faces the table (+X)
-    cafe_chair(f"CafeChair_{ti}B", (0.5, 0, 0), -90, t)   # faces the table (-X)
+def hanging_lamp(prefix, coll, x, y, rail_z, shade_z, parent):
+    cyl(f"{prefix}_Cord", coll, 0.004, rail_z - shade_z - 0.07, (x, y, (rail_z + shade_z + 0.07) / 2),
+        M["graphite"], segs=6, parent=parent)
+    sphere(f"{prefix}_Shade", coll, 0.1, (x, y, shade_z), M["brass"], parent=parent,
+           scale=(1, 1, 0.85), cut_below=0.0)
+    sphere(f"{prefix}_Bulb", coll, 0.034, (x, y, shade_z - 0.005), M["bulb"], parent=parent,
+           segs=12, rings=8)
+
+
+# --- 1. CommunalTable: long oak table, 6 chairs, 3 pendants on a ceiling rail
+c_ct2 = make_coll("CommunalTable")
+CT_X, CT_Yc = 1.6, -0.45
+ctab = empty("CommunalTable", c_ct2, (CT_X, CT_Yc, 0))
+box("CommunalTable_Edge", c_ct2, (2.6, 0.9, 0.05), (0, 0, 0.725), M["oak_edge"], bevel=0.012,
+    parent=ctab)
+box("CommunalTable_Top", c_ct2, (2.56, 0.86, 0.012), (0, 0, 0.756), M["oak"], bevel=0.004,
+    parent=ctab)
+for sx in (-1, 1):  # two solid trestle legs + stretcher
+    box(f"CommunalTable_Trestle{sx}", c_ct2, (0.08, 0.72, 0.68), (sx * 1.05, 0, 0.36),
+        M["oak_edge"], bevel=0.015, parent=ctab)
+    box(f"CommunalTable_Foot{sx}", c_ct2, (0.12, 0.8, 0.05), (sx * 1.05, 0, 0.025),
+        M["oak_edge"], bevel=0.012, parent=ctab)
+box("CommunalTable_Stretcher", c_ct2, (2.1, 0.06, 0.08), (0, 0, 0.3), M["oak_edge"],
+    bevel=0.012, parent=ctab)
+for i, cx in enumerate((-0.85, 0.0, 0.85)):
+    wood_chair(f"CommunalChair_N{i}", c_ct2, (cx, 0.72, 0), 0, ctab)  # faces table (-Y)
+    wood_chair(f"CommunalChair_S{i}", c_ct2, (cx + 0.08, -0.72, 0), 180, ctab)  # faces table (+Y)
+TT = 0.762
+for i, (x, y) in enumerate(((-0.8, -0.18), (0.35, 0.2))):
+    cyl(f"CommunalTable_Cup{i}", c_ct2, 0.035, 0.09, (x, y, TT + 0.045), M["cup"], segs=14,
+        parent=ctab, r2=0.039)
+    cyl(f"CommunalTable_Coffee{i}", c_ct2, 0.036, 0.003, (x, y, TT + 0.088), M["coffee"],
+        segs=14, parent=ctab)
+box("CommunalTable_LaptopBase", c_ct2, (0.32, 0.22, 0.014), (-0.2, -0.2, TT + 0.007),
+    M["laptop"], bevel=0.005, parent=ctab, rot=(0, 0, 8))
+box("CommunalTable_LaptopLid", c_ct2, (0.32, 0.012, 0.21), (-0.215, -0.09, TT + 0.1),
+    M["laptop"], bevel=0.005, parent=ctab, rot=(-12, 0, 8))
+cyl("CommunalTable_Vase", c_ct2, 0.045, 0.16, (0.75, 0.0, TT + 0.08), M["ceramic"], segs=16,
+    parent=ctab, r2=0.03)
+for k, (dx, dy, dz) in enumerate(((0, 0, 0.2), (0.03, 0.02, 0.24), (-0.025, -0.01, 0.23))):
+    sphere(f"CommunalTable_Sprig{k}", c_ct2, 0.03, (0.75 + dx, dy, TT + dz), M["leaf_light"],
+           parent=ctab, segs=10, rings=6)
+CROW_Z = 2.66
+box("CommunalTable_CeilingRail", c_ct2, (2.0, 0.03, 0.03), (0, 0, CROW_Z), M["white"],
+    bevel=0.008, parent=ctab)
+for i, lx in enumerate((-0.8, 0.0, 0.8)):
+    hanging_lamp(f"CommunalTable_Lamp{i}", c_ct2, lx, 0, CROW_Z, 1.62, ctab)
+    EXTRA_LIGHTS.append((f"CommunalLamp_Light{i}", (CT_X + lx, CT_Yc, 1.55), 18))
+
+# --- 2. Banquette along a short left side wall, 2 walnut tables + chairs, WallArt above
+c_bq = make_coll("Banquette")
+BQ_X, BQ_Y = -5.0, 1.6
+bq = empty("Banquette", c_bq, (BQ_X, BQ_Y, 0))
+box("Banquette_SideWall", c_bq, (0.06, 2.5, 2.2), (-0.42, 0, 1.1), M["white"], bevel=0.012,
+    parent=bq)
+box("Banquette_Plinth", c_bq, (0.5, 2.0, 0.1), (-0.13, 0, 0.05), M["walnut"], bevel=0.01,
+    parent=bq)
+box("Banquette_Seat", c_bq, (0.5, 2.0, 0.34), (-0.13, 0, 0.27), M["fabric_green"], bevel=0.05,
+    segs=3, parent=bq)
+box("Banquette_Back", c_bq, (0.16, 2.0, 0.62), (-0.31, 0, 0.75), M["fabric_green"],
+    bevel=0.06, segs=3, parent=bq)
+for row, z in enumerate((0.62, 0.86)):
+    for k in range(7):
+        y = -0.85 + k * (1.7 / 6) + (0.14 if row else 0)
+        if y > 0.95:
+            continue
+        sphere(f"Banquette_Tuft{row}_{k}", c_bq, 0.016, (-0.225, y, z), M["fabric_button"],
+               parent=bq, scale=(0.6, 1, 1), segs=8, rings=6)
+for ti, ty in enumerate((-0.48, 0.48)):
+    t = empty(f"Banquette_Table{ti}", c_bq, (0.42, ty, 0), parent=bq)
+    box(f"Banquette_Table{ti}_Top", c_bq, (0.6, 0.6, 0.035), (0, 0, 0.73), M["walnut"],
+        bevel=0.01, parent=t)
+    cyl(f"Banquette_Table{ti}_Stem", c_bq, 0.03, 0.7, (0, 0, 0.36), M["graphite"], segs=10,
+        parent=t)
+    box(f"Banquette_Table{ti}_Foot", c_bq, (0.4, 0.4, 0.02), (0, 0, 0.01), M["graphite"],
+        bevel=0.006, parent=t)
+    cyl(f"Banquette_Table{ti}_Cup", c_bq, 0.034, 0.08, (0.05 - 0.1 * ti, 0.08, 0.787),
+        M["cup"], segs=14, parent=t, r2=0.038)
+    wood_chair(f"Banquette_Chair{ti}", c_bq, (0.95, ty, 0), -90, bq)  # faces table (-X)
+c_wa = make_coll("WallArt")
+wa = empty("WallArt", c_wa, (BQ_X - 0.385, BQ_Y, 0))
+for i, (y, w, h, inner, accent) in enumerate(((-0.45, 0.55, 0.7, M["art_sage"], M["art_terra"]),
+                                               (0.45, 0.55, 0.7, M["art_navy"], M["cream"]))):
+    box(f"WallArt_Frame{i}", c_wa, (0.03, w, h), (0.015, y, 1.62), M["walnut"], bevel=0.006,
+        parent=wa)
+    box(f"WallArt_Mat{i}", c_wa, (0.008, w - 0.07, h - 0.07), (0.033, y, 1.62), M["cream"],
+        bevel=0.0, parent=wa)
+    box(f"WallArt_Print{i}", c_wa, (0.006, w - 0.17, h - 0.19), (0.04, y, 1.63), inner,
+        bevel=0.0, parent=wa)
+    cyl(f"WallArt_Motif{i}", c_wa, 0.08, 0.006, (0.045, y, 1.66), accent, segs=24,
+        parent=wa, rot=(0, 90, 0))
+
+# --- 3. LoungeCluster: two leather club chairs facing each other, coffee table, lamp, plant
+c_lc = make_coll("LoungeCluster")
+LC_X, LC_Y = 4.15, 2.15
+lc = empty("LoungeCluster", c_lc, (LC_X, LC_Y, 0))
+
+
+def club_chair(tag, loc, rot_z):
+    root = empty(f"LoungeCluster_Chair{tag}", c_lc, loc, rot_z=rot_z, parent=lc)
+    box(f"Club{tag}_Body", c_lc, (0.72, 0.7, 0.3), (0, 0, 0.25), M["leather"], bevel=0.08,
+        segs=4, parent=root)
+    box(f"Club{tag}_Cushion", c_lc, (0.5, 0.52, 0.1), (0, -0.04, 0.43), M["leather"],
+        bevel=0.045, segs=3, parent=root)
+    box(f"Club{tag}_Back", c_lc, (0.72, 0.18, 0.4), (0, 0.27, 0.6), M["leather"], bevel=0.08,
+        segs=4, parent=root)
+    for sx in (-1, 1):
+        box(f"Club{tag}_Arm{sx}", c_lc, (0.13, 0.66, 0.26), (sx * 0.3, 0.0, 0.5),
+            M["leather"], bevel=0.06, segs=3, parent=root)
+        box(f"Club{tag}_Seam{sx}", c_lc, (0.135, 0.6, 0.012), (sx * 0.3, 0.0, 0.42),
+            M["leather_dark"], bevel=0.004, parent=root)
+        for sy in (-1, 1):
+            cyl(f"Club{tag}_Foot{sx}{sy}", c_lc, 0.022, 0.1, (sx * 0.29, sy * 0.28, 0.05),
+                M["walnut"], segs=8, parent=root, r2=0.016)
+
+
+club_chair("A", (-0.55, 0, 0), 90)   # faces +X
+club_chair("B", (0.55, 0, 0), -90)   # faces -X
+cyl("LoungeCluster_TableTop", c_lc, 0.3, 0.04, (0, 0, 0.4), M["walnut"], segs=32, parent=lc)
+cyl("LoungeCluster_TableBase", c_lc, 0.12, 0.38, (0, 0, 0.19), M["oak_edge"], segs=20,
+    parent=lc, r2=0.08)
+cyl("LoungeCluster_Book", c_lc, 0.0, 0.0, (0, 0, 0), M["rust"], segs=3, parent=lc) \
+    if False else box("LoungeCluster_Book", c_lc, (0.2, 0.14, 0.03), (-0.08, -0.08, 0.435),
+                      M["navy"], bevel=0.004, parent=lc, rot=(0, 0, 20))
+cyl("LoungeCluster_LampBase", c_lc, 0.05, 0.03, (0.13, 0.1, 0.435), M["brass_m"], segs=16,
+    parent=lc)
+cyl("LoungeCluster_LampStem", c_lc, 0.008, 0.2, (0.13, 0.1, 0.55), M["brass_m"], segs=8,
+    parent=lc)
+_bm = bmesh.new()
+bmesh.ops.create_cone(_bm, cap_ends=False, segments=20, radius1=0.1, radius2=0.065, depth=0.11)
+finish_mesh(_bm, "LoungeCluster_LampShade", c_lc, M["lampshade"], (0.13, 0.1, 0.67), lc, 60)
+sphere("LoungeCluster_LampBulb", c_lc, 0.022, (0.13, 0.1, 0.645), M["bulb"], parent=lc,
+       segs=10, rings=6)
+plant("Lounge", (0.0, 0.62, 0), 0.9, pot="pot_char", parent=lc, coll=c_lc, s=0.9)
+EXTRA_LIGHTS.append(("LoungeLamp_Light", (LC_X + 0.13, LC_Y + 0.1, 0.62), 10))
 
 # --- BookOfTheDay: free-standing digital totem at the nook's front-left edge, facing camera
 c_bd = make_coll("BookOfTheDay")
@@ -1081,14 +1331,11 @@ def hart_extras(name, coll, root):
             sy=0.74)
     box(f"{name}_Collar", coll, (0.12, 0.02, 0.12), (0, -0.14, 1.3), M["white"], bevel=0.01,
         parent=root, rot=(-12, 0, 0))
-    # stamp in right hand
-    hx, hy, hz = 0.195, -0.26, 1.02
-    cyl(f"{name}_StampHandle", coll, 0.02, 0.09, (hx, hy, hz + 0.06), M["wood_dark"], segs=12,
-        parent=root)
-    sphere(f"{name}_StampKnob", coll, 0.026, (hx, hy, hz + 0.115), M["wood_dark"], parent=root,
-           segs=12, rings=8)
-    box(f"{name}_StampBase", coll, (0.07, 0.05, 0.022), (hx, hy, hz - 0.04), M["burgundy"],
-        bevel=0.005, parent=root)
+    # small tablet for approving holds, held in front with both hands
+    box(f"{name}_Tablet", coll, (0.22, 0.16, 0.012), (0.0, -0.3, 1.04), M["graphite"],
+        bevel=0.007, parent=root, rot=(30, 0, 0))
+    box(f"{name}_TabletScreen", coll, (0.195, 0.135, 0.003), (0.0, -0.302, 1.048), M["screen"],
+        bevel=0.0, parent=root, rot=(30, 0, 0))
 
 
 def courier_extras(name, coll, root):
@@ -1109,10 +1356,10 @@ def courier_extras(name, coll, root):
 
 figure("Ivy", (-3.45, 0.35, 0), 0, M["green"], M["pants"], hair_ivy,
        arms=("down", "tuck"), extras=ivy_extras)
-figure("Milo", (-0.45, COUNTER_Y + 0.62, 0), 0, M["white"], M["pants_dark"], hair_milo,
+figure("Milo", (0.0, COUNTER_Y + 0.62, 0), 0, M["white"], M["pants_dark"], hair_milo,
        arms=("forward", "forward"), extras=milo_extras)
-figure("MrsHart", (-2.55, 1.5, 0), -12, M["white"], M["pants_dark"], hair_hart,
-       arms=("down", "forward"), extras=hart_extras)
+figure("MrsHart", (0.85, COUNTER_Y + 0.66, 0), -8, M["white"], M["pants_dark"], hair_hart,
+       arms=("forward", "forward"), extras=hart_extras)
 figure("InkwellCourier", (0.3, -3.25, 0), -135, M["hood"], M["pants_dark"], hair_courier,
        arms=("down", "forward"), eyes=False, extras=courier_extras)
 
@@ -1161,6 +1408,15 @@ no = bpy.data.objects.new("ReadingLamp_Light", nd)
 no.location = NOOK_LAMP
 link(no, c_env)
 tag_light(no)
+for lname, lpos, lpow in EXTRA_LIGHTS:
+    ld = bpy.data.lights.new(lname, "POINT")
+    ld.energy = lpow
+    ld.color = WARM_2700K
+    ld.shadow_soft_size = 0.06
+    lo = bpy.data.objects.new(lname, ld)
+    lo.location = lpos
+    link(lo, c_env)
+    tag_light(lo)
 
 area_d = bpy.data.lights.new("Area_Fill", "AREA")
 area_d.energy = 900
@@ -1208,6 +1464,11 @@ scene.view_settings.exposure = 0.0
 try:
     ee = scene.eevee
     ee.taa_render_samples = 64
+    if hasattr(ee, "shadow_pool_size"):
+        try:
+            ee.shadow_pool_size = "1024"
+        except Exception:
+            pass
     for attr, val in (("use_shadows", True), ("use_raytracing", False),
                       ("shadow_ray_count", 2), ("shadow_step_count", 8)):
         if hasattr(ee, attr):
@@ -1285,19 +1546,23 @@ join_under(O["OrderDesk"], "OrderDesk_Mesh")
 join_under(O["SandboxBox"], "SandboxBox_Frame",
            exclude_roots=(O["SandboxBox_Glass"], O["SandboxBox_Alarm"], O["SandboxBox_CoreLight"]))
 join_under(O["VultrVM"], "VultrVM_Mesh", exclude_roots=(O["VultrVM_Status"],))
-join_under(O["Gate_Arm"], "Gate_Arm_Mesh")
 join_under(O["Gate_Light"], "Gate_Light_Mesh")
-join_under(O["Gate"], "Gate_Mesh", exclude_roots=(O["Gate_Arm"], O["Gate_Light"]))
+join_under(O["Gate"], "Gate_Mesh", exclude_roots=(O["Gate_Light"], O["Gate_Screen"]))
+join_under(O["Ledger"], "Ledger_Mesh")
 for who in ("Ivy", "Milo", "MrsHart", "InkwellCourier"):
     join_under(O[who], f"{who}_Mesh",
                exclude_roots=(O["Logo_Badge"],) if who == "Milo" else ())
 join_under(O["MenuBoard"], "MenuBoard_Mesh", exclude_roots=(O["MenuBoard_Image"], O["MenuBoard_HaloGlow"]))
 join_under(O["PendantLamps"], "PendantLamps_Mesh")
-join_under(O["PastryCase"], "PastryCase_Mesh", exclude_roots=(O["PastryCase_Glass"],))
+join_under(O["PastryCase"], "PastryCase_Mesh", exclude_roots=(O["PastryCase_Glass"], O["PastryCase_GlassFront"]))
+join_under(O["Register"], "Register_Mesh")
 join_under(O["Plants"], "Plants_Mesh")
 join_under(O["PickupCorner"], "PickupCorner_Mesh", exclude_roots=(O["PickupCorner_SignText"],))
 join_under(O["ReadingNook"], "ReadingNook_Mesh")
-join_under(O["CafeTables"], "CafeTables_Mesh")
+join_under(O["CommunalTable"], "CommunalTable_Mesh")
+join_under(O["Banquette"], "Banquette_Mesh")
+join_under(O["WallArt"], "WallArt_Mesh")
+join_under(O["LoungeCluster"], "LoungeCluster_Mesh")
 join_under(O["BookOfTheDay"], "BookOfTheDay_Mesh", exclude_roots=(O["BookOfTheDay_Face"],))
 
 
@@ -1347,9 +1612,10 @@ if DO_RENDER:
     ground = finish_mesh(bmg, "Preview_Ground", c_env, gm, (0, 0, -1.1), None)
     render_to(os.path.join(OUT, "preview-overview.png"), *OVERVIEW)
     render_to(os.path.join(OUT, "preview-ivy.png"), (-1.7, -2.4, 1.95), (-3.35, 0.1, 1.05), 42)
-    render_to(os.path.join(OUT, "preview-counter.png"), (1.6, -1.0, 2.6), (-0.6, 2.9, 1.35), 24)
+    render_to(os.path.join(OUT, "preview-counter.png"), (0.55, -0.35, 2.45), (0.25, 2.6, 1.15), 16)
+    render_to(os.path.join(OUT, "preview-seating.png"), (0.5, -5.8, 4.4), (-0.2, 1.0, 0.6), 19)
     render_to(os.path.join(OUT, "preview-nook.png"), (6.3, -2.2, 1.8), (4.0, 0.35, 0.6), 32)
-    render_to(os.path.join(OUT, "preview-gate.png"), (0.0, -1.4, 2.1), (-1.75, 1.7, 0.85), 40)
+    render_to(os.path.join(OUT, "preview-gate.png"), (0.75, 1.05, 1.5), (0.5, 2.15, 1.12), 40)
     aim(cam, *OVERVIEW)
     bpy.data.objects.remove(ground)
     bpy.data.materials.remove(gm)

@@ -48,6 +48,8 @@
   .v-pass { background: #e3efe8; color: var(--green); } .v-hold { background: #fbf0d9; color: #8a5d00; } .v-block, .v-quarantined { background: #f8e1dc; color: var(--red); }
   pre { margin: 10px 0 0; padding: 12px; border-radius: 10px; background: #1f2624; color: #e9efe9; font: 12px/1.45 var(--mono); overflow-x: auto; max-height: 260px; }
   pre .hl { background: #6b2a20; color: #fff; }
+  #text, #side { min-width: 0; }
+  td { overflow-wrap: anywhere; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; } td, th { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
   .diff { font: 600 13px/1.4 var(--mono); } .diff del { color: var(--red); } .diff ins { color: var(--green); text-decoration: none; }
   textarea, input { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 13px/1.4 inherit; background: #fff; margin-bottom: 8px; }
@@ -115,9 +117,9 @@ const STEPS = [
   { n: "05", k: "Drills", title: "Assume the model itself is turned", focus: "SandboxBox", drills: true,
     body: `<p>The parser does not have to be fooled into being hostile. These drills hand the box code that is hostile on purpose. Each one runs live in a fresh container.</p>` },
   { n: "06", k: "Milo pays", title: "An honest refund goes through", focus: "Gate", run: "honest",
-    body: `<p>A customer returns a book with an open return record. Ivy reads it, Milo refunds it, the <b>Counterfoil gate</b> checks the amount, the order, the record and the remaining balance against the books, and the money moves on the Braintree sandbox.</p>` },
+    body: `<p>A customer returns a book with an open return record. Ivy reads it, Milo refunds it, the <b>Counterfoil POS</b> checks the amount, the order, the return record and the remaining balance against the books, and the money moves on the Braintree sandbox.</p>` },
   { n: "07", k: "Hidden note", title: "The hidden note, and Mrs. Hart", focus: "MrsHart", run: "hidden-note",
-    body: `<p>The email asks for 25.00. The attachment tells the payments agent to make it 40.00. The parser is clean, so the box has nothing to stop. This is the gate's job: the call doesn't match the books, so it is <b>held for Mrs. Hart</b>, with the exact difference.</p>` },
+    body: `<p>The email asks for 25.00. The attachment tells the payments agent to make it 40.00. The parser is clean, so the box has nothing to stop. This is Counterfoil's job: the call doesn't match the books, so the POS <b>holds it for Mrs. Hart</b>, with the exact difference.</p>` },
   { n: "08", k: "Fool it", title: "Try to fool it yourself", focus: "OrderDesk", fool: true,
     body: `<p>Write the email. The books are those of order ST-1042: one return open, <b>30.00 USD</b> refundable. Can you get more money out, or get it sent somewhere else?</p>` },
   { n: "09", k: "Evidence", title: "Every run leaves a receipt", focus: "VultrVM", evidence: true,
@@ -166,7 +168,7 @@ const named = {};
 const LABELS = {
   Ivy: ["Ivy · Reader agent", ""], Milo: ["Milo · payments agent", ""], MrsHart: ["Mrs. Hart · human approval", ""],
   InkwellCourier: ["Inkwell Press · supplier", "alarm"], SandboxBox: ["Sandbox · gVisor, no network", "alarm"],
-  Gate: ["Counterfoil gate", "hold"], VultrVM: ["Vultr VM", "vultr"], PaymentTerminal: ["Braintree sandbox", ""],
+  Gate: ["Counterfoil POS · checked against the books", "hold"], Ledger: ["The books", ""], VultrVM: ["Vultr VM", "vultr"], PaymentTerminal: ["Braintree sandbox", ""],
   OrderDesk: ["Inbox", ""], ReadingNook: ["Reading nook", ""],
 };
 const labelObjs = {};
@@ -182,6 +184,26 @@ function canvasTexture(w, h, draw) {
 }
 const ADS = ["/static/brand/ads/ad-1-latte.png", "/static/brand/ads/ad-2-bun.png", "/static/brand/ads/ad-3-matcha.png"];
 const adTex = ADS.map((u) => { const t = new THREE.TextureLoader().load(u); t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; return t; });
+let posCanvas = null, posTex = null;
+function drawPOS(state = "ready", line1 = "", line2 = "") {
+  if (!posCanvas) { posCanvas = document.createElement("canvas"); posCanvas.width = 360; posCanvas.height = 560; }
+  const g = posCanvas.getContext("2d"), w = 360, h = 560;
+  const C = { ready: ["#1f2624", "#9fb3ab"], check: ["#1f2624", "#E9B79A"], ok: ["#e3efe8", "#2F7A55"], hold: ["#fbf0d9", "#B07A00"], block: ["#f8e1dc", "#C4402F"] }[state];
+  g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+  g.fillStyle = state === "ready" || state === "check" ? "#E9B79A" : C[1]; g.font = "600 22px ui-monospace, Menlo"; g.textAlign = "center";
+  g.fillText("COUNTERFOIL", w / 2, 50);
+  g.lineWidth = 16; g.strokeStyle = C[1]; g.beginPath();
+  if (state === "ok") { g.moveTo(105, 270); g.lineTo(160, 325); g.lineTo(260, 215); }
+  else if (state === "block") { g.moveTo(115, 215); g.lineTo(245, 345); g.moveTo(245, 215); g.lineTo(115, 345); }
+  else if (state === "hold") { g.arc(w / 2, 280, 70, 0, Math.PI * 2); g.moveTo(w / 2, 240); g.lineTo(w / 2, 285); g.lineTo(w / 2 + 30, 305); }
+  else { g.arc(w / 2, 280, 60, state === "check" ? 0.3 : 0, state === "check" ? Math.PI * 1.6 : Math.PI * 2); }
+  g.stroke();
+  const t = { ready: "Ready", check: "Checking against the books", ok: "Approved", hold: "Held for Mrs. Hart", block: "Blocked" }[state];
+  g.fillStyle = state === "ready" || state === "check" ? "#F4EEDF" : C[1]; g.font = "700 30px Georgia"; wrap(g, t, w / 2, 420, 320, 36);
+  g.fillStyle = state === "ready" || state === "check" ? "#9fb3ab" : "#3b3b3b"; g.font = "22px ui-monospace, Menlo";
+  if (line1) g.fillText(line1, w / 2, 495); if (line2) g.fillText(line2, w / 2, 528);
+  if (posTex) posTex.needsUpdate = true;
+}
 function bookTexture() {
   return canvasTexture(720, 1260, (g, w, h) => {
     g.fillStyle = "#1f2624"; g.fillRect(0, 0, w, h);
@@ -200,7 +222,7 @@ function wrap(g, text, x, y, maxW, lh) {
   g.fillText(line, x, y);
 }
 
-new GLTFLoader().load("/static/quiet-page.glb", (gltf) => {
+new GLTFLoader().load("/static/quiet-page.glb?v=" + Date.now(), (gltf) => {
   const root = gltf.scene;
   root.traverse((o) => {
     if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
@@ -217,6 +239,8 @@ new GLTFLoader().load("/static/quiet-page.glb", (gltf) => {
   alarm = named.SandboxBox_Alarm || null; if (alarm) alarm.visible = false;
   adFaces = ["AdScreen_L_Face", "AdScreen_R_Face"].map((n) => named[n]).filter(Boolean);
   adFaces.forEach((m, i) => { m.material = new THREE.MeshBasicMaterial({ map: adTex[i % adTex.length], toneMapped: false }); });
+  const gs = named.Gate_Screen || null;
+  if (gs) { drawPOS("ready"); posTex = new THREE.CanvasTexture(posCanvas); posTex.colorSpace = THREE.SRGBColorSpace; posTex.flipY = false; gs.material = new THREE.MeshBasicMaterial({ map: posTex, toneMapped: false }); }
   bookFace = named.BookOfTheDay_Face || null;
   if (bookFace) bookFace.material = new THREE.MeshBasicMaterial({ map: bookTexture(), toneMapped: false });
   for (const [n, [txt, cls]] of Object.entries(LABELS)) {
@@ -240,7 +264,8 @@ const camGoal = { pos: null, target: null };
 function focus(name, instant = false) {
   const o = named[name] || named.Platform; if (!o) return;
   const box = new THREE.Box3().setFromObject(o); const c = box.getCenter(new THREE.Vector3()); const s = box.getSize(new THREE.Vector3()).length();
-  const dist = (name === "Platform" ? 15 : Math.max(4.2, s * 2.4)) * Math.max(1.0, 1.4 / camera.aspect);
+  const minDist = { Gate: 1.3, PaymentTerminal: 1.3, Ledger: 1.3 }[name] || 4.2;
+  const dist = (name === "Platform" ? 15 : Math.max(minDist, s * 2.4)) * Math.max(1.0, 1.4 / camera.aspect);
   // look from the overview camera's side, so close-ups stay on the open front of the café
   const base = named.Platform ? new THREE.Box3().setFromObject(named.Platform).getCenter(new THREE.Vector3()) : c;
   const dir = overviewCam ? overviewCam.clone().sub(base).normalize() : new THREE.Vector3(0.62, 0.55, 0.72).normalize();
@@ -272,6 +297,16 @@ function sceneState(outcome, steps) {
   const held = (steps || []).some((s) => ["APPROVAL", "BLOCK"].includes(s.decision) && ["refund", "charge", "void"].includes(s.tool));
   armTarget = held || alarmOn ? 0 : -Math.PI / 2.2; // arm down when held/blocked; up when money moved
   if (gateLight?.material) gateLight.material.emissive?.set(held ? 0xE0A126 : 0x5fbf7a);
+  const money = (steps || []).find((s) => ["refund", "charge", "void"].includes(s.tool));
+  if (alarmOn) drawPOS("ready", "no payment request", "(quarantined upstream)");
+  else if (!money) drawPOS("ready");
+  else {
+    const f = (money.findings || [])[0];
+    const want = money.args?.amount ? `${money.args.amount} ${money.args.currency || ""}` : money.tool;
+    if (money.decision === "PASS") drawPOS("ok", `${money.tool} ${want}`, "matches the books");
+    else if (money.decision === "APPROVAL") drawPOS("hold", `asked ${want}`, f ? f.code.replaceAll("_", " ").toLowerCase().slice(0, 26) : "");
+    else drawPOS("block", `${money.tool} ${want}`, f ? f.code.replaceAll("_", " ").toLowerCase().slice(0, 26) : "");
+  }
   labelObjs.SandboxBox?.el.classList.toggle("alarm", alarmOn);
 }
 
@@ -351,7 +386,7 @@ function sideIntro(s) {
 
 async function runCase(id) {
   const btns = document.querySelectorAll("#text .btn"); btns.forEach((b) => (b.disabled = true));
-  $("#side").innerHTML = `<div class="card muted">Running… a fresh container is starting.</div>`;
+  $("#side").innerHTML = `<div class="card muted">Running… a fresh container is starting.</div>`; drawPOS("check");
   try {
     const r = await fetch(`/api/run/${id}`, { method: "POST" }); const data = await r.json();
     if (!r.ok) throw new Error(data.detail || r.statusText);
@@ -373,11 +408,11 @@ function show(d) {
   const money = d.steps.find((s) => ["refund", "charge", "void"].includes(s.tool));
   let v, cls;
   if (d.outcome === "quarantined") { v = "Quarantined · the box caught it"; cls = "v-quarantined"; focus("SandboxBox"); }
-  else if (money && money.decision === "PASS") { v = "Paid · the gate let it through"; cls = "v-pass"; focus("Gate"); }
-  else if (money && money.decision === "APPROVAL") { v = "Held for Mrs. Hart"; cls = "v-hold"; focus("MrsHart"); }
+  else if (money && money.decision === "PASS") { v = "Paid · Counterfoil approved it"; cls = "v-pass"; focus("Gate"); }
+  else if (money && money.decision === "APPROVAL") { v = "Held for Mrs. Hart"; cls = "v-hold"; focus("Gate"); }
   else if (money && money.decision === "BLOCK") { v = "Blocked by the gate"; cls = "v-block"; focus("Gate"); }
   else { v = "No money moved"; cls = "v-hold"; }
-  let h = `<div class="card"><span class="verdict ${cls}">${v}</span><p class="muted" style="margin-top:8px">${d.mode === "live" ? "Live run" : "Recorded run"} · model: ${esc(d.model)}</p>`;
+  let h = `<div class="card"><div style="display:flex;gap:14px;align-items:flex-start"><img alt="Counterfoil POS screen" src="${posCanvas ? posCanvas.toDataURL() : ""}" style="width:96px;border-radius:10px;border:6px solid #2b2f2e;flex:none"><div><span class="verdict ${cls}">${v}</span><p class="muted" style="margin-top:8px">${d.mode === "live" ? "Live run" : "Recorded run"} · model: ${esc(d.model)}</p></div></div>`;
   if (d.sandbox) {
     const code = esc(d.sandbox.code || "").replace(/(urlopen|socket|os\.fork|os\.environ|bytearray\(10\*\*7\)|open\('\/job[^)]*\))/g, '<span class="hl">$1</span>');
     h += `<h3 style="margin-top:12px">The parser ${d.model.startsWith("none") ? "(drill code)" : "the model wrote"}</h3><pre>${code}</pre>`;
