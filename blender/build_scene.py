@@ -1410,12 +1410,12 @@ def drape(tag, a, b, sag, n_swags, spacing=0.12):
                M["fairy"], parent=sl, segs=6, rings=4)
 
 
-drape("Wall", (-4.35, WALL_FRONT - 0.02, 2.62), (4.35, WALL_FRONT - 0.02, 2.62), 0.14, 8)
+drape("Wall", (-4.35, WALL_FRONT - 0.06, 2.58), (4.35, WALL_FRONT - 0.06, 2.58), 0.14, 8)
 drape("Shelves", (7.54, -3.85, 1.84), (7.54, -2.03, 1.84), 0.08, 3, 0.1)
 
 # --- Wreath on the back wall at the entrance end (left)
 c_wr = make_coll("Wreath")
-wr = empty("Wreath", c_wr, (-4.05, WALL_FRONT - 0.04, 1.75))
+wr = empty("Wreath", c_wr, (-4.05, WALL_FRONT - 0.095, 1.75))
 torus("Wreath_Ring", c_wr, 0.19, 0.055, (0, 0, 0), M["fir"], parent=wr, rot=(90, 0, 0))
 for k in range(14):
     a = k * 2 * math.pi / 14
@@ -1432,6 +1432,117 @@ for sx in (-1, 1):
         M["holiday_red"], bevel=0.004, parent=wr, rot=(0, sx * 12, 0))
 sphere("Wreath_BowKnot", c_wr, 0.022, (0, -0.065, -0.19), M["holiday_red"], parent=wr, segs=8,
        rings=6)
+
+
+# ================================================================ 15. Wall details (oak / walnut / brass)
+c_wd = make_coll("WallDetails")
+wd = empty("WallDetails", c_wd)
+M["led_warm"] = mat("M_LEDWarm", "#ffd9a0", 0.3, emit="#ffc27a", emit_strength=3.5)
+BW_X0, BW_X1, BW_H = -4.5, 4.5, 2.7
+SL_W, SL_D, SL_P = 0.04, 0.025, 0.075
+SL_Y = WALL_FRONT - SL_D / 2
+
+
+def slat_run(tag, x0, x1, z0, z1, mat_a, mat_b):
+    n = int((x1 - x0) / SL_P)
+    for k in range(n):
+        x = x0 + SL_P / 2 + k * SL_P
+        box(f"Slat_{tag}{k}", c_wd, (SL_W, SL_D, z1 - z0), (x, SL_Y, (z0 + z1) / 2),
+            mat_a if k % 5 else mat_b, bevel=0.0, parent=wd)
+
+
+# back wall: full-height oak slats either side of the screens, a low band beneath them
+SCREEN_X = 1.32  # |x| covered by menu + ad screens (left ad edge at -1.215)
+slat_run("L", BW_X0 + 0.05, -SCREEN_X - 0.05, 0.0, 2.6, M["oak"], M["walnut"])
+slat_run("R", SCREEN_X + 0.05, BW_X1 - 0.05, 0.0, 2.6, M["oak"], M["walnut"])
+slat_run("C", -SCREEN_X, SCREEN_X, 0.0, 1.22, M["oak"], M["walnut"])
+box("BackWall_SlatCapC", c_wd, (2 * SCREEN_X + 0.02, 0.05, 0.03), (0, WALL_FRONT - 0.025, 1.235),
+    M["walnut"], bevel=0.006, parent=wd)
+for sx in (-1, 1):  # warm uplight strip tucked under the top of the side slat runs
+    box(f"BackWall_LED{sx}", c_wd, ((BW_X1 - SCREEN_X - 0.15), 0.02, 0.012),
+        (sx * (SCREEN_X + BW_X1) / 2, WALL_FRONT - 0.04, 2.595), M["led_warm"], bevel=0.0, parent=wd)
+    box(f"BackWall_LEDCap{sx}", c_wd, ((BW_X1 - SCREEN_X - 0.1), 0.06, 0.025),
+        (sx * (SCREEN_X + BW_X1) / 2, WALL_FRONT - 0.03, 2.615), M["walnut"], bevel=0.005, parent=wd)
+# crown trims
+box("Crown_Back", c_wd, (9.04, 0.1, 0.05), (0, WALL_FRONT - 0.02, BW_H + 0.025), M["walnut"],
+    bevel=0.01, parent=wd)
+LW_X = BQ_X - 0.42 + 0.03  # left wall inner face
+LW_Y0, LW_Y1 = BQ_Y - 2.25, BQ_Y + 2.25
+RW_X = 7.92 - 0.03         # right wall inner face
+RW_Y0, RW_Y1 = -1.3 - 2.9, -1.3 + 2.9
+box("Crown_Left", c_wd, (0.1, LW_Y1 - LW_Y0 + 0.04, 0.05), (LW_X + 0.02, BQ_Y, 2.225),
+    M["walnut"], bevel=0.01, parent=wd)
+box("Crown_Right", c_wd, (0.1, RW_Y1 - RW_Y0 + 0.04, 0.05), (RW_X - 0.02, -1.3, 2.225),
+    M["walnut"], bevel=0.01, parent=wd)
+# walnut wainscot (~1.1 m) with a thin oak top rail and vertical stiles, both side walls
+for tag, xf, y0, y1, sgn in (("Left", LW_X, LW_Y0, LW_Y1, 1), ("Right", RW_X, RW_Y0, RW_Y1, -1)):
+    L = y1 - y0
+    yc = (y0 + y1) / 2
+    box(f"Wainscot_{tag}", c_wd, (0.02, L, 1.1), (xf + sgn * 0.01, yc, 0.55), M["walnut"],
+        bevel=0.0, parent=wd)
+    box(f"Wainscot_{tag}Rail", c_wd, (0.045, L + 0.02, 0.04), (xf + sgn * 0.022, yc, 1.12),
+        M["oak"], bevel=0.008, parent=wd)
+    box(f"Wainscot_{tag}Skirt", c_wd, (0.035, L, 0.1), (xf + sgn * 0.017, yc, 0.05), M["oak_edge"],
+        bevel=0.004, parent=wd)
+    n = int(L / 0.6)
+    for k in range(n + 1):
+        box(f"Wainscot_{tag}Stile{k}", c_wd, (0.03, 0.035, 0.95), (xf + sgn * 0.033,
+            y0 + k * (L / n), 0.6), M["oak_edge"], bevel=0.004, parent=wd)
+
+# coffee-origin map between the two prints on the left wall
+MAP_Y, MAP_Z = BQ_Y, 1.62
+box("CoffeeMap_Frame", c_wd, (0.035, 0.92, 0.66), (LW_X + 0.018, MAP_Y, MAP_Z), M["walnut"],
+    bevel=0.006, parent=wd)
+box("CoffeeMap_Paper", c_wd, (0.006, 0.84, 0.58), (LW_X + 0.038, MAP_Y, MAP_Z), M["cream"],
+    bevel=0.0, parent=wd)
+box("CoffeeMap_Equator", c_wd, (0.004, 0.8, 0.004), (LW_X + 0.042, MAP_Y, MAP_Z - 0.02),
+    M["oak_edge"], bevel=0.0, parent=wd)
+for k, (dy, dz, sy, sz) in enumerate(((-0.24, 0.08, 0.12, 0.1), (-0.2, -0.1, 0.07, 0.12),
+                                       (0.02, 0.06, 0.09, 0.14), (0.24, 0.07, 0.15, 0.09),
+                                       (0.3, -0.12, 0.07, 0.05))):
+    sphere(f"CoffeeMap_Land{k}", c_wd, 1.0, (LW_X + 0.042, MAP_Y + dy, MAP_Z + dz), M["art_sage"],
+           parent=wd, scale=(0.004, sy, sz), segs=14, rings=8)
+for k, (dy, dz) in enumerate(((-0.19, -0.04), (0.03, -0.01), (0.22, -0.03), (0.29, 0.02))):
+    sphere(f"CoffeeMap_Origin{k}", c_wd, 0.012, (LW_X + 0.048, MAP_Y + dy, MAP_Z + dz), M["rust"],
+           parent=wd, segs=8, rings=6)
+# brass picture lights over the two prints + the map
+for k, py in enumerate((BQ_Y - 0.8, BQ_Y, BQ_Y + 0.8)):
+    w = 0.42 if k != 1 else 0.6
+    box(f"PictureLight_Mount{k}", c_wd, (0.03, 0.05, 0.05), (LW_X + 0.015, py, 2.08), M["brass_m"],
+        bevel=0.006, parent=wd)
+    cyl(f"PictureLight_Arm{k}", c_wd, 0.007, 0.12, (LW_X + 0.07, py, 2.08), M["brass_m"], segs=8,
+        parent=wd, rot=(0, 90, 0))
+    cyl(f"PictureLight_Bar{k}", c_wd, 0.022, w, (LW_X + 0.13, py, 2.07), M["brass_m"], segs=12,
+        parent=wd, rot=(90, 0, 0))
+    box(f"PictureLight_Glow{k}", c_wd, (0.012, w - 0.03, 0.006), (LW_X + 0.13, py, 2.047),
+        M["led_warm"], bevel=0.0, parent=wd)
+# brass wall sconces flanking the banquette
+for k, py in enumerate((BQ_Y - 1.65, BQ_Y + 1.65)):
+    cyl(f"Sconce_Plate{k}", c_wd, 0.05, 0.015, (LW_X + 0.008, py, 1.7), M["brass_m"], segs=16,
+        parent=wd, rot=(0, 90, 0))
+    cyl(f"Sconce_Arm{k}", c_wd, 0.008, 0.14, (LW_X + 0.08, py, 1.7), M["brass_m"], segs=8,
+        parent=wd, rot=(0, 90, 0))
+    _bm = bmesh.new()
+    bmesh.ops.create_cone(_bm, cap_ends=False, segments=18, radius1=0.07, radius2=0.045, depth=0.12)
+    finish_mesh(_bm, f"Sconce_Shade{k}", c_wd, M["lampshade"], (LW_X + 0.15, py, 1.78), wd, 60)
+    sphere(f"Sconce_Bulb{k}", c_wd, 0.022, (LW_X + 0.15, py, 1.76), M["bulb"], parent=wd, segs=10,
+           rings=6)
+    EXTRA_LIGHTS.append((f"Sconce_Light{k}", (LW_X + 0.2, py, 1.72), 6))
+# floating walnut shelves on the RightWall by the reading corner (books + small plants)
+for k, (sy, sz) in enumerate(((-1.1, 1.45), (-0.55, 1.85), (0.05, 1.45))):
+    box(f"FloatShelf_{k}", c_wd, (0.22, 0.8, 0.035), (RW_X - 0.11, sy, sz), M["walnut"],
+        bevel=0.006, parent=wd)
+    for b in range(5):
+        h = (0.2, 0.17, 0.22, 0.18, 0.19)[(b + k) % 5]
+        box(f"FloatShelf_{k}_Book{b}", c_wd, (0.16, 0.035, h), (RW_X - 0.1, sy - 0.32 + b * 0.04,
+            sz + 0.0175 + h / 2), BOOK_COLS[(b + k) % 4], bevel=0.003, segs=1, parent=wd)
+    cyl(f"FloatShelf_{k}_Pot", c_wd, 0.045, 0.08, (RW_X - 0.11, sy + 0.22, sz + 0.0575),
+        M["pot_cream"], segs=14, parent=wd, r2=0.055)
+    for j, (dx, dy, dz) in enumerate(((0, 0, 0.13), (0.02, 0.03, 0.17), (-0.02, -0.025, 0.16))):
+        sphere(f"FloatShelf_{k}_Leaf{j}", c_wd, 0.04, (RW_X - 0.11 + dx, sy + 0.22 + dy, sz + dz),
+               M["leaf"] if j % 2 == 0 else M["leaf_light"], parent=wd, segs=10, rings=6)
+    box(f"FloatShelf_{k}_Bookend", c_wd, (0.12, 0.015, 0.12), (RW_X - 0.11, sy - 0.12, sz + 0.0775),
+        M["brass_m"], bevel=0.003, parent=wd)
 
 # ================================================================ 9. Characters
 def figure(name, loc, rot_z, top, pants, hair_fn, arms=("down", "down"), eyes=True,
@@ -1802,6 +1913,7 @@ join_under(O["MerchShelf"], "MerchShelf_Mesh", exclude_roots=(O["MerchShelf_Deca
 join_under(O["HolidayTree"], "HolidayTree_Mesh")
 join_under(O["StringLights"], "StringLights_Mesh")
 join_under(O["Wreath"], "Wreath_Mesh")
+join_under(O["WallDetails"], "WallDetails_Mesh")
 join_under(O["CommunalTable"], "CommunalTable_Mesh")
 join_under(O["Banquette"], "Banquette_Mesh")
 join_under(O["WallArt"], "WallArt_Mesh")
@@ -1859,6 +1971,7 @@ if DO_RENDER:
     render_to(os.path.join(OUT, "preview-seating.png"), (0.5, -8.6, 6.2), (0.0, 1.4, 0.6), 19)
     render_to(os.path.join(OUT, "preview-merch.png"), (-2.7, 0.45, 1.65), (-4.2, 2.2, 0.85), 38)
     render_to(os.path.join(OUT, "preview-holiday.png"), (4.2, -8.2, 2.8), (6.6, -3.2, 1.1), 26)
+    render_to(os.path.join(OUT, "preview-walls.png"), (1.2, -1.8, 2.1), (-5.2, 3.0, 1.45), 22)
     render_to(os.path.join(OUT, "preview-nook.png"), (3.9, -8.0, 2.7), (6.3, -2.9, 0.8), 30)
     render_to(os.path.join(OUT, "preview-gate.png"), (0.75, 2.3, 1.5), (0.5, 3.4, 1.12), 40)
     aim(cam, *OVERVIEW)
