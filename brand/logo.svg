@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>The Quiet Page</title>
+  <defs>
+    <!-- text rings: top arc runs left→right over the top, bottom arc runs left→right under the bottom -->
+    <path id="ringTop" d="M 76 256 A 180 180 0 0 1 436 256"/>
+    <path id="ringBottom" d="M 92 256 A 164 164 0 0 0 420 256"/>
+  </defs>
+  <circle cx="256" cy="256" r="246" fill="#2F5D50"/>
+  <circle cx="256" cy="256" r="232" fill="none" stroke="#F4EEDF" stroke-width="3"/>
+  <circle cx="256" cy="256" r="146" fill="#F4EEDF"/>
+  <text font-family="Georgia, 'Times New Roman', serif" font-size="40" font-weight="700" letter-spacing="7" fill="#F4EEDF">
+    <textPath href="#ringTop" startOffset="50%" text-anchor="middle">THE QUIET PAGE</textPath>
+  </text>
+  <text font-family="Georgia, serif" font-size="24" letter-spacing="9" fill="#E9B79A">
+    <textPath href="#ringBottom" startOffset="50%" text-anchor="middle" dominant-baseline="hanging">BOOKS · COFFEE</textPath>
+  </text>
+  <circle cx="92" cy="256" r="6" fill="#E9B79A"/>
+  <circle cx="420" cy="256" r="6" fill="#E9B79A"/>
+  <!-- steam rising from the spine of an open book that sits like a cup on a saucer -->
+  <path d="M240 222 C 226 202, 254 192, 240 170 S 250 144, 243 130" fill="none" stroke="#B5553A" stroke-width="9" stroke-linecap="round"/>
+  <path d="M272 222 C 258 202, 286 192, 272 170 S 282 144, 275 130" fill="none" stroke="#B5553A" stroke-width="9" stroke-linecap="round"/>
+  <path d="M160 238 C 196 224, 232 228, 256 246 C 280 228, 316 224, 352 238 L 352 310 C 316 298, 280 300, 256 318 C 232 300, 196 298, 160 310 Z" fill="#2F5D50"/>
+  <path d="M256 246 L 256 318" stroke="#F4EEDF" stroke-width="5"/>
+  <path d="M180 258 C 206 250, 230 252, 244 262 M180 280 C 206 272, 230 274, 244 284 M332 258 C 306 250, 282 252, 268 262 M332 280 C 306 272, 282 274, 268 284" fill="none" stroke="#F4EEDF" stroke-width="4" stroke-linecap="round"/>
+  <path d="M176 334 Q 256 358 336 334" fill="none" stroke="#2F5D50" stroke-width="9" stroke-linecap="round"/>
+</svg>

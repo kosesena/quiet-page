@@ -83,6 +83,18 @@ M = {
     "graphite": mat("M_Graphite", "#3b3f45", 0.5),
     "steel": mat("M_Steel", "#b8bcc2", 0.35, metal=0.6),
     "green": mat("M_MutedGreen", "#6b8a74", 0.7),
+    "green_dark": mat("M_MutedGreenDark", "#4f6a57", 0.7),
+    "walnut": mat("M_Walnut", "#6e4b34", 0.55),
+    "slate": mat("M_ChalkSlate", "#2f3534", 0.85),
+    "chalk": mat("M_Chalk", "#e9e1cc", 0.9),
+    "brass": mat("M_ShadeOchre", "#c99a5b", 0.45, metal=0.2),
+    "bulb": mat("M_WarmBulb", "#ffe2b0", 0.3, emit="#ffc77a", emit_strength=8.0),
+    "leaf": mat("M_Leaf", "#5e8560", 0.75),
+    "leaf_light": mat("M_LeafLight", "#7b9d6f", 0.75),
+    "soil": mat("M_Soil", "#4a3a2c", 0.95),
+    "pastry": mat("M_Pastry", "#d9a15b", 0.6),
+    "pastry_dark": mat("M_PastryDark", "#8a5a3c", 0.6),
+    "glaze": mat("M_Glaze", "#eedcc0", 0.5),
     "rust": mat("M_Rust", "#b0644a", 0.7),
     "navy": mat("M_Navy", "#33415e", 0.65),
     "cream": mat("M_Cream", "#efe5cf", 0.7),
@@ -315,8 +327,8 @@ box("Counter_Top", c_ct, (CT_W + 0.06, CT_D + 0.04, 0.05), (0, 0, CT_H - 0.025),
 box("Counter_Kick", c_ct, (CT_W - 0.04, 0.02, 0.08), (0, -CT_D / 2 + 0.035, 0.04),
     M["grey"], bevel=0.004, parent=counter)
 for i, xx in enumerate((-0.5, 0.0, 0.5)):  # three calm vertical panels
-    box(f"Counter_Panel{i}", c_ct, (0.58, 0.012, 0.66), (xx * 1.3, -CT_D / 2 + 0.03, 0.5),
-        M["offwhite"], bevel=0.004, parent=counter)
+    box(f"Counter_Panel{i}", c_ct, (0.62, 0.014, 0.76), (xx * 1.3, -CT_D / 2 + 0.03, 0.5),
+        M["walnut"], bevel=0.006, parent=counter)
 # espresso machine (local to counter)
 em = empty("Counter_Espresso", c_ct, (0.62, 0.08, CT_H), parent=counter)
 box("Espresso_Body", c_ct, (0.42, 0.34, 0.36), (0, 0.02, 0.18), M["graphite"], bevel=0.03,
@@ -461,6 +473,167 @@ cyl("Gate_Light_Base", c_gt, 0.07, 0.025, (0, 0, 0.0125), M["graphite"], parent=
 sphere("Gate_Light_Dome", c_gt, 0.06, (0, 0, 0.025), M["amber"], parent=gl, cut_below=0.0)
 
 
+
+# ================================================================ 11. Logo + coffeehouse ambience
+LOGO_PATH = os.path.join(os.path.dirname(OUT), "brand", "logo-1024.png")
+logo_img = bpy.data.images.load(LOGO_PATH, check_existing=False)
+logo_img.name = "QuietPage_Logo"
+logo_img.pack()  # embedded in .blend; the glTF exporter embeds it in the .glb
+LOGO_UV_R = 492 / 1024  # badge circle radius in UV units (alpha bbox 20..1004)
+
+m_logo = bpy.data.materials.new("M_Logo")
+m_logo.use_nodes = True
+_nt = m_logo.node_tree
+_bsdf = next(n for n in _nt.nodes if n.type == "BSDF_PRINCIPLED")
+_tex = _nt.nodes.new("ShaderNodeTexImage")
+_tex.image = logo_img
+_nt.links.new(_tex.outputs["Color"], _bsdf.inputs["Base Color"])
+_bsdf.inputs["Roughness"].default_value = 0.5
+# Disc UVs stay inside the badge circle, so alpha is always 1 there -> opaque material
+# (avoids transparency sorting on the web); the transparent PNG corners are never sampled.
+m_logo_edge = mat("M_LogoEdge", "#2f5d50", 0.55)
+
+
+def logo_disc(name, coll, r, depth, loc, parent=None, rot=(90, 0, 0)):
+    """Cylinder disc; +Z cap carries the logo. rot (90,0,0) makes it face -Y (front)."""
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=48,
+                          radius1=r, radius2=r, depth=depth)
+    uv = bm.loops.layers.uv.new("UVMap")
+    for f in bm.faces:
+        top = f.normal.z > 0.9
+        f.material_index = 0 if top else 1
+        for lp in f.loops:
+            co = lp.vert.co
+            lp[uv].uv = (0.5 + co.x / r * LOGO_UV_R, 0.5 + co.y / r * LOGO_UV_R) if top \
+                else (0.5, 0.97)
+    ob = finish_mesh(bm, name, coll, m_logo, loc, parent, 40, rot)
+    ob.data.materials.append(m_logo_edge)
+    return ob
+
+
+# --- back wall behind the counter (carries menu board + logo sign)
+c_bw = make_coll("BackWall")
+box("BackWall", c_bw, (2.3, 0.06, 2.7), (1.12, 1.95, 1.35), M["white"], bevel=0.015)
+WALL_FRONT = 1.92
+
+# --- Logo_Sign: ~45 cm disc on the counter's centre walnut panel (front, facing -Y)
+c_ls = make_coll("Logo_Sign")
+COUNTER_PANEL_FRONT = 0.85 - 0.31 + 0.03 - 0.007  # counter y + panel offset - half thickness
+sign = logo_disc("Logo_Sign", c_ls, 0.225, 0.015, (1.1, COUNTER_PANEL_FRONT - 0.0075, 0.5))
+
+# --- MenuBoard: readable drinks menu texture (frame + slate are in the image)
+MENU_PATH = os.path.join(os.path.dirname(OUT), "brand", "menu-board.png")
+menu_img = bpy.data.images.load(MENU_PATH, check_existing=False)
+menu_img.name = "QuietPage_Menu"
+menu_img.pack()
+m_menu = bpy.data.materials.new("M_MenuBoard")
+m_menu.use_nodes = True
+_nt = m_menu.node_tree
+_bsdf = next(n for n in _nt.nodes if n.type == "BSDF_PRINCIPLED")
+_tex = _nt.nodes.new("ShaderNodeTexImage")
+_tex.image = menu_img
+_nt.links.new(_tex.outputs["Color"], _bsdf.inputs["Base Color"])
+_bsdf.inputs["Roughness"].default_value = 0.8
+
+MB_W, MB_H, MB_TOP = 1.2, 0.75, 2.1
+c_mb = make_coll("MenuBoard")
+mb = empty("MenuBoard", c_mb, (1.45, WALL_FRONT, MB_TOP - MB_H / 2))
+box("MenuBoard_Backing", c_mb, (MB_W - 0.03, 0.02, MB_H - 0.03), (0, -0.01, 0), M["walnut"],
+    bevel=0.01, parent=mb)
+_bm = bmesh.new()
+_v = [_bm.verts.new(c) for c in ((-MB_W / 2, 0, -MB_H / 2), (MB_W / 2, 0, -MB_H / 2),
+                                 (MB_W / 2, 0, MB_H / 2), (-MB_W / 2, 0, MB_H / 2))]
+_f = _bm.faces.new(_v)  # normal faces -Y (front)
+_bm.normal_update()
+if _f.normal.y > 0:
+    _f.normal_flip()
+# round the corners to match the image's rounded frame (~40 px of 1920)
+bmesh.ops.bevel(_bm, geom=list(_bm.verts), offset=MB_W * 40 / 1920, segments=5,
+                affect="VERTICES", profile=0.5)
+_uv = _bm.loops.layers.uv.new("UVMap")
+for f in _bm.faces:
+    for lp in f.loops:
+        co = lp.vert.co
+        lp[_uv].uv = ((co.x + MB_W / 2) / MB_W, (co.z + MB_H / 2) / MB_H)
+finish_mesh(_bm, "MenuBoard_Image", c_mb, m_menu, (0, -0.022, 0), mb)
+
+# --- PendantLamps: thin ceiling rail from the wall top, 3 warm dome shades
+c_pl = make_coll("PendantLamps")
+pl = empty("PendantLamps", c_pl)
+RAIL_Z, RAIL_Y = 2.66, 0.85  # high enough to project above the menu in Cam_Overview
+for i, x in enumerate((0.2, 1.6)):
+    box(f"PendantLamps_Arm{i}", c_pl, (0.03, WALL_FRONT - RAIL_Y + 0.03, 0.03),
+        (x, (WALL_FRONT + RAIL_Y) / 2, RAIL_Z), M["white"], bevel=0.008, parent=pl)
+box("PendantLamps_Rail", c_pl, (1.43, 0.03, 0.03), (0.9, RAIL_Y, RAIL_Z), M["white"],
+    bevel=0.008, parent=pl)
+BULBS = []
+for i, x in enumerate((0.4, 0.9, 1.4)):
+    cyl(f"PendantLamps_Cord{i}", c_pl, 0.004, RAIL_Z - 1.93, (x, RAIL_Y, (RAIL_Z + 1.93) / 2), M["graphite"],
+        segs=6, parent=pl)
+    sphere(f"PendantLamps_Shade{i}", c_pl, 0.12, (x, RAIL_Y, 1.86), M["brass"], parent=pl,
+           scale=(1, 1, 0.8), cut_below=0.0)
+    sphere(f"PendantLamps_Bulb{i}", c_pl, 0.04, (x, RAIL_Y, 1.855), M["bulb"], parent=pl,
+           segs=12, rings=8)
+    BULBS.append((x, RAIL_Y, 1.82))
+
+# --- PastryCase on the counter
+c_pc = make_coll("PastryCase")
+pc = empty("PastryCase", c_pc, (0.86, 0.83, 1.0))
+box("PastryCase_Base", c_pc, (0.42, 0.28, 0.03), (0, 0, 0.015), M["walnut"], bevel=0.006,
+    parent=pc)
+box("PastryCase_Glass", c_pc, (0.4, 0.26, 0.2), (0, 0, 0.13), M["glass"], bevel=0.0,
+    parent=pc)
+box("PastryCase_Lid", c_pc, (0.42, 0.28, 0.012), (0, 0, 0.236), M["walnut"], bevel=0.004,
+    parent=pc)
+cr = capsule("PastryCase_Croissant", c_pc, 0.026, 0.11, (-0.12, 0.04, 0.056), M["pastry"],
+             parent=pc, rot=(0, 90, 20), sy=0.8)
+cyl("PastryCase_MuffinCup", c_pc, 0.028, 0.035, (-0.03, -0.05, 0.048), M["glaze"], segs=14,
+    parent=pc, r2=0.033)
+sphere("PastryCase_MuffinTop", c_pc, 0.036, (-0.03, -0.05, 0.065), M["pastry_dark"],
+       parent=pc, cut_below=0.0, segs=14, rings=8)
+sphere("PastryCase_Bun", c_pc, 0.036, (0.065, 0.045, 0.052), M["pastry"], parent=pc,
+       scale=(1, 1, 0.62), segs=14, rings=8)
+torus("PastryCase_Donut", c_pc, 0.026, 0.013, (0.13, -0.045, 0.044), M["glaze"], parent=pc,
+      rot=(0, 0, 0))
+
+# --- Plants: one by the shelves, one by the VultrVM
+c_pt2 = make_coll("Plants")
+plants = empty("Plants", c_pt2)
+
+
+def plant(tag, loc, h):
+    root = empty(f"Plant_{tag}", c_pt2, loc, parent=plants)
+    cyl(f"Plant_{tag}_Pot", c_pt2, 0.1, 0.28, (0, 0, 0.14), M["rust"], segs=18, parent=root,
+        r2=0.135)
+    cyl(f"Plant_{tag}_Soil", c_pt2, 0.125, 0.01, (0, 0, 0.27), M["soil"], segs=18,
+        parent=root)
+    leaves = [(0, 0, 0.42, 0.16), (0.08, 0.03, 0.62, 0.13), (-0.07, -0.04, 0.68, 0.12),
+              (0.02, 0.05, 0.86, 0.11), (-0.03, -0.02, 0.98, 0.09)]
+    for i, (x, y, z, r) in enumerate(leaves):
+        z = 0.3 + (z - 0.3) * (h - 0.3) / 0.7
+        sphere(f"Plant_{tag}_Leaf{i}", c_pt2, r, (x, y, z),
+               M["leaf"] if i % 2 == 0 else M["leaf_light"], parent=root,
+               scale=(1, 1, 1.15), segs=14, rings=8)
+
+
+plant("Shelves", (-0.55, 1.68, 0), 1.05)
+plant("VultrVM", (2.64, 0.78, 0), 0.8)
+
+# --- Stools: in front of the counter, right of the gate arm's path
+c_st = make_coll("Stools")
+stools = empty("Stools", c_st)
+for i, x in enumerate((1.7, 2.04)):
+    root = empty(f"Stool_{i}", c_st, (x, 0.27, 0), parent=stools)
+    cyl(f"Stool_{i}_Base", c_st, 0.16, 0.025, (0, 0, 0.0125), M["graphite"], segs=20,
+        parent=root)
+    cyl(f"Stool_{i}_Column", c_st, 0.022, 0.66, (0, 0, 0.355), M["steel"], segs=10,
+        parent=root)
+    torus(f"Stool_{i}_Footrest", c_st, 0.12, 0.009, (0, 0, 0.3), M["steel"], parent=root,
+          rot=(0, 0, 0))
+    cyl(f"Stool_{i}_Seat", c_st, 0.17, 0.06, (0, 0, 0.715), M["walnut"], segs=24,
+        parent=root)
+
 # ================================================================ 9. Characters
 def figure(name, loc, rot_z, top, pants, hair_fn, arms=("down", "down"), eyes=True,
            extras=None, sleeve=None):
@@ -531,8 +704,23 @@ def hair_milo(name, coll, root):
 
 
 def hair_hart(name, coll, root):
-    sphere(f"{name}_Hair", coll, 0.15, (0, 0.02, 1.55), M["hair_grey"], parent=root,
-           scale=(1.02, 1.0, 0.95), cut_below=-0.15)
+    """Short soft wavy hair: overlapping small blobs on top/sides/back, face left open."""
+    hc = Vector((0, 0, 1.53))
+    # small back-set base so gaps between curls never show scalp
+    sphere(f"{name}_HairBase", coll, 0.138, (0, 0.03, 1.55), M["hair_grey"], parent=root,
+           scale=(0.98, 0.95, 0.95), cut_below=0.15)
+    blobs = [  # (azimuth from front deg, elevation deg, radius)
+        (0, 68, 0.058), (35, 62, 0.055), (-35, 62, 0.055), (0, 88, 0.06),
+        (70, 50, 0.056), (-70, 50, 0.056), (100, 22, 0.05), (-100, 22, 0.05),
+        (125, 45, 0.058), (-125, 45, 0.058), (160, 25, 0.058), (-160, 25, 0.058),
+        (180, 55, 0.06), (90, 72, 0.055), (-90, 72, 0.055), (150, 75, 0.055),
+        (-150, 75, 0.055),
+    ]
+    for i, (az, el, rr) in enumerate(blobs):
+        a, e = math.radians(az), math.radians(el)
+        d = Vector((math.sin(a) * math.cos(e), -math.cos(a) * math.cos(e), math.sin(e)))
+        sphere(f"{name}_Curl{i}", coll, rr, tuple(hc + d * 0.118), M["hair_grey"],
+               parent=root, segs=12, rings=8)
 
 
 def hair_courier(name, coll, root):
@@ -547,9 +735,14 @@ def hair_courier(name, coll, root):
 
 # --- extras
 def ivy_extras(name, coll, root):
-    # cardigan: cream shirt strip + green body
-    box(f"{name}_Shirt", coll, (0.09, 0.02, 0.42), (0, -0.135, 1.16), M["cream"], bevel=0.008,
-        parent=root)
+    # closed cardigan: subtle darker V-neck collar + two small buttons
+    for sx in (-1, 1):
+        box(f"{name}_Collar{'L' if sx < 0 else 'R'}", coll, (0.02, 0.022, 0.15),
+            (sx * 0.036, -0.118, 1.285), M["green_dark"], bevel=0.008, parent=root,
+            rot=(-22, sx * 28, 0))
+    for i, z in enumerate((1.14, 1.04)):
+        sphere(f"{name}_Button{i}", coll, 0.014, (0, -0.135, z), M["green_dark"],
+               parent=root, scale=(1, 0.5, 1), segs=10, rings=6)
     # three books held upright against the right hip, under the forearm
     for i, (c, w) in enumerate(((M["navy"], 0.24), (M["rust"], 0.22), (M["cream"], 0.25))):
         box(f"{name}_Book{i}", coll, (0.05, w, 0.18 - i * 0.01),
@@ -568,6 +761,7 @@ def milo_extras(name, coll, root):
         bevel=0.008, parent=root, rot=(30, 0, 0))
     box(f"{name}_TabletScreen", coll, (0.23, 0.15, 0.003), (0.0, -0.302, 1.049), M["screen"],
         bevel=0.0, parent=root, rot=(30, 0, 0))
+    logo_disc("Logo_Badge", coll, 0.033, 0.006, (0.06, -0.158, 1.31), parent=root)
 
 
 def hart_extras(name, coll, root):
@@ -608,7 +802,7 @@ figure("Milo", (1.3, 1.45, 0), 0, M["white"], M["pants_dark"], hair_milo,
        arms=("forward", "forward"), extras=milo_extras)
 figure("MrsHart", (-0.14, 0.12, 0), -12, M["white"], M["pants_dark"], hair_hart,
        arms=("down", "forward"), extras=hart_extras)
-figure("InkwellCourier", (-0.15, -1.62, 0), 160, M["hood"], M["pants_dark"], hair_courier,
+figure("InkwellCourier", (1.35, -1.72, 0), -118, M["hood"], M["pants_dark"], hair_courier,
        arms=("down", "forward"), eyes=False, extras=courier_extras)
 
 
@@ -618,8 +812,8 @@ world = bpy.data.worlds.new("QuietWorld")
 scene.world = world
 world.use_nodes = True
 bg = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
-bg.inputs["Color"].default_value = (*hexcol("#f1f1ef"), 1)
-bg.inputs["Strength"].default_value = 0.55
+bg.inputs["Color"].default_value = (*hexcol("#e3e4e2"), 1)
+bg.inputs["Strength"].default_value = 0.65
 
 sun_d = bpy.data.lights.new("Sun_Key", "SUN")
 sun_d.energy = 3.6
@@ -627,6 +821,15 @@ sun_d.angle = math.radians(12)
 sun = bpy.data.objects.new("Sun_Key", sun_d)
 sun.rotation_euler = (math.radians(42), math.radians(0), math.radians(-35))
 link(sun, c_env)
+
+for i, bpos in enumerate(BULBS):
+    pd = bpy.data.lights.new(f"PendantLamp_Light{i}", "POINT")
+    pd.energy = 25
+    pd.color = (1.0, 0.78, 0.52)
+    pd.shadow_soft_size = 0.05
+    po = bpy.data.objects.new(f"PendantLamp_Light{i}", pd)
+    po.location = bpos
+    link(po, c_env)
 
 area_d = bpy.data.lights.new("Area_Fill", "AREA")
 area_d.energy = 400
@@ -650,7 +853,7 @@ def aim(cam_obj, loc, target, lens=50):
     cam_obj.data.lens = lens
 
 
-OVERVIEW = ((9.6, -11.2, 8.4), (0.0, 0.05, 0.25), 50)
+OVERVIEW = ((9.6, -11.2, 8.4), (0.0, -0.05, 0.3), 58)
 aim(cam, *OVERVIEW)
 
 # ---------------------------------------------------------------- render settings
@@ -733,7 +936,14 @@ join_under(O["Gate_Arm"], "Gate_Arm_Mesh")
 join_under(O["Gate_Light"], "Gate_Light_Mesh")
 join_under(O["Gate"], "Gate_Mesh", exclude_roots=(O["Gate_Arm"], O["Gate_Light"]))
 for who in ("Ivy", "Milo", "MrsHart", "InkwellCourier"):
-    join_under(O[who], f"{who}_Mesh")
+    join_under(O[who], f"{who}_Mesh",
+               exclude_roots=(O["Logo_Badge"],) if who == "Milo" else ())
+join_under(O["MenuBoard"], "MenuBoard_Mesh")
+join_under(O["PendantLamps"], "PendantLamps_Mesh")
+join_under(O["PastryCase"], "PastryCase_Mesh", exclude_roots=(O["PastryCase_Glass"],))
+join_under(O["Plants"], "Plants_Mesh")
+join_under(O["Stools"], "Stools_Mesh")
+
 
 # ---------------------------------------------------------------- stats
 deps = bpy.context.evaluated_depsgraph_get()
@@ -775,12 +985,13 @@ def render_to(path, loc, target, lens):
 if DO_RENDER:
     # preview-only ground far below so the floating slab casts a soft shadow
     # (added after the GLB export and removed before the final save)
-    gm = mat("M_PreviewGround", "#f1f1ef", 0.9)
+    gm = mat("M_PreviewGround", "#bfc0be", 0.95)
     bmg = bmesh.new()
     bmesh.ops.create_grid(bmg, x_segments=1, y_segments=1, size=30)
     ground = finish_mesh(bmg, "Preview_Ground", c_env, gm, (0, 0, -1.1), None)
     render_to(os.path.join(OUT, "preview-overview.png"), *OVERVIEW)
-    render_to(os.path.join(OUT, "preview-ivy.png"), (-0.4, -3.4, 2.0), (-1.45, -0.4, 0.95), 45)
+    render_to(os.path.join(OUT, "preview-ivy.png"), (0.2, -2.7, 1.95), (-1.6, -0.25, 1.05), 42)
+    render_to(os.path.join(OUT, "preview-counter.png"), (1.9, -1.1, 1.25), (1.4, 1.6, 1.6), 35)
     render_to(os.path.join(OUT, "preview-gate.png"), (2.6, -3.0, 2.1), (0.45, 0.3, 0.8), 45)
     aim(cam, *OVERVIEW)
     bpy.data.objects.remove(ground)

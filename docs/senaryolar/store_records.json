@@ -1,7 +1,7 @@
 {
   "store": {
-    "name": "Cloudwillow Goods",
-    "support_email": "support@cloudwillow.example.com"
+    "name": "The Quiet Page",
+    "support_email": "support@thequietpage.example.com"
   },
   "refund_policy": {
     "window_days": 30,
@@ -11,37 +11,37 @@
   "catalog": [
     {
       "sku": "CUP",
-      "name": "Cloudstone cup",
+      "name": "Quiet Page mug",
       "unit_price": "25.00",
       "currency": "USD"
     },
     {
       "sku": "BAG",
-      "name": "Willowfold tote",
+      "name": "Canvas book tote",
       "unit_price": "40.00",
       "currency": "USD"
     },
     {
       "sku": "LAMP",
-      "name": "Dawnpetal desk lamp",
+      "name": "Brass reading lamp",
       "unit_price": "150.00",
       "currency": "USD"
     },
     {
       "sku": "TRAY",
-      "name": "Mistvale tray",
+      "name": "Winter Atlas (hardcover)",
       "unit_price": "30.00",
       "currency": "USD"
     },
     {
       "sku": "BOWL",
-      "name": "Riverfern bowl",
+      "name": "The Night Garden (novel)",
       "unit_price": "30.00",
       "currency": "USD"
     },
     {
       "sku": "VASE",
-      "name": "Cloudreed vase",
+      "name": "Poems for Rain (paperback)",
       "unit_price": "30.00",
       "currency": "USD"
     }
