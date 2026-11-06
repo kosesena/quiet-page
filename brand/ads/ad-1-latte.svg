@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 960" width="540" height="960">
+<defs><radialGradient id="g" cx="50%" cy="42%" r="70%"><stop offset="0" stop-color="#3E6B5C"/><stop offset="1" stop-color="#1F3A33"/></radialGradient></defs>
+<rect width="540" height="960" fill="url(#g)"/>
+<g font-family="Georgia, 'Times New Roman', serif" text-anchor="middle">
+<text x="270" y="96" font-size="24" letter-spacing="9" fill="#E9B79A">THE QUIET PAGE</text>
+<g transform="translate(270,430)">
+<path d="M-60 -150 C -80 -190, -40 -210, -60 -250" fill="none" stroke="#F4EEDF" stroke-width="8" stroke-linecap="round" opacity=".7"/>
+<path d="M40 -150 C 20 -190, 60 -210, 40 -250" fill="none" stroke="#F4EEDF" stroke-width="8" stroke-linecap="round" opacity=".7"/>
+<path d="M-130 -110 L130 -110 L100 150 Q0 190 -100 150 Z" fill="#F4EEDF"/><ellipse cx="0" cy="-110" rx="130" ry="34" fill="#E9B79A"/>
+<path d="M-26 -118 q26 -36 26 0 q0 -36 26 0 q-26 30 -26 40 q0 -10 -26 -40" fill="#F4EEDF"/>
+<path d="M128 -60 q70 10 46 90 q-14 40 -66 34" fill="none" stroke="#F4EEDF" stroke-width="18"/>
+<ellipse cx="0" cy="200" rx="190" ry="26" fill="none" stroke="#F4EEDF" stroke-width="8"/>
+<g transform="translate(-170,90) rotate(-12)"><rect width="120" height="160" rx="6" fill="#B5553A"/><rect x="12" width="8" height="160" fill="#5B3A29" opacity=".5"/><text x="66" y="70" font-size="18" fill="#F4EEDF">WINTER</text><text x="66" y="96" font-size="18" fill="#F4EEDF">ATLAS</text></g></g>
+<text x="270" y="760" font-size="48" font-weight="700" fill="#F4EEDF">Latte &amp; a Story</text>
+<text x="270" y="812" font-size="26" font-style="italic" fill="#E9B79A">Winter Atlas, 10% off with any coffee</text>
+<rect x="190" y="848" width="160" height="54" rx="27" fill="#F4EEDF"/><text x="270" y="885" font-size="28" font-weight="700" fill="#2F5D50">4.50</text>
+</g></svg>

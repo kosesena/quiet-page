@@ -5,7 +5,7 @@ Re-run headless (does not touch any open Blender session):
       --python build_scene.py -- [--no-render]
 
 Outputs next to this file: quiet-page.blend, quiet-page.glb,
-preview-overview.png, preview-ivy.png, preview-gate.png
+preview-overview.png, preview-ivy.png, preview-counter.png, preview-nook.png, preview-gate.png
 """
 import math
 import os
@@ -88,7 +88,7 @@ M = {
     "slate": mat("M_ChalkSlate", "#2f3534", 0.85),
     "chalk": mat("M_Chalk", "#e9e1cc", 0.9),
     "brass": mat("M_ShadeOchre", "#c99a5b", 0.45, metal=0.2),
-    "bulb": mat("M_WarmBulb", "#ffe2b0", 0.3, emit="#ffc77a", emit_strength=8.0),
+    "bulb": mat("M_WarmBulb", "#ffe2b0", 0.3, emit="#ffb46b", emit_strength=12.0),  # ~2700K
     "leaf": mat("M_Leaf", "#5e8560", 0.75),
     "leaf_light": mat("M_LeafLight", "#7b9d6f", 0.75),
     "soil": mat("M_Soil", "#4a3a2c", 0.95),
@@ -514,7 +514,7 @@ def logo_disc(name, coll, r, depth, loc, parent=None, rot=(90, 0, 0)):
 
 # --- back wall behind the counter (carries menu board + logo sign)
 c_bw = make_coll("BackWall")
-box("BackWall", c_bw, (2.3, 0.06, 2.7), (1.12, 1.95, 1.35), M["white"], bevel=0.015)
+box("BackWall", c_bw, (2.7, 0.06, 2.7), (1.32, 1.95, 1.35), M["white"], bevel=0.015)
 WALL_FRONT = 1.92
 
 # --- Logo_Sign: ~45 cm disc on the counter's centre walnut panel (front, facing -Y)
@@ -562,20 +562,20 @@ finish_mesh(_bm, "MenuBoard_Image", c_mb, m_menu, (0, -0.022, 0), mb)
 c_pl = make_coll("PendantLamps")
 pl = empty("PendantLamps", c_pl)
 RAIL_Z, RAIL_Y = 2.66, 0.85  # high enough to project above the menu in Cam_Overview
-for i, x in enumerate((0.2, 1.6)):
+for i, x in enumerate((0.2, 2.0)):
     box(f"PendantLamps_Arm{i}", c_pl, (0.03, WALL_FRONT - RAIL_Y + 0.03, 0.03),
         (x, (WALL_FRONT + RAIL_Y) / 2, RAIL_Z), M["white"], bevel=0.008, parent=pl)
-box("PendantLamps_Rail", c_pl, (1.43, 0.03, 0.03), (0.9, RAIL_Y, RAIL_Z), M["white"],
+box("PendantLamps_Rail", c_pl, (1.83, 0.03, 0.03), (1.1, RAIL_Y, RAIL_Z), M["white"],
     bevel=0.008, parent=pl)
 BULBS = []
-for i, x in enumerate((0.4, 0.9, 1.4)):
-    cyl(f"PendantLamps_Cord{i}", c_pl, 0.004, RAIL_Z - 1.93, (x, RAIL_Y, (RAIL_Z + 1.93) / 2), M["graphite"],
+for i, x in enumerate((0.3, 1.9)):  # Milo stands in the gap (no shade over his head in Cam_Overview)
+    cyl(f"PendantLamps_Cord{i}", c_pl, 0.004, RAIL_Z - 1.67, (x, RAIL_Y, (RAIL_Z + 1.67) / 2), M["graphite"],
         segs=6, parent=pl)
-    sphere(f"PendantLamps_Shade{i}", c_pl, 0.12, (x, RAIL_Y, 1.86), M["brass"], parent=pl,
+    sphere(f"PendantLamps_Shade{i}", c_pl, 0.12, (x, RAIL_Y, 1.60), M["brass"], parent=pl,
            scale=(1, 1, 0.8), cut_below=0.0)
-    sphere(f"PendantLamps_Bulb{i}", c_pl, 0.04, (x, RAIL_Y, 1.855), M["bulb"], parent=pl,
+    sphere(f"PendantLamps_Bulb{i}", c_pl, 0.04, (x, RAIL_Y, 1.595), M["bulb"], parent=pl,
            segs=12, rings=8)
-    BULBS.append((x, RAIL_Y, 1.82))
+    BULBS.append((x, RAIL_Y, 1.56))
 
 # --- PastryCase on the counter
 c_pc = make_coll("PastryCase")
@@ -633,6 +633,297 @@ for i, x in enumerate((1.7, 2.04)):
           rot=(0, 0, 0))
     cyl(f"Stool_{i}_Seat", c_st, 0.17, 0.06, (0, 0, 0.715), M["walnut"], segs=24,
         parent=root)
+
+
+# ================================================================ 12. Screens, pickup, reading nook
+WARM_2700K = (1.0, 0.63, 0.33)  # linear RGB approximation of a 2700K bulb
+
+
+def image_mat(name, path, emissive=1.0, rough=0.4):
+    img = bpy.data.images.load(path, check_existing=False)
+    img.name = os.path.basename(path)
+    img.pack()
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    bsdf = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    ekey = "Emission Color" if "Emission Color" in bsdf.inputs else "Emission"
+    nt.links.new(tex.outputs["Color"], bsdf.inputs[ekey])
+    bsdf.inputs["Emission Strength"].default_value = emissive
+    bsdf.inputs["Roughness"].default_value = rough
+    return m
+
+
+def face_plane(name, coll, w, h, loc, material, parent=None):
+    """Plane in local XZ facing -Y with clean 0-1 UVs (u = left->right, v = bottom->top)."""
+    bm = bmesh.new()
+    vs = [bm.verts.new(c) for c in ((-w / 2, 0, -h / 2), (w / 2, 0, -h / 2),
+                                    (w / 2, 0, h / 2), (-w / 2, 0, h / 2))]
+    f = bm.faces.new(vs)
+    bm.normal_update()
+    if f.normal.y > 0:
+        f.normal_flip()
+    uv = bm.loops.layers.uv.new("UVMap")
+    for lp in f.loops:
+        co = lp.vert.co
+        lp[uv].uv = ((co.x + w / 2) / w, (co.z + h / 2) / h)
+    return finish_mesh(bm, name, coll, material, loc, parent)
+
+
+BRAND = os.path.join(os.path.dirname(OUT), "brand")
+
+# --- AdScreen_L / AdScreen_R: portrait 9:16 screens flanking the menu board
+for side, x, img in (("L", 0.475, "ad-1-latte.png"), ("R", 2.425, "ad-3-matcha.png")):
+    c_ad = make_coll(f"AdScreen_{side}")
+    bez = box(f"AdScreen_{side}", c_ad, (0.48, 0.03, 0.83), (x, WALL_FRONT - 0.015, 1.725),
+              M["graphite"], bevel=0.008)
+    face_plane(f"AdScreen_{side}_Face", c_ad, 0.45, 0.8, (0, -0.0155, 0),
+               image_mat(f"M_AdScreen_{side}", os.path.join(BRAND, "ads", img), 1.0), bez)
+
+
+# --- warm LED halos behind the ad screens (+ subtle one behind the menu board)
+import numpy as np  # bundled with Blender
+
+M["led_gold"] = mat("M_LEDGold", "#ffc766", 0.3, emit="#ffc766", emit_strength=3.0)
+
+
+def rounded_rect_points(w, h, r, seg=6):
+    pts = []
+    for cx, cy, a0 in ((w / 2 - r, h / 2 - r, 0), (-w / 2 + r, h / 2 - r, 90),
+                       (-w / 2 + r, -h / 2 + r, 180), (w / 2 - r, -h / 2 + r, 270)):
+        for k in range(seg + 1):
+            a = math.radians(a0 + 90 * k / seg)
+            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    return pts
+
+
+def led_tube(name, coll, w, h, loc, parent=None, thick=0.01):
+    """Rounded-rectangle rope light in local XZ (thin tube, ~1 cm)."""
+    cu = bpy.data.curves.new(name + "_curve", "CURVE")
+    cu.dimensions = "3D"
+    cu.bevel_depth = thick / 2
+    cu.bevel_resolution = 1
+    sp = cu.splines.new("POLY")
+    pts = rounded_rect_points(w, h, 0.03)
+    sp.points.add(len(pts) - 1)
+    for p_, (x, z) in zip(sp.points, pts):
+        p_.co = (x, 0, z, 1)
+    sp.use_cyclic_u = True
+    tmp = bpy.data.objects.new(name + "_tmp", cu)
+    scene.collection.objects.link(tmp)
+    me = bpy.data.meshes.new_from_object(tmp.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    bpy.data.objects.remove(tmp)
+    bpy.data.curves.remove(cu)
+    me.name = name
+    for poly in me.polygons:
+        poly.use_smooth = True
+    me.materials.clear()
+    me.materials.append(M["led_gold"])
+    ob = bpy.data.objects.new(name, me)
+    ob.location = loc
+    link(ob, coll)
+    if parent:
+        ob.parent = parent
+    return ob
+
+
+def glow_material(name, plane_w, plane_h, inner_w, inner_h, peak, px=256):
+    """Generated soft-falloff gold glow (alpha) around an inner rounded rect."""
+    W = px
+    H = max(8, int(px * plane_h / plane_w))
+    xs = (np.arange(W) + 0.5) / W * plane_w - plane_w / 2
+    zs = (np.arange(H) + 0.5) / H * plane_h - plane_h / 2
+    X, Z = np.meshgrid(xs, zs)
+    r = 0.03
+    qx = np.abs(X) - (inner_w / 2 - r)
+    qz = np.abs(Z) - (inner_h / 2 - r)
+    d = np.hypot(np.maximum(qx, 0), np.maximum(qz, 0)) - r
+    d = np.maximum(d, 0)
+    margin = min(plane_w - inner_w, plane_h - inner_h) / 2
+    a = peak * np.exp(-(d / (margin * 0.38)) ** 1.4)
+    a[d >= margin * 0.98] = 0
+    img = bpy.data.images.new(name + "_img", W, H, alpha=True)
+    rgba = np.zeros((H, W, 4), dtype=np.float32)
+    rgba[..., 0], rgba[..., 1], rgba[..., 2] = 1.0, 0.80, 0.42
+    rgba[..., 3] = a
+    img.pixels.foreach_set(rgba.ravel())
+    img.pack()
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    bsdf = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    ekey = "Emission Color" if "Emission Color" in bsdf.inputs else "Emission"
+    nt.links.new(tex.outputs["Color"], bsdf.inputs[ekey])
+    nt.links.new(tex.outputs["Alpha"], bsdf.inputs["Alpha"])
+    bsdf.inputs["Emission Strength"].default_value = 1.2
+    for attr, val in (("surface_render_method", "BLENDED"), ("blend_method", "BLEND")):
+        try:
+            setattr(m, attr, val)
+        except Exception:
+            pass
+    return m
+
+
+for side, x in (("L", 0.475), ("R", 2.425)):
+    scr = O_ = bpy.data.objects[f"AdScreen_{side}"]
+    coll = bpy.data.collections[f"AdScreen_{side}"]
+    # tube sits between screen and wall, ~2 cm outside the bezel
+    led_tube(f"AdScreen_{side}_Halo", coll, 0.52, 0.87, (0, 0.009, 0), parent=scr)
+    gw, gh = 0.48 + 0.3, 0.83 + 0.3
+    face_plane(f"AdScreen_{side}_HaloGlow", coll, gw, gh, (0, 0.0135, 0),
+               glow_material(f"M_AdScreen_{side}_Glow", gw, gh, 0.5, 0.85, 0.6), scr)
+mbo = bpy.data.objects["MenuBoard"]
+gw, gh = MB_W + 0.26, MB_H + 0.26
+face_plane("MenuBoard_HaloGlow", bpy.data.collections["MenuBoard"], gw, gh, (0, -0.0015, 0),
+           glow_material("M_MenuBoard_Glow", gw, gh, MB_W, MB_H, 0.32), mbo)
+
+# --- PickupCorner: raised hand-off ledge at the counter end next to the Gate
+c_pk = make_coll("PickupCorner")
+pk = empty("PickupCorner", c_pk, (-0.09, 0.85, 0))
+box("PickupCorner_Cabinet", c_pk, (0.3, 0.5, 1.06), (0, 0, 0.53), M["white"], bevel=0.015,
+    parent=pk)
+box("PickupCorner_Panel", c_pk, (0.012, 0.42, 0.76), (-0.152, 0, 0.5), M["walnut"],
+    bevel=0.004, parent=pk)
+box("PickupCorner_Ledge", c_pk, (0.34, 0.54, 0.04), (0, 0, 1.08), M["walnut"], bevel=0.008,
+    parent=pk)
+LEDGE_Z = 1.10
+# sign card + "PICK UP HERE" text converted to mesh
+box("PickupCorner_SignStand", c_pk, (0.08, 0.04, 0.02), (0, 0.17, LEDGE_Z + 0.01),
+    M["walnut"], bevel=0.005, parent=pk)
+box("PickupCorner_SignCard", c_pk, (0.28, 0.008, 0.075), (0, 0.17, LEDGE_Z + 0.058),
+    M["cream"], bevel=0.003, parent=pk)
+_cu = bpy.data.curves.new("PickupText", "FONT")
+_cu.body = "PICK UP HERE"
+_cu.size = 0.032
+_cu.extrude = 0.0006
+_cu.align_x = "CENTER"
+_cu.align_y = "CENTER"
+_tob = bpy.data.objects.new("PickupText_tmp", _cu)
+scene.collection.objects.link(_tob)
+_me = bpy.data.meshes.new_from_object(_tob.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+bpy.data.objects.remove(_tob)
+bpy.data.curves.remove(_cu)
+_me.name = "PickupCorner_SignText"
+_w = max(v.co.x for v in _me.vertices) - min(v.co.x for v in _me.vertices)
+_sc = min(1.0, 0.24 / _w)
+for v in _me.vertices:
+    v.co *= _sc
+_me.materials.append(M["graphite"])
+_txt = bpy.data.objects.new("PickupCorner_SignText", _me)
+_txt.location = (0, 0.17 - 0.0055, LEDGE_Z + 0.058)
+_txt.rotation_euler = (math.radians(90), 0, 0)
+link(_txt, c_pk)
+_txt.parent = pk
+M["kraft"] = mat("M_Kraft", "#b98a5e", 0.8)
+for i, cx in enumerate((-0.085, 0.0, 0.085)):
+    cup_root = empty(f"PickupCorner_Cup{i}", c_pk, (cx, -0.06 + (i % 2) * 0.03, LEDGE_Z),
+                     parent=pk)
+    cyl(f"PickupCorner_Cup{i}_Body", c_pk, 0.028, 0.12, (0, 0, 0.06), M["cup"], segs=16,
+        parent=cup_root, r2=0.036)
+    cyl(f"PickupCorner_Cup{i}_Sleeve", c_pk, 0.0335, 0.045, (0, 0, 0.065), M["kraft"],
+        segs=16, parent=cup_root, r2=0.0355)
+    cyl(f"PickupCorner_Cup{i}_Lid", c_pk, 0.038, 0.012, (0, 0, 0.126), M["cup"], segs=16,
+        parent=cup_root, r2=0.034)
+    cyl(f"PickupCorner_Cup{i}_LidTop", c_pk, 0.028, 0.008, (0, 0, 0.136), M["cup"], segs=16,
+        parent=cup_root)
+    box(f"PickupCorner_Cup{i}_Label", c_pk, (0.03, 0.004, 0.012), (0, -0.0345, 0.1),
+        M["cream"], bevel=0.0, parent=cup_root, rot=(-4, 0, 0))
+
+# --- ReadingNook: right side of the platform, clear of the courier/label space
+c_rn = make_coll("ReadingNook")
+M["velvet_green"] = mat("M_VelvetGreen", "#2f5a46", 0.85)
+M["velvet_rust"] = mat("M_VelvetRust", "#a5573a", 0.85)
+M["rug_in"] = mat("M_RugInner", "#e8ddcb", 0.95)
+M["rug_out"] = mat("M_RugBorder", "#c4a789", 0.95)
+M["brass_m"] = mat("M_Brass", "#c9a35f", 0.35, metal=0.7)
+M["lampshade"] = mat("M_ReadingShade", "#f3e6cc", 0.6, emit="#ffbf80", emit_strength=1.2)
+nook = empty("ReadingNook", c_rn, (2.28, -0.5, 0))
+cyl("ReadingNook_RugBorder", c_rn, 0.64, 0.008, (0, -0.05, 0.004), M["rug_out"], segs=48,
+    parent=nook)
+cyl("ReadingNook_Rug", c_rn, 0.56, 0.01, (0, -0.05, 0.005), M["rug_in"], segs=48,
+    parent=nook)
+
+
+def armchair(tag, loc, rot_z, fabric):
+    root = empty(f"ReadingNook_Chair{tag}", c_rn, loc, rot_z=rot_z, parent=nook)
+    box(f"Chair{tag}_Base", c_rn, (0.56, 0.52, 0.2), (0, 0, 0.19), fabric, bevel=0.05, segs=3,
+        parent=root)
+    box(f"Chair{tag}_Cushion", c_rn, (0.44, 0.42, 0.09), (0, -0.02, 0.33), fabric, bevel=0.035,
+        segs=3, parent=root)
+    box(f"Chair{tag}_Back", c_rn, (0.56, 0.13, 0.46), (0, 0.205, 0.52), fabric, bevel=0.05,
+        segs=3, parent=root, rot=(-8, 0, 0))
+    for sx in (-1, 1):
+        box(f"Chair{tag}_Arm{sx}", c_rn, (0.085, 0.5, 0.2), (sx * 0.24, 0.0, 0.38), fabric,
+            bevel=0.04, segs=3, parent=root)
+        for sy in (-1, 1):
+            cyl(f"Chair{tag}_Leg{sx}{sy}", c_rn, 0.016, 0.09,
+                (sx * 0.22, sy * 0.2, 0.045), M["walnut"], segs=8, parent=root, r2=0.011)
+    return root
+
+
+armchair("Green", (-0.39, 0.12, 0), 14, M["velvet_green"])
+armchair("Rust", (0.39, 0.12, 0), -14, M["velvet_rust"])
+# round side table with a cup and an open book
+tb = empty("ReadingNook_Table", c_rn, (0.0, -0.36, 0), parent=nook)
+cyl("Table_Base", c_rn, 0.12, 0.015, (0, 0, 0.0075), M["brass_m"], segs=24, parent=tb)
+cyl("Table_Stem", c_rn, 0.016, 0.47, (0, 0, 0.25), M["brass_m"], segs=10, parent=tb)
+cyl("Table_Top", c_rn, 0.19, 0.025, (0, 0, 0.495), M["walnut"], segs=32, parent=tb)
+TZ = 0.5075
+cyl("Table_Saucer", c_rn, 0.05, 0.006, (0.08, 0.05, TZ + 0.003), M["cup"], parent=tb)
+cyl("Table_Cup", c_rn, 0.033, 0.06, (0.08, 0.05, TZ + 0.036), M["cup"], parent=tb, r2=0.038)
+cyl("Table_Coffee", c_rn, 0.034, 0.003, (0.08, 0.05, TZ + 0.064), M["coffee"], parent=tb)
+for sx in (-1, 1):
+    box(f"Table_BookPage{sx}", c_rn, (0.075, 0.11, 0.008),
+        (-0.06 + sx * 0.037, -0.05, TZ + 0.012), M["paper"], bevel=0.002, segs=1, parent=tb,
+        rot=(0, -sx * 8, 15))
+box("Table_BookCover", c_rn, (0.16, 0.115, 0.006), (-0.06, -0.05, TZ + 0.004), M["rust"],
+    bevel=0.002, segs=1, parent=tb, rot=(0, 0, 15))
+# brass floor reading lamp between/behind the chairs
+lp = empty("ReadingNook_Lamp", c_rn, (0.0, 0.3, 0), parent=nook)
+cyl("Lamp_Base", c_rn, 0.12, 0.02, (0, 0, 0.01), M["brass_m"], segs=24, parent=lp)
+cyl("Lamp_Pole", c_rn, 0.011, 1.3, (0, 0, 0.67), M["brass_m"], segs=10, parent=lp)
+_bm = bmesh.new()
+bmesh.ops.create_cone(_bm, cap_ends=False, segments=24, radius1=0.16, radius2=0.1, depth=0.2)
+finish_mesh(_bm, "Lamp_Shade", c_rn, M["lampshade"], (0, 0, 1.36), lp, 60)
+sphere("Lamp_Bulb", c_rn, 0.035, (0, 0, 1.31), M["bulb"], parent=lp, segs=12, rings=8)
+NOOK_LAMP = (2.28, -0.2, 1.30)
+# short low bookshelf behind the chairs
+ls = empty("ReadingNook_LowShelf", c_rn, (0.33, 0.66, 0), parent=nook)
+LW, LD, LH = 0.6, 0.26, 0.5
+for sx in (-1, 1):
+    box(f"LowShelf_Side{sx}", c_rn, (0.025, LD, LH), (sx * (LW / 2 - 0.0125), 0, LH / 2),
+        M["white"], parent=ls)
+for i, z in enumerate((0.03, 0.25, LH - 0.0125)):
+    box(f"LowShelf_Board{i}", c_rn, (LW, LD, 0.025), (0, 0, z), M["white"], parent=ls)
+for row, z0 in enumerate((0.0425, 0.2625)):
+    xcur = -LW / 2 + 0.035
+    k = 0
+    while xcur < LW / 2 - 0.09:
+        w = (0.035, 0.045, 0.04, 0.05)[k % 4]
+        h = (0.17, 0.15, 0.18, 0.16)[(k + row) % 4]
+        box(f"LowShelf_Book{row}_{k}", c_rn, (w - 0.004, 0.18, h), (xcur + w / 2, -0.01, z0 + h / 2),
+            BOOK_COLS[(k + row) % 4], bevel=0.003, segs=1, parent=ls)
+        xcur += w
+        k += 1
+
+# --- BookOfTheDay: free-standing digital totem at the nook's front-left edge, facing camera
+c_bd = make_coll("BookOfTheDay")
+bd = empty("BookOfTheDay", c_bd, (1.72, -1.02, 0), rot_z=40)
+box("BookOfTheDay_Base", c_bd, (0.36, 0.26, 0.045), (0, 0, 0.0225), M["walnut"], bevel=0.012,
+    parent=bd)
+cyl("BookOfTheDay_Pole", c_bd, 0.018, 0.52, (0, 0.02, 0.3), M["brass_m"], segs=10, parent=bd)
+box("BookOfTheDay_Frame", c_bd, (0.46, 0.045, 0.76), (0, 0.02, 0.92), M["walnut"],
+    bevel=0.012, parent=bd)
+box("BookOfTheDay_Trim", c_bd, (0.47, 0.05, 0.014), (0, 0.02, 1.305), M["brass_m"],
+    bevel=0.004, parent=bd)
+M["botd"] = mat("M_BookOfTheDay", "#1d2127", 0.35, emit="#28313d", emit_strength=1.0)
+face_plane("BookOfTheDay_Face", c_bd, 0.4, 0.7, (0, -0.0035, 0.92), M["botd"], bd)
 
 # ================================================================ 9. Characters
 def figure(name, loc, rot_z, top, pants, hair_fn, arms=("down", "down"), eyes=True,
@@ -798,7 +1089,7 @@ def courier_extras(name, coll, root):
 
 figure("Ivy", (-1.7, -0.08, 0), 0, M["green"], M["pants"], hair_ivy,
        arms=("down", "tuck"), extras=ivy_extras)
-figure("Milo", (1.3, 1.45, 0), 0, M["white"], M["pants_dark"], hair_milo,
+figure("Milo", (0.72, 1.45, 0), 0, M["white"], M["pants_dark"], hair_milo,
        arms=("forward", "forward"), extras=milo_extras)
 figure("MrsHart", (-0.14, 0.12, 0), -12, M["white"], M["pants_dark"], hair_hart,
        arms=("down", "forward"), extras=hart_extras)
@@ -817,19 +1108,39 @@ bg.inputs["Strength"].default_value = 0.65
 
 sun_d = bpy.data.lights.new("Sun_Key", "SUN")
 sun_d.energy = 3.6
-sun_d.angle = math.radians(12)
+sun_d.angle = math.radians(16)
 sun = bpy.data.objects.new("Sun_Key", sun_d)
 sun.rotation_euler = (math.radians(42), math.radians(0), math.radians(-35))
 link(sun, c_env)
 
+def tag_light(ob):
+    """Extras so the web page can recreate the light (color linear RGB, power in W)."""
+    d = ob.data
+    ob["light_type"] = d.type
+    ob["light_color"] = [round(c, 4) for c in d.color]
+    ob["light_power_w" if d.type != "SUN" else "light_strength"] = d.energy
+    if d.type == "AREA":
+        ob["light_size_m"] = d.size
+
+
+tag_light(sun)
 for i, bpos in enumerate(BULBS):
     pd = bpy.data.lights.new(f"PendantLamp_Light{i}", "POINT")
-    pd.energy = 25
-    pd.color = (1.0, 0.78, 0.52)
-    pd.shadow_soft_size = 0.05
+    pd.energy = 32
+    pd.color = WARM_2700K
+    pd.shadow_soft_size = 0.06
     po = bpy.data.objects.new(f"PendantLamp_Light{i}", pd)
     po.location = bpos
     link(po, c_env)
+    tag_light(po)
+nd = bpy.data.lights.new("ReadingLamp_Light", "POINT")
+nd.energy = 28
+nd.color = WARM_2700K
+nd.shadow_soft_size = 0.08
+no = bpy.data.objects.new("ReadingLamp_Light", nd)
+no.location = NOOK_LAMP
+link(no, c_env)
+tag_light(no)
 
 area_d = bpy.data.lights.new("Area_Fill", "AREA")
 area_d.energy = 400
@@ -838,6 +1149,7 @@ area = bpy.data.objects.new("Area_Fill", area_d)
 area.location = (-4.5, -5.0, 6.5)
 area.rotation_euler = (Vector((0, 0, 0.5)) - area.location).to_track_quat("-Z", "Y").to_euler()
 link(area, c_env)
+tag_light(area)
 
 cam_d = bpy.data.cameras.new("Cam_Overview")
 cam_d.lens = 50
@@ -882,6 +1194,27 @@ try:
             setattr(ee, attr, val)
 except Exception as exc:
     print("eevee settings:", exc)
+
+# soft bloom on emissive bulbs/screens via compositor Glare (Blender 5.x node-group API)
+try:
+    ng = bpy.data.node_groups.new("QP_Compositor", "CompositorNodeTree")
+    ng.interface.new_socket("Image", in_out="OUTPUT", socket_type="NodeSocketColor")
+    rl = ng.nodes.new("CompositorNodeRLayers")
+    gl = ng.nodes.new("CompositorNodeGlare")
+    out = ng.nodes.new("NodeGroupOutput")
+    if hasattr(gl, "glare_type"):
+        gl.glare_type = "BLOOM"
+    elif "Type" in gl.inputs:
+        gl.inputs["Type"].default_value = "Bloom"
+    for key, val in (("Threshold", 1.2), ("Strength", 0.35), ("Size", 0.5)):
+        if key in gl.inputs:
+            gl.inputs[key].default_value = val
+    ng.links.new(rl.outputs["Image"], gl.inputs["Image"])
+    ng.links.new(gl.outputs["Image"], out.inputs[0])
+    scene.compositing_node_group = ng
+    print("QP_BLOOM ok", [(i.name, getattr(i, "default_value", None)) for i in gl.inputs if i.name in ("Type", "Threshold", "Strength", "Size")])
+except Exception as exc:
+    print("QP_BLOOM skipped:", exc)
 
 # ---------------------------------------------------------------- join meshes
 # Fewer draw calls on the web: each named group becomes <Name>_Mesh under its root
@@ -938,11 +1271,14 @@ join_under(O["Gate"], "Gate_Mesh", exclude_roots=(O["Gate_Arm"], O["Gate_Light"]
 for who in ("Ivy", "Milo", "MrsHart", "InkwellCourier"):
     join_under(O[who], f"{who}_Mesh",
                exclude_roots=(O["Logo_Badge"],) if who == "Milo" else ())
-join_under(O["MenuBoard"], "MenuBoard_Mesh")
+join_under(O["MenuBoard"], "MenuBoard_Mesh", exclude_roots=(O["MenuBoard_Image"], O["MenuBoard_HaloGlow"]))
 join_under(O["PendantLamps"], "PendantLamps_Mesh")
 join_under(O["PastryCase"], "PastryCase_Mesh", exclude_roots=(O["PastryCase_Glass"],))
 join_under(O["Plants"], "Plants_Mesh")
 join_under(O["Stools"], "Stools_Mesh")
+join_under(O["PickupCorner"], "PickupCorner_Mesh", exclude_roots=(O["PickupCorner_SignText"],))
+join_under(O["ReadingNook"], "ReadingNook_Mesh")
+join_under(O["BookOfTheDay"], "BookOfTheDay_Mesh", exclude_roots=(O["BookOfTheDay_Face"],))
 
 
 # ---------------------------------------------------------------- stats
@@ -964,7 +1300,7 @@ alarm.hide_render = False
 alarm.hide_set(False)
 gltf_kwargs = dict(filepath=os.path.join(OUT, "quiet-page.glb"), export_format="GLB",
                    use_selection=False, export_apply=True, export_extras=True,
-                   export_cameras=True, export_lights=False, export_yup=True)
+                   export_cameras=True, export_lights=True, export_yup=True)
 try:
     bpy.ops.export_scene.gltf(**gltf_kwargs)
 except TypeError as exc:
@@ -991,7 +1327,8 @@ if DO_RENDER:
     ground = finish_mesh(bmg, "Preview_Ground", c_env, gm, (0, 0, -1.1), None)
     render_to(os.path.join(OUT, "preview-overview.png"), *OVERVIEW)
     render_to(os.path.join(OUT, "preview-ivy.png"), (0.2, -2.7, 1.95), (-1.6, -0.25, 1.05), 42)
-    render_to(os.path.join(OUT, "preview-counter.png"), (1.9, -1.1, 1.25), (1.4, 1.6, 1.6), 35)
+    render_to(os.path.join(OUT, "preview-counter.png"), (2.6, -1.8, 2.6), (1.15, 1.45, 1.3), 26)
+    render_to(os.path.join(OUT, "preview-nook.png"), (3.9, -2.9, 1.7), (2.1, -0.45, 0.6), 34)
     render_to(os.path.join(OUT, "preview-gate.png"), (2.6, -3.0, 2.1), (0.45, 0.3, 0.8), 45)
     aim(cam, *OVERVIEW)
     bpy.data.objects.remove(ground)
