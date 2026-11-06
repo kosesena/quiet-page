@@ -19,6 +19,10 @@ ignore = ["E501"]                            # the formatter wraps code; long co
 "docs/senaryolar/validate.py" = ["S101"]     # a checker script: its asserts are the checks
 "counterfoil/runmeta.py" = ["S310"]          # urlopen only on a localhost Ollama endpoint
 "counterfoil/paypal.py" = ["S310"]           # urlopen only on the fixed https PayPal sandbox host
+# the sandbox drives the docker CLI on purpose; "/tmp" there is the container's tmpfs, and the job dir must be
+# world-readable so the container's unprivileged uid 65534 can read the mounted parser and input
+"counterfoil/sandbox.py" = ["S603", "S607", "S108", "S103"]
+"tests/test_sandbox.py" = ["S603", "S607"]
 
 [tool.mypy]
 python_version = "3.13"
