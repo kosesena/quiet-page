@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 960" width="540" height="960">
+<defs><radialGradient id="g" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="#7A2420"/><stop offset="1" stop-color="#3A1210"/></radialGradient></defs>
+<rect width="540" height="960" fill="url(#g)"/>
+<g fill="#F4EEDF" opacity=".55"><circle cx="60" cy="170" r="4"/><circle cx="120" cy="90" r="3"/><circle cx="470" cy="140" r="5"/><circle cx="420" cy="260" r="3"/><circle cx="80" cy="330" r="3"/><circle cx="500" cy="380" r="4"/><circle cx="40" cy="520" r="3"/><circle cx="480" cy="560" r="3"/><circle cx="140" cy="620" r="4"/><circle cx="400" cy="640" r="3"/></g>
+<g font-family="Georgia, 'Times New Roman', serif" text-anchor="middle">
+<text x="270" y="96" font-size="24" letter-spacing="9" fill="#E7C27D">THE QUIET PAGE</text>
+<g transform="translate(270,430)">
+<path d="M-40 -150 C -60 -190, -20 -210, -40 -250" fill="none" stroke="#F4EEDF" stroke-width="8" stroke-linecap="round" opacity=".7"/>
+<path d="M40 -150 C 20 -190, 60 -210, 40 -250" fill="none" stroke="#F4EEDF" stroke-width="8" stroke-linecap="round" opacity=".7"/>
+<path d="M-110 -130 L110 -130 L88 170 Q0 196 -88 170 Z" fill="#F4EEDF"/>
+<rect x="-104" y="-50" width="206" height="70" fill="#9E2B25"/><g fill="#F4EEDF"><path d="M-90 -15 l8 -10 l8 10 l-8 10 z"/><path d="M-60 -15 l8 -10 l8 10 l-8 10 z"/><path d="M-30 -15 l8 -10 l8 10 l-8 10 z"/><path d="M0 -15 l8 -10 l8 10 l-8 10 z"/><path d="M30 -15 l8 -10 l8 10 l-8 10 z"/><path d="M60 -15 l8 -10 l8 10 l-8 10 z"/><path d="M90 -15 l8 -10 l8 10 l-8 10 z"/></g>
+<rect x="-118" y="-150" width="236" height="26" rx="10" fill="#2F5D50"/>
+<g transform="translate(150,110) rotate(10)"><rect x="-55" y="-45" width="110" height="90" fill="#2F5D50"/><rect x="-8" y="-45" width="16" height="90" fill="#E7C27D"/><rect x="-55" y="-8" width="110" height="16" fill="#E7C27D"/><path d="M0 -45 c -30 -30 -40 0 0 0 c 30 -30 40 0 0 0" fill="none" stroke="#E7C27D" stroke-width="6"/></g>
+</g>
+<text x="270" y="750" font-size="46" font-weight="700" fill="#F4EEDF">Winter Spice Latte</text>
+<text x="270" y="800" font-size="25" font-style="italic" fill="#E7C27D">cinnamon, clove &amp; a gift-wrapped book</text>
+<rect x="130" y="836" width="280" height="56" rx="28" fill="#F4EEDF"/><text x="270" y="874" font-size="25" font-weight="700" fill="#9E2B25">Holiday set 18.00</text>
+</g></svg>

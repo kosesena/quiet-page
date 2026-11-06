@@ -85,6 +85,11 @@ M = {
     "green": mat("M_MutedGreen", "#6b8a74", 0.7),
     "green_dark": mat("M_MutedGreenDark", "#4f6a57", 0.7),
     "walnut": mat("M_Walnut", "#6e4b34", 0.55),
+    "holiday_red": mat("M_HolidayRed", "#a8322d", 0.45),
+    "fir": mat("M_Fir", "#2d4f3c", 0.85),
+    "fir_light": mat("M_FirLight", "#3b6249", 0.85),
+    "gold": mat("M_Gold", "#d4a94f", 0.25, metal=0.8),
+    "fairy": mat("M_FairyLight", "#ffd08a", 0.3, emit="#ffc766", emit_strength=7.0),
     "pot_cream": mat("M_PotCream", "#e9e2d4", 0.6),
     "pot_char": mat("M_PotCharcoal", "#45484d", 0.6),
     "slate": mat("M_ChalkSlate", "#2f3534", 0.85),
@@ -278,8 +283,8 @@ shelves = empty("Shelves", c_sh)
 BOOK_COLS = [M["green"], M["rust"], M["navy"], M["cream"]]
 
 
-def bookshelf(tag, x, y):
-    root = empty(f"Shelf_{tag}", c_sh, (x, y, 0), parent=shelves)
+def bookshelf(tag, x, y, rot=0.0):
+    root = empty(f"Shelf_{tag}", c_sh, (x, y, 0), rot_z=rot, parent=shelves)
     W, D, H, T = 0.92, 0.34, 1.86, 0.035
     box(f"Shelf_{tag}_SideL", c_sh, (T, D, H), (-W / 2 + T / 2, 0, H / 2), M["white"], parent=root)
     box(f"Shelf_{tag}_SideR", c_sh, (T, D, H), (W / 2 - T / 2, 0, H / 2), M["white"], parent=root)
@@ -315,8 +320,9 @@ def bookshelf(tag, x, y):
     return root
 
 
-bookshelf("A", 3.78, 3.3)
-bookshelf("B", 4.8, 3.3)
+# tall shelves line the right edge beside the reading nook, books facing in (-X)
+bookshelf("A", 3.86, -1.22)
+bookshelf("B", 4.88, -1.22)
 
 # ================================================================ 3. Counter
 c_ct = make_coll("Counter")
@@ -745,8 +751,9 @@ def plant(tag, loc, h, pot="rust", parent=None, coll=None, s=1.0):
 plant("Shelves", (3.3, 2.95, 0), 1.05)
 plant("VultrVM", (-4.05, 3.2, 0), 0.8)
 plant("Corner", (-5.05, 0.05, 0), 1.55, pot="pot_cream", s=1.3)
-plant("FrontRight", (5.1, -1.45, 0), 1.1, pot="pot_char", s=1.1)
+plant("BackRight", (5.05, 3.0, 0), 1.1, pot="pot_char", s=1.1)
 plant("BackLeft", (-3.45, 3.2, 0), 0.65, pot="pot_cream", s=0.8)
+plant("Divider", (3.15, -1.2, 0), 1.75, pot="pot_cream", s=1.35)  # tall plant at the divider end
 
 # (no bar stools: normal cafe seating lives in CafeTables)
 
@@ -924,8 +931,10 @@ M["kraft"] = mat("M_Kraft", "#b98a5e", 0.8)
 for i, cx in enumerate((-0.085, 0.0, 0.085)):
     cup_root = empty(f"PickupCorner_Cup{i}", c_pk, (cx, -0.06 + (i % 2) * 0.03, LEDGE_Z),
                      parent=pk)
-    cyl(f"PickupCorner_Cup{i}_Body", c_pk, 0.028, 0.12, (0, 0, 0.06), M["cup"], segs=16,
-        parent=cup_root, r2=0.036)
+    cyl(f"PickupCorner_Cup{i}_Body", c_pk, 0.028, 0.12, (0, 0, 0.06), M["holiday_red"],
+        segs=16, parent=cup_root, r2=0.036)  # winter cup
+    cyl(f"PickupCorner_Cup{i}_Band", c_pk, 0.0349, 0.012, (0, 0, 0.104), M["cream"], segs=16,
+        parent=cup_root, r2=0.0356)
     cyl(f"PickupCorner_Cup{i}_Sleeve", c_pk, 0.0335, 0.045, (0, 0, 0.065), M["kraft"],
         segs=16, parent=cup_root, r2=0.0355)
     cyl(f"PickupCorner_Cup{i}_Lid", c_pk, 0.038, 0.012, (0, 0, 0.126), M["cup"], segs=16,
@@ -943,11 +952,11 @@ M["rug_in"] = mat("M_RugInner", "#e8ddcb", 0.95)
 M["rug_out"] = mat("M_RugBorder", "#c4a789", 0.95)
 M["brass_m"] = mat("M_Brass", "#c9a35f", 0.35, metal=0.7)
 M["lampshade"] = mat("M_ReadingShade", "#f3e6cc", 0.6, emit="#ffbf80", emit_strength=1.2)
-NOOK_X, NOOK_Y = 4.3, 0.5
-nook = empty("ReadingNook", c_rn, (NOOK_X, NOOK_Y, 0))
-cyl("ReadingNook_RugBorder", c_rn, 0.9, 0.008, (0, -0.1, 0.004), M["rug_out"], segs=48,
+NOOK_X, NOOK_Y, NOOK_ROT = 4.1, -2.55, 40  # quiet front-right corner, chairs face the camera
+nook = empty("ReadingNook", c_rn, (NOOK_X, NOOK_Y, 0), rot_z=NOOK_ROT)
+cyl("ReadingNook_RugBorder", c_rn, 0.84, 0.008, (0, -0.1, 0.004), M["rug_out"], segs=48,
     parent=nook)
-cyl("ReadingNook_Rug", c_rn, 0.8, 0.01, (0, -0.1, 0.005), M["rug_in"], segs=48,
+cyl("ReadingNook_Rug", c_rn, 0.75, 0.01, (0, -0.1, 0.005), M["rug_in"], segs=48,
     parent=nook)
 
 
@@ -993,7 +1002,35 @@ _bm = bmesh.new()
 bmesh.ops.create_cone(_bm, cap_ends=False, segments=24, radius1=0.16, radius2=0.1, depth=0.2)
 finish_mesh(_bm, "Lamp_Shade", c_rn, M["lampshade"], (0, 0, 1.36), lp, 60)
 sphere("Lamp_Bulb", c_rn, 0.035, (0, 0, 1.31), M["bulb"], parent=lp, segs=12, rings=8)
-NOOK_LAMP = (NOOK_X, NOOK_Y + 0.32, 1.30)
+_a = math.radians(NOOK_ROT)
+NOOK_LAMP = (NOOK_X - 0.32 * math.sin(_a), NOOK_Y + 0.32 * math.cos(_a), 1.30)
+
+# --- ReadingDivider: waist-high double-sided bookshelf + tall plant, closing the nook off
+c_dv = make_coll("ReadingDivider")
+dv = empty("ReadingDivider", c_dv, (3.15, -2.35, 0), rot_z=90)  # runs along Y
+DW, DD, DH = 1.8, 0.34, 0.92
+for sx in (-1, 1):
+    box(f"Divider_End{sx}", c_dv, (0.03, DD, DH), (sx * (DW / 2 - 0.015), 0, DH / 2),
+        M["walnut"], bevel=0.006, parent=dv)
+for i, z in enumerate((0.03, 0.46, DH - 0.015)):
+    box(f"Divider_Board{i}", c_dv, (DW, DD, 0.03), (0, 0, z), M["walnut"], bevel=0.006,
+        parent=dv)
+box("Divider_Spine", c_dv, (DW - 0.06, 0.015, DH - 0.06), (0, 0, DH / 2), M["walnut"],
+    bevel=0.0, parent=dv)
+for side in (-1, 1):  # books on both faces
+    for row, z0 in enumerate((0.045, 0.475)):
+        xcur, k = -DW / 2 + 0.05, 0
+        while xcur < DW / 2 - 0.08:
+            w = (0.035, 0.045, 0.04, 0.05, 0.03)[(k + row + side) % 5]
+            h = (0.3, 0.27, 0.33, 0.29, 0.31)[(k * 3 + row) % 5]
+            if (k + row) % 9 == 8:  # a little gap now and then
+                xcur += 0.06
+            box(f"Divider_Book{side}_{row}_{k}", c_dv, (w - 0.004, 0.14, h),
+                (xcur + w / 2, side * 0.085, z0 + h / 2), BOOK_COLS[(k + row + (side > 0)) % 4],
+                bevel=0.003, segs=1, parent=dv)
+            xcur += w
+            k += 1
+
 # short low bookshelf behind the chairs
 ls = empty("ReadingNook_LowShelf", c_rn, (0.0, 0.78, 0), parent=nook)
 LW, LD, LH = 0.6, 0.26, 0.5
@@ -1184,7 +1221,7 @@ EXTRA_LIGHTS.append(("LoungeLamp_Light", (LC_X + 0.13, LC_Y + 0.1, 0.62), 10))
 
 # --- BookOfTheDay: free-standing digital totem at the nook's front-left edge, facing camera
 c_bd = make_coll("BookOfTheDay")
-bd = empty("BookOfTheDay", c_bd, (NOOK_X - 0.7, NOOK_Y - 1.55, 0), rot_z=40)
+bd = empty("BookOfTheDay", c_bd, (2.72, -2.0, 0), rot_z=40)  # outside the divider, at the nook edge, facing camera
 box("BookOfTheDay_Base", c_bd, (0.36, 0.26, 0.045), (0, 0, 0.0225), M["walnut"], bevel=0.012,
     parent=bd)
 cyl("BookOfTheDay_Pole", c_bd, 0.018, 0.52, (0, 0.02, 0.3), M["brass_m"], segs=10, parent=bd)
@@ -1194,6 +1231,204 @@ box("BookOfTheDay_Trim", c_bd, (0.47, 0.05, 0.014), (0, 0.02, 1.305), M["brass_m
     bevel=0.004, parent=bd)
 M["botd"] = mat("M_BookOfTheDay", "#1d2127", 0.35, emit="#28313d", emit_strength=1.0)
 face_plane("BookOfTheDay_Face", c_bd, 0.4, 0.7, (0, -0.0035, 0.92), M["botd"], bd)
+
+
+# --- MerchShelf: freestanding retail unit at the queue/entrance end of the counter
+c_ms = make_coll("MerchShelf")
+ms = empty("MerchShelf", c_ms, (-2.55, 1.3, 0), rot_z=45)  # faces the queue and the camera
+MW, MD, MH = 1.1, 0.38, 1.5
+M["brand_green"] = mat("M_BrandGreen", "#2f5d50", 0.4)
+M["tin_gold"] = mat("M_TinGold", "#c9a35f", 0.3, metal=0.6)
+for sx in (-1, 1):
+    box(f"Merch_Side{sx}", c_ms, (0.035, MD, MH), (sx * (MW / 2 - 0.0175), 0, MH / 2),
+        M["walnut"], bevel=0.008, parent=ms)
+box("Merch_Back", c_ms, (MW - 0.07, 0.015, MH - 0.05), (0, MD / 2 - 0.008, MH / 2 + 0.01),
+    M["cream"], bevel=0.0, parent=ms)
+box("Merch_Plinth", c_ms, (MW - 0.07, MD - 0.02, 0.08), (0, 0, 0.04), M["walnut"], bevel=0.006,
+    parent=ms)
+SH = (0.08, 0.46, 0.84, 1.16)
+for i, z in enumerate(SH + (MH - 0.02,)):
+    box(f"Merch_Shelf{i}", c_ms, (MW - 0.07, MD - 0.02, 0.03), (0, 0, z + 0.015), M["oak"],
+        bevel=0.005, parent=ms)
+decals = empty("MerchShelf_Decals", c_ms, (0, 0, 0), parent=ms)
+FRONT = -MD / 2 + 0.06
+
+
+def tag(name, x, z):
+    box(name, c_ms, (0.05, 0.004, 0.025), (x, -MD / 2 + 0.008, z + 0.012), M["cream"],
+        bevel=0.0, parent=ms)
+
+
+# top shelf: branded tumblers in three colours with a small logo decal
+z0 = SH[3] + 0.03
+for k, col in enumerate(("brand_green", "cream", "rust", "brand_green", "cream", "rust")):
+    x = -0.42 + k * 0.168
+    cyl(f"Merch_Tumbler{k}", c_ms, 0.036, 0.2, (x, FRONT + 0.03, z0 + 0.1), M[col], segs=18,
+        parent=ms, r2=0.034)
+    cyl(f"Merch_TumblerBand{k}", c_ms, 0.0355, 0.03, (x, FRONT + 0.03, z0 + 0.165),
+        M["holiday_red"] if col == "cream" else M["cream"], segs=18, parent=ms, r2=0.0345)
+    cyl(f"Merch_TumblerLid{k}", c_ms, 0.035, 0.025, (x, FRONT + 0.03, z0 + 0.212),
+        M["graphite"] if col != "brand_green" else M["cream"], segs=18, parent=ms)
+    logo_disc(f"Merch_TumblerLogo{k}", c_ms, 0.022, 0.002, (x, FRONT + 0.03 - 0.0365, z0 + 0.1),
+              parent=decals)
+tag("Merch_Price3", 0.0, SH[3] + 0.03)
+# second shelf: ceramic mugs + tea tins
+z1 = SH[2] + 0.03
+for k, col in enumerate(("cream", "brand_green", "cream", "rust")):
+    x = -0.42 + k * 0.11
+    cyl(f"Merch_Mug{k}", c_ms, 0.04, 0.09, (x, FRONT + 0.02, z1 + 0.045), M[col], segs=16,
+        parent=ms)
+    torus(f"Merch_MugHandle{k}", c_ms, 0.022, 0.006, (x + 0.048, FRONT + 0.02, z1 + 0.048), M[col],
+          parent=ms, rot=(90, 0, 0))
+for k, col in enumerate(("brand_green", "tin_gold", "rust", "navy")):
+    x = 0.08 + k * 0.105
+    cyl(f"Merch_Tin{k}", c_ms, 0.035, 0.11, (x, FRONT + 0.03, z1 + 0.055), M[col], segs=16,
+        parent=ms)
+    cyl(f"Merch_TinLid{k}", c_ms, 0.037, 0.015, (x, FRONT + 0.03, z1 + 0.115), M["tin_gold"],
+        segs=16, parent=ms)
+tag("Merch_Price2", -0.25, z1)
+tag("Merch_Price2b", 0.24, z1)
+# third shelf: kraft coffee bean pouches with labels
+z2 = SH[1] + 0.03
+for k in range(5):
+    x = -0.4 + k * 0.2
+    box(f"Merch_Pouch{k}", c_ms, (0.13, 0.065, 0.22), (x, FRONT + 0.04, z2 + 0.11), M["kraft"],
+        bevel=0.015, segs=2, parent=ms)
+    box(f"Merch_PouchFold{k}", c_ms, (0.13, 0.03, 0.025), (x, FRONT + 0.04, z2 + 0.232),
+        M["kraft"], bevel=0.006, parent=ms)
+    box(f"Merch_PouchLabel{k}", c_ms, (0.08, 0.004, 0.07), (x, FRONT + 0.0065, z2 + 0.12),
+        M["cream"] if k % 2 == 0 else M["brand_green"], bevel=0.0, parent=ms)
+tag("Merch_Price1", 0.0, z2)
+# bottom: folded tote bags stack + a tall thermos pair
+z3 = SH[0] + 0.03
+for k, col in enumerate(("cream", "brand_green", "cream", "rust")):
+    box(f"Merch_Tote{k}", c_ms, (0.36, 0.26, 0.035), (-0.24, 0.0, z3 + 0.018 + k * 0.036),
+        M[col], bevel=0.01, segs=2, parent=ms, rot=(0, 0, (k - 1.5) * 2.5))
+for k, col in enumerate(("brand_green", "rust")):
+    x = 0.18 + k * 0.16
+    cyl(f"Merch_Thermos{k}", c_ms, 0.045, 0.26, (x, FRONT + 0.03, z3 + 0.13), M[col], segs=18,
+        parent=ms)
+    cyl(f"Merch_ThermosCap{k}", c_ms, 0.042, 0.045, (x, FRONT + 0.03, z3 + 0.282), M["steel"],
+        segs=18, parent=ms)
+    logo_disc(f"Merch_ThermosLogo{k}", c_ms, 0.026, 0.002, (x, FRONT + 0.03 - 0.0455, z3 + 0.15),
+              parent=decals)
+tag("Merch_Price0", 0.25, z3)
+# small wrapped gift stack on top of the unit (kraft paper, green / red ribbon)
+for k, (w, d, h, dx, rib) in enumerate(((0.26, 0.2, 0.14, -0.22, "brand_green"),
+                                        (0.18, 0.15, 0.11, -0.2, "holiday_red"),
+                                        (0.16, 0.14, 0.12, 0.08, "holiday_red"))):
+    zb = MH + 0.0 + (0.14 if k == 1 else 0.0)
+    rz = (8, -12, 18)[k]
+    box(f"Merch_Gift{k}", c_ms, (w, d, h), (dx, 0.0, zb + h / 2), M["kraft"], bevel=0.006,
+        parent=ms, rot=(0, 0, rz))
+    box(f"Merch_GiftRibbonA{k}", c_ms, (w + 0.004, 0.02, h + 0.004), (dx, 0.0, zb + h / 2),
+        M[rib], bevel=0.0, parent=ms, rot=(0, 0, rz))
+    box(f"Merch_GiftRibbonB{k}", c_ms, (0.02, d + 0.004, h + 0.004), (dx, 0.0, zb + h / 2),
+        M[rib], bevel=0.0, parent=ms, rot=(0, 0, rz))
+    for sx in (-1, 1):
+        sphere(f"Merch_GiftBow{k}{sx}", c_ms, 0.022, (dx + sx * 0.018, 0.0, zb + h + 0.012),
+               M[rib], parent=ms, scale=(1.2, 0.6, 0.7), segs=10, rings=6)
+
+
+# ================================================================ 14. Holiday season
+# --- HolidayTree: stylized layered fir, baubles, spiral fairy lights, star
+c_ht = make_coll("HolidayTree")
+TREE_X, TREE_Y = 5.08, -1.85
+ht = empty("HolidayTree", c_ht, (TREE_X, TREE_Y, 0))
+box("HolidayTree_Crate", c_ht, (0.36, 0.36, 0.26), (0, 0, 0.13), M["walnut"], bevel=0.012,
+    parent=ht)
+cyl("HolidayTree_Trunk", c_ht, 0.04, 0.12, (0, 0, 0.32), M["wood_dark"], segs=10, parent=ht)
+LAYERS = ((0.42, 0.36, 0.36), (0.38, 0.62, 0.34), (0.3, 0.86, 0.32), (0.21, 1.08, 0.3),
+          (0.13, 1.28, 0.26))  # (radius, base z, height)
+for i, (r, zb, h) in enumerate(LAYERS):
+    cyl(f"HolidayTree_Layer{i}", c_ht, r, h, (0, 0, zb + h / 2), M["fir"] if i % 2 == 0 else
+        M["fir_light"], segs=20, parent=ht, r2=0.02)
+
+
+def cone_point(t, ang, inset=0.0):
+    """Point on the tree silhouette at height fraction t (0 bottom, 1 top)."""
+    z = 0.4 + t * 1.08
+    r = max(0.03, 0.44 * (1 - t) ** 0.95) - inset
+    return (r * math.cos(ang), r * math.sin(ang), z)
+
+
+rng = random.Random(11)
+for k in range(16):
+    t = 0.08 + 0.8 * (k / 16)
+    ang = k * 2.4 + rng.uniform(-0.2, 0.2)
+    x, y, z = cone_point(t, ang, 0.02)
+    sphere(f"HolidayTree_Bauble{k}", c_ht, 0.03 if t < 0.6 else 0.024, (x, y, z - 0.03),
+           (M["gold"], M["holiday_red"], M["cream"])[k % 3], parent=ht, segs=10, rings=6)
+for k in range(46):  # spiral string of tiny warm bulbs
+    t = 0.04 + 0.9 * k / 46
+    x, y, z = cone_point(t, k * 0.62, -0.012)
+    sphere(f"HolidayTree_Light{k}", c_ht, 0.011, (x, y, z), M["fairy"], parent=ht, segs=6,
+           rings=4)
+_bm = bmesh.new()  # 5-point star, extruded
+pts = []
+for k in range(10):
+    a = math.pi / 2 + k * math.pi / 5
+    rr = 0.085 if k % 2 == 0 else 0.036
+    pts.append((rr * math.cos(a), 0, rr * math.sin(a)))
+front = [_bm.verts.new((x, -0.012, z)) for x, _, z in pts]
+back = [_bm.verts.new((x, 0.012, z)) for x, _, z in pts]
+_bm.faces.new(front[::-1]); _bm.faces.new(back)
+for k in range(10):
+    j = (k + 1) % 10
+    _bm.faces.new((front[k], front[j], back[j], back[k]))
+star = finish_mesh(_bm, "HolidayTree_Star", c_ht, M["gold"], (0, 0, 1.6), ht, 20, (0, 0, 40))
+EXTRA_LIGHTS.append(("HolidayTree_Light", (TREE_X - 0.25, TREE_Y - 0.25, 0.9), 8))
+
+
+# --- StringLights: draped fairy lights (cord + tiny bulbs) on the back wall and shelf tops
+c_sl = make_coll("StringLights")
+sl = empty("StringLights", c_sl)
+
+
+def drape(tag, a, b, sag, n_swags, spacing=0.12):
+    a, b = Vector(a), Vector(b)
+    total = (b - a).length
+    n = max(2, int(total / spacing))
+    pts = []
+    for i in range(n + 1):
+        u = i / n
+        p_ = a.lerp(b, u)
+        su = (u * n_swags) % 1.0
+        p_.z -= sag * 4 * su * (1 - su)
+        pts.append(p_)
+    for i in range(n):
+        p0, p1 = pts[i], pts[i + 1]
+        d = p1 - p0
+        cobj = cyl(f"StringLights_{tag}_Cord{i}", c_sl, 0.002, d.length, tuple((p0 + p1) / 2),
+                   M["graphite"], segs=4, parent=sl)
+        cobj.rotation_mode = "QUATERNION"
+        cobj.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(d.normalized())
+        sphere(f"StringLights_{tag}_Bulb{i}", c_sl, 0.012, tuple(p0 - Vector((0, 0, 0.014))),
+               M["fairy"], parent=sl, segs=6, rings=4)
+
+
+drape("Wall", (-3.15, WALL_FRONT - 0.02, 2.62), (3.15, WALL_FRONT - 0.02, 2.62), 0.14, 6)
+drape("Shelves", (3.42, -1.41, 1.84), (5.3, -1.41, 1.84), 0.08, 3, 0.1)
+
+# --- Wreath on the back wall at the entrance end (left)
+c_wr = make_coll("Wreath")
+wr = empty("Wreath", c_wr, (-2.85, WALL_FRONT - 0.04, 1.75))
+torus("Wreath_Ring", c_wr, 0.19, 0.055, (0, 0, 0), M["fir"], parent=wr, rot=(90, 0, 0))
+for k in range(14):
+    a = k * 2 * math.pi / 14
+    sphere(f"Wreath_Tuft{k}", c_wr, 0.05, (0.19 * math.cos(a), -0.01, 0.19 * math.sin(a)),
+           M["fir_light"] if k % 2 else M["fir"], parent=wr, scale=(1, 0.6, 1), segs=8, rings=6)
+for k in range(7):
+    a = 0.3 + k * 0.9
+    sphere(f"Wreath_Berry{k}", c_wr, 0.016, (0.2 * math.cos(a), -0.05, 0.2 * math.sin(a)),
+           M["holiday_red"], parent=wr, segs=8, rings=6)
+for sx in (-1, 1):
+    box(f"Wreath_BowLoop{sx}", c_wr, (0.09, 0.025, 0.06), (sx * 0.05, -0.06, -0.19),
+        M["holiday_red"], bevel=0.012, parent=wr, rot=(0, sx * 18, 0))
+    box(f"Wreath_BowTail{sx}", c_wr, (0.025, 0.012, 0.1), (sx * 0.025, -0.058, -0.26),
+        M["holiday_red"], bevel=0.004, parent=wr, rot=(0, sx * 12, 0))
+sphere("Wreath_BowKnot", c_wr, 0.022, (0, -0.065, -0.19), M["holiday_red"], parent=wr, segs=8,
+       rings=6)
 
 # ================================================================ 9. Characters
 def figure(name, loc, rot_z, top, pants, hair_fn, arms=("down", "down"), eyes=True,
@@ -1559,6 +1794,11 @@ join_under(O["Register"], "Register_Mesh")
 join_under(O["Plants"], "Plants_Mesh")
 join_under(O["PickupCorner"], "PickupCorner_Mesh", exclude_roots=(O["PickupCorner_SignText"],))
 join_under(O["ReadingNook"], "ReadingNook_Mesh")
+join_under(O["ReadingDivider"], "ReadingDivider_Mesh")
+join_under(O["MerchShelf"], "MerchShelf_Mesh", exclude_roots=(O["MerchShelf_Decals"],))
+join_under(O["HolidayTree"], "HolidayTree_Mesh")
+join_under(O["StringLights"], "StringLights_Mesh")
+join_under(O["Wreath"], "Wreath_Mesh")
 join_under(O["CommunalTable"], "CommunalTable_Mesh")
 join_under(O["Banquette"], "Banquette_Mesh")
 join_under(O["WallArt"], "WallArt_Mesh")
@@ -1614,7 +1854,9 @@ if DO_RENDER:
     render_to(os.path.join(OUT, "preview-ivy.png"), (-1.7, -2.4, 1.95), (-3.35, 0.1, 1.05), 42)
     render_to(os.path.join(OUT, "preview-counter.png"), (0.55, -0.35, 2.45), (0.25, 2.6, 1.15), 16)
     render_to(os.path.join(OUT, "preview-seating.png"), (0.5, -5.8, 4.4), (-0.2, 1.0, 0.6), 19)
-    render_to(os.path.join(OUT, "preview-nook.png"), (6.3, -2.2, 1.8), (4.0, 0.35, 0.6), 32)
+    render_to(os.path.join(OUT, "preview-merch.png"), (-1.05, -0.45, 1.65), (-2.55, 1.3, 0.85), 38)
+    render_to(os.path.join(OUT, "preview-holiday.png"), (6.6, -5.2, 2.6), (3.7, -1.4, 1.1), 26)
+    render_to(os.path.join(OUT, "preview-nook.png"), (6.9, -5.6, 2.3), (4.15, -2.1, 0.6), 30)
     render_to(os.path.join(OUT, "preview-gate.png"), (0.75, 1.05, 1.5), (0.5, 2.15, 1.12), 40)
     aim(cam, *OVERVIEW)
     bpy.data.objects.remove(ground)

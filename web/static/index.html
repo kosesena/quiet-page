@@ -182,7 +182,7 @@ function canvasTexture(w, h, draw) {
   const c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d"), w, h);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; return t;
 }
-const ADS = ["/static/brand/ads/ad-1-latte.png", "/static/brand/ads/ad-2-bun.png", "/static/brand/ads/ad-3-matcha.png"];
+const ADS = ["/static/brand/ads/ad-4-winter.png", "/static/brand/ads/ad-1-latte.png", "/static/brand/ads/ad-2-bun.png", "/static/brand/ads/ad-3-matcha.png"];
 const adTex = ADS.map((u) => { const t = new THREE.TextureLoader().load(u); t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; return t; });
 let posCanvas = null, posTex = null;
 function drawPOS(state = "ready", line1 = "", line2 = "") {
