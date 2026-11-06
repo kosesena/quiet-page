@@ -8,26 +8,26 @@
 <link rel="icon" href="/static/brand/logo.png">
 <style>
   :root {
-    --bg: #f6f4ef; --ink: #23302c; --muted: #6b746f; --line: #e2ddd2; --card: #ffffff;
+    --bg: #1c1b1a; --ink: #efe8dc; --muted: #a39b8f; --line: #3a3633; --card: #262422;
     --green: #2F5D50; --rust: #B5553A; --tan: #E9B79A; --amber: #E0A126; --red: #C4402F; --blue: #3B82C4;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, "Segoe UI", Inter, system-ui, sans-serif; }
-  #stage { position: relative; height: 66vh; min-height: 420px; background: radial-gradient(120% 90% at 50% 30%, #fbfaf7 0%, #ece8df 100%); }
+  #stage { position: relative; height: 66vh; min-height: 420px; background: #1e1c1b; }
   #stage canvas { display: block; }
-  .tag { position: absolute; top: 14px; left: 14px; padding: 6px 12px; border-radius: 999px; background: #fff; font: 600 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; box-shadow: 0 1px 4px rgba(0,0,0,.08); z-index: 2; }
+  .tag { position: absolute; top: 14px; left: 14px; padding: 6px 12px; border-radius: 999px; background: rgba(38,36,34,.9); color: var(--ink); font: 600 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; box-shadow: 0 1px 4px rgba(0,0,0,.08); z-index: 2; }
   .tag.right { left: auto; right: 14px; color: var(--muted); }
   .zoom { position: absolute; right: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 6px; z-index: 2; }
-  .zoom button { width: 38px; height: 38px; border: 0; border-radius: 10px; background: #fff; font-size: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); cursor: pointer; }
-  .label { padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.94); font: 600 11px/1.2 var(--mono); color: var(--ink); box-shadow: 0 1px 4px rgba(0,0,0,.12); white-space: nowrap; pointer-events: none; transition: opacity .3s; }
+  .zoom button { width: 38px; height: 38px; border: 0; border-radius: 10px; background: #2e2b28; color: var(--ink); font-size: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); cursor: pointer; }
+  .label { padding: 4px 10px; border-radius: 999px; background: rgba(30,28,27,.88); font: 600 11px/1.2 var(--mono); color: var(--ink); border: 1px solid #4a4440; box-shadow: 0 1px 4px rgba(0,0,0,.12); white-space: nowrap; pointer-events: none; transition: opacity .3s; }
   .label.dim { opacity: .25; }
   .label .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; background: var(--green); vertical-align: 1px; }
   .label.alarm .dot { background: var(--red); } .label.hold .dot { background: var(--amber); } .label.vultr .dot { background: var(--blue); }
   nav { display: flex; gap: 4px; overflow-x: auto; padding: 14px 16px 8px; border-bottom: 1px solid var(--line); background: var(--bg); position: sticky; top: 0; z-index: 3; }
   nav button { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px; border: 0; background: none; cursor: pointer; padding: 2px 8px; color: var(--muted); font: 12px/1.2 inherit; }
-  nav button .n { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; font: 600 12px/1 var(--mono); background: #fff; }
-  nav button.on { color: var(--ink); font-weight: 600; } nav button.on .n { background: var(--ink); color: #fff; border-color: var(--ink); }
+  nav button .n { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; font: 600 12px/1 var(--mono); background: #262422; }
+  nav button.on { color: var(--ink); font-weight: 600; } nav button.on .n { background: #E9B79A; color: #1c1b1a; border-color: #E9B79A; }
   main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 80px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; }
   @media (max-width: 860px) { main { grid-template-columns: 1fr; } #stage { height: 46vh; } }
   .kicker { font: 600 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -35,28 +35,28 @@
   h1 small { font: 600 14px/1 var(--mono); color: var(--muted); margin-right: 8px; }
   p { margin: 0 0 12px; } .muted { color: var(--muted); }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 14px; }
-  .chip { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-size: 12px; }
+  .chip { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: #262422; font-size: 12px; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
-  .btn { border: 0; border-radius: 10px; padding: 10px 16px; background: var(--ink); color: #fff; font: 600 14px/1 inherit; cursor: pointer; }
-  .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+  .btn { border: 0; border-radius: 10px; padding: 10px 16px; background: #E9B79A; color: #1c1b1a; font: 600 14px/1 inherit; cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
   .btn.small { padding: 7px 11px; font-size: 13px; }
   .btn:disabled { opacity: .5; cursor: wait; }
   .pager { display: flex; justify-content: space-between; margin-top: 22px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
   .card h3 { margin: 0 0 8px; font-size: 14px; }
   .verdict { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 13px; }
-  .v-pass { background: #e3efe8; color: var(--green); } .v-hold { background: #fbf0d9; color: #8a5d00; } .v-block, .v-quarantined { background: #f8e1dc; color: var(--red); }
+  .v-pass { background: #20392f; color: #8fd1ad; } .v-hold { background: #3d3018; color: #f0c56b; } .v-block, .v-quarantined { background: #43211c; color: #f08d7c; }
   pre { margin: 10px 0 0; padding: 12px; border-radius: 10px; background: #1f2624; color: #e9efe9; font: 12px/1.45 var(--mono); overflow-x: auto; max-height: 260px; }
   pre .hl { background: #6b2a20; color: #fff; }
   #text, #side { min-width: 0; }
   td { overflow-wrap: anywhere; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; } td, th { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
   .diff { font: 600 13px/1.4 var(--mono); } .diff del { color: var(--red); } .diff ins { color: var(--green); text-decoration: none; }
-  textarea, input { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 13px/1.4 inherit; background: #fff; margin-bottom: 8px; }
+  textarea, input { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 13px/1.4 inherit; background: #262422; color: var(--ink); margin-bottom: 8px; }
   textarea { min-height: 90px; resize: vertical; }
   .hidden { display: none !important; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0 40px; }
-  a { color: var(--green); }
+  a { color: #8fd1ad; }
 </style>
 <script type="importmap">
 { "imports": {
@@ -146,17 +146,17 @@ Object.assign(labels.domElement.style, { position: "absolute", top: 0, left: 0, 
 stage.appendChild(labels.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf1eee8);
+scene.background = new THREE.Color(0x1e1c1b);
 const camera = new THREE.PerspectiveCamera(30, stage.clientWidth / stage.clientHeight, 0.1, 200);
 camera.position.set(9, 7.5, 10);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.minDistance = 3; controls.maxDistance = 25; controls.maxPolarAngle = Math.PI * 0.47;
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0xd9d2c3, 1.0));
-const key = new THREE.DirectionalLight(0xfff1e0, 1.8); key.position.set(6, 10, 5); key.castShadow = true;
+scene.add(new THREE.HemisphereLight(0xfff1df, 0x3a3027, 0.55));
+const key = new THREE.DirectionalLight(0xffe2c0, 1.1); key.position.set(6, 10, 5); key.castShadow = true;
 key.shadow.mapSize.set(2048, 2048); key.shadow.camera.left = -8; key.shadow.camera.right = 8; key.shadow.camera.top = 8; key.shadow.camera.bottom = -8; key.shadow.radius = 6;
 scene.add(key);
-const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.16 }));
+const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.35 }));
 shadowPlane.rotation.x = -Math.PI / 2; shadowPlane.position.y = -0.9; shadowPlane.receiveShadow = true; scene.add(shadowPlane);
 
 const composer = new EffectComposer(renderer);
@@ -233,7 +233,7 @@ new GLTFLoader().load("/static/quiet-page.glb?v=" + Date.now(), (gltf) => {
   // Blender's lamp powers don't translate to three's units; keep the positions, use warm lights of our own
   for (const L of glbLights) {
     const pos = L.getWorldPosition(new THREE.Vector3()); L.parent?.remove(L);
-    const warm = new THREE.PointLight(0xffc98a, 2.2, 3.2, 2); warm.position.copy(pos); scene.add(warm);
+    const warm = new THREE.PointLight(0xffc27a, 3.2, 4.0, 2); warm.position.copy(pos); scene.add(warm);
   }
   gateArm = named.Gate_Arm || null; gateLight = named.Gate_Light || null;
   alarm = named.SandboxBox_Alarm || null; if (alarm) alarm.visible = false;
