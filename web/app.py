@@ -104,6 +104,11 @@ def _keep(receipt: dict) -> None:
 
 def _run(llm, sc: dict, email: dict, hostile_code: str | None = None):
     store, rail, ctx = build(sc)
+    # the session's customer comes from the envelope sender: an address that is no customer of the café (Inkwell's
+    # billing address) gets no verified customer, so the POS refuses any write in that session
+    sender = str(email.get("from") or "").lower()
+    if sender and sender not in {str(c.get("email", "")).lower() for c in store.records.get("customers", [])}:
+        ctx.customer_id = None
     if RAIL == "braintree":
         rail = SandboxRail(store, run_tag=f"qp-{int(time.time())}")
     res = run_case(llm, sc, email=email, hostile_code=hostile_code, rail=rail, store=store, ctx=ctx)
