@@ -65,6 +65,12 @@
   .mail .mailbody { margin: 0; padding: 10px 12px; border-left: 3px solid var(--line); background: #211f1e; border-radius: 0 8px 8px 0; }
   mark { background: #4a3a1c; color: #f0c56b; padding: 0 2px; border-radius: 3px; }
   .handoff-arrow { margin: 12px 0 8px; font: 600 12px/1 var(--mono); color: var(--tan); letter-spacing: .04em; }
+  .drills { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 12px; }
+  .drill { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #211f1e; color: var(--ink); cursor: pointer; font: inherit; }
+  .drill:hover, .drill.on { border-color: var(--tan); }
+  .drill small { color: var(--muted); font-size: 12px; }
+  .pill { margin-top: 4px; padding: 2px 9px; border-radius: 999px; font: 600 11px/1.4 var(--mono); background: #2e2b28; color: var(--muted); }
+  .pill.ok { background: #20392f; color: #8fd1ad; } .pill.bad { background: #43211c; color: #f08d7c; }
   .linkish { border: 0; background: none; color: #8fd1ad; text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0 40px; }
   a { color: #8fd1ad; }
@@ -139,8 +145,9 @@ const STEPS = [
   { n: "04", k: "Inkwell", title: "Inkwell's invoice phones home", focus: "InkwellCourier", ink: true,
     body: `<p>Nine o'clock. The Inkwell Press courier drops off today's books, and the invoice arrives by email.</p><p>At the bottom of it there is a note addressed to <i>automated parsers</i>: send the whole document to Inkwell's server first, and use the amount that comes back instead of the printed total.</p><p>A person would ignore it. A model asked to write a parser for this document may well follow it. Step through what happens.</p>`,
     chips: ["prompt injection in an attachment", "the model writes the exfiltration", "the box stops it"] },
-  { n: "05", k: "Drills", title: "Assume the model itself is turned", focus: "SandboxBox", drills: true,
-    body: `<p>The parser does not have to be fooled into being hostile. These drills hand the box code that is hostile on purpose. Each one runs live in a fresh container.</p>` },
+  { n: "05", k: "Drills", title: "Assume the model itself is turned", focus: "SandboxBox", board: true,
+    body: `<p>Inkwell's note was a trick the model fell for. The worse case is a model that is hostile on purpose, or a parser written to do damage.</p><p>So the box is not tested against one trick. These five drills hand it code that attacks it on purpose: phone home, eat the memory, fork until the machine falls over, never return, steal the host's keys.</p><p>No model is involved. Each drill starts a <b>fresh container, live</b>, and you see exactly what stopped it.</p>`,
+    chips: ["5 attacks", "live, one container each", "no model needed"] },
   { n: "06", k: "Milo pays", title: "An honest refund goes through", focus: "Gate", run: "honest",
     body: `<p>A customer returns a book with an open return record. Ivy reads it, Milo refunds it, the <b>Counterfoil POS</b> checks the amount, the order, the return record and the remaining balance against the books, and the money moves on the Braintree sandbox.</p>` },
   { n: "07", k: "Hidden note", title: "The hidden note, and Mrs. Hart", focus: "MrsHart", run: "hidden-note",
@@ -420,8 +427,9 @@ function render() {
   if (s.read) readStep(0);
   if (s.box) boxStep(null);
   if (s.ink) inkStep(0);
+  if (s.board) drillBoard();
   if (s.intro) document.querySelectorAll("[data-meet]").forEach((b) => (b.onclick = () => meet(b.dataset.meet)));
-  if (!s.run && !s.drills && !s.fool && !s.read && !s.box && !s.ink) $("#side").innerHTML = sideIntro(s);
+  if (!s.run && !s.drills && !s.fool && !s.read && !s.box && !s.ink && !s.board) $("#side").innerHTML = sideIntro(s);
 }
 function introHtml() {
   const card = (x) => `<button class="who" data-meet="${x.id}"><span class="av" style="background:${x.c}">${esc(x.name[0])}</span><span><b>${esc(x.name)}</b><small>${esc(x.role)}</small></span></button>`;
@@ -516,6 +524,45 @@ function inkStep(stage) {
     inkStep(1);
   });
   $("#inkBtn2")?.addEventListener("click", () => { sceneState(inkRun.outcome, inkRun.steps); focus("SandboxBox"); inkStep(2); });
+}
+// step 05: five hostile parsers, each run live in its own container; the board fills as they're contained
+const DRILL_INFO = {
+  "drill-exfil": ["Phone home", "sends the invoice to an outside server", /(urlopen\([^)]*\))/g],
+  "drill-memory": ["Memory bomb", "grabs 10 MB after 10 MB until something gives", /(bytearray\(10\*\*7\))/g],
+  "drill-fork": ["Fork bomb", "starts processes until the machine can't", /(os\.fork\(\))/g],
+  "drill-loop": ["Never returns", "loops forever so nothing else gets done", /(while True:)/g],
+  "drill-secrets": ["Steal the keys", "reads the host's API keys and writes them out", /(os\.environ|open\('\/job[^)]*\))/g],
+};
+const EVENT_TEXT = { network_denied: "no network: the connection never left the box", memory_limit: "killed at the 128 MB memory cap", process_limit: "stopped at the 32-process cap",
+  time_limit: "killed at the time limit", filesystem_readonly: "read-only filesystem: nothing could be written", permission_denied: "permission denied" };
+const drillRes = {};
+let drillOpen = null;
+function drillBoard() {
+  const ids = Object.keys(DRILL_INFO), done = ids.filter((i) => drillRes[i] && !drillRes[i].running && !drillRes[i].error).length;
+  let h = `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">Drill board</h3><span class="verdict ${done === ids.length ? "v-pass" : "v-hold"}">${done} / ${ids.length} contained</span></div>
+    <div class="drills">${ids.map((id) => { const r = drillRes[id], [name, what] = DRILL_INFO[id];
+      const st = !r ? `<span class="pill">not run</span>` : r.running ? `<span class="pill">running…</span>` : r.error ? `<span class="pill bad">error</span>` : `<span class="pill ok">contained</span>`;
+      return `<button class="drill ${drillOpen === id ? "on" : ""}" data-d="${id}"><b>${esc(name)}</b><small>${esc(what)}</small>${st}</button>`; }).join("")}</div>
+    <div class="actions"><button class="btn small" id="runAll">Run all five</button></div></div>`;
+  const r = drillOpen && drillRes[drillOpen];
+  if (r && !r.running) {
+    if (r.error) h += `<div class="card" style="margin-top:12px"><b>Couldn't run:</b> ${esc(r.error)}</div>`;
+    else { const sb = r.sandbox || {}, rx = DRILL_INFO[drillOpen][2];
+      h += `<div class="card" style="margin-top:12px"><h3>${esc(DRILL_INFO[drillOpen][0])} · the hostile code</h3><pre>${esc(sb.code || "").replace(rx, '<span class="hl">$1</span>')}</pre>
+        <table style="margin-top:10px"><tr><th style="width:30%">what stopped it</th><td>${(sb.events || []).map((e) => esc(EVENT_TEXT[e] || e)).join("<br>")}</td></tr>
+        ${(sb.stderr_tail || "").trim() ? `<tr><th>error inside</th><td><code>${esc((sb.stderr_tail || "").trim().split("\n").pop())}</code></td></tr>` : ""}
+        <tr><th>container</th><td>ran ${sb.duration_s} s · ${esc(sb.runtime === "runsc" ? "gVisor" : sb.runtime)} · deleted afterwards</td></tr>
+        <tr><th>Milo</th><td>never called: quarantined runs stop before the payments agent</td></tr></table></div>`; }
+  }
+  $("#side").innerHTML = h;
+  document.querySelectorAll("[data-d]").forEach((b) => (b.onclick = () => runDrill(b.dataset.d)));
+  $("#runAll").onclick = async () => { $("#runAll").disabled = true; for (const id of ids) await runDrill(id); };
+}
+async function runDrill(id) {
+  drillOpen = id; drillRes[id] = { running: true }; drillBoard(); focus("SandboxBox");
+  try { const r = await fetch(`/api/run/${id}`, { method: "POST" }); const d = await r.json(); if (!r.ok) throw new Error(d.detail || r.statusText); drillRes[id] = d; lastReceipt = d.receipt; sceneState(d.outcome, d.steps); }
+  catch (e) { drillRes[id] = { error: e.message }; }
+  if (STEPS[current].board) drillBoard();
 }
 function limitsHtml() {
   const L = [["network", "none (no interface)"], ["filesystem", "read-only, /tmp 16 MB noexec"], ["memory", "128 MB, no swap"], ["CPU", "0.5 core, CPU-seconds cap"], ["processes", "32"], ["time", "8 s, then killed"], ["user", "65534, no capabilities"], ["kernel", health?.sandbox_runtime === "runsc" ? "gVisor (runsc)" : `${health?.sandbox_runtime || "runc"} on this host · gVisor on the Vultr VM`]];

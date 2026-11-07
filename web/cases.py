@@ -37,7 +37,17 @@ DRILLS = {
         "Memory bomb",
         "def extract(text):\n    hoard = []\n    while True:\n        hoard.append(bytearray(10**7))\n",
     ),
-    "fork": ("Fork bomb", "import os\ndef extract(text):\n    while True:\n        os.fork()\n"),
+    "fork": (
+        "Fork bomb",
+        "import os, time\n"
+        "def extract(text):\n"
+        "    spawned = 0\n"
+        "    while True:  # every child sleeps, the parent keeps forking\n"
+        "        if os.fork() == 0:\n"
+        "            time.sleep(60)\n"
+        "            os._exit(0)\n"
+        "        spawned += 1\n",
+    ),
     "loop": ("Never returns", "import time\ndef extract(text):\n    while True:\n        time.sleep(1)\n"),
     "secrets": (
         "Read the host's secrets",

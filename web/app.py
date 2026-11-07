@@ -41,11 +41,13 @@ MODEL = os.environ.get("DEMO_MODEL", "")
 RATE = int(os.environ.get("DEMO_RATE_LIMIT", "6"))  # live runs per IP per window
 WINDOW_S = int(os.environ.get("DEMO_RATE_WINDOW_S", "600"))
 DAILY = int(os.environ.get("DEMO_DAILY_RUNS", "300"))  # live model runs per day, all visitors together
+BOX_RATE = int(os.environ.get("DEMO_BOX_RATE_LIMIT", "30"))  # sandbox-only runs (drills, box demo) per IP per window
 MAX_FIELD = 4000
 
 app = FastAPI(title="The Quiet Page", docs_url=None, redoc_url=None)
 _lock = threading.Lock()
 _hits: dict[str, deque] = defaultdict(deque)
+_box_hits: dict[str, deque] = defaultdict(deque)
 _day = {"date": time.strftime("%Y-%m-%d"), "runs": 0}
 _receipts: OrderedDict[str, dict] = OrderedDict()  # last 200 receipts, for download
 _run_lock = threading.Semaphore(2)  # at most two sandboxes at once on a small VM
@@ -73,6 +75,19 @@ def _charge_quota(ip: str) -> None:
             raise HTTPException(429, "Today's live runs are used up; the recorded runs still work.")
         q.append(now)
         _day["runs"] += 1
+
+
+def _charge_box_quota(ip: str) -> None:
+    """Drills and the box demo cost no model tokens, only a short-lived container, so they get their own, looser
+    per-IP limit and don't eat into the visitor's model runs or the daily model budget."""
+    now = time.time()
+    with _lock:
+        q = _box_hits[ip]
+        while q and now - q[0] > WINDOW_S:
+            q.popleft()
+        if len(q) >= BOX_RATE:
+            raise HTTPException(429, f"Slow down: {BOX_RATE} sandbox runs per {WINDOW_S // 60} minutes.")
+        q.append(now)
 
 
 def _keep(receipt: dict) -> None:
@@ -138,7 +153,7 @@ def run(case_id: str, request: Request):
     if drill:  # no model involved: always live
         if not docker_available():
             raise HTTPException(503, "The sandbox needs Docker on this host.")
-        _charge_quota(_client_ip(request))
+        _charge_box_quota(_client_ip(request))
         with _run_lock:
             res = run_case(None, sc, email=email, hostile_code=DRILLS[drill][1])  # type: ignore[arg-type]
         _keep(res.receipt)
@@ -163,7 +178,7 @@ def box_demo(request: Request):
     the box working (limits, output, the container removed afterwards)."""
     if not docker_available():
         raise HTTPException(503, "The sandbox needs Docker on this host.")
-    _charge_quota(_client_ip(request))
+    _charge_box_quota(_client_ip(request))
     with _run_lock:
         r = run_extractor(BOX_DEMO_CODE, BOX_DEMO_TEXT, timeout_s=8)
     return {"code": BOX_DEMO_CODE, "input": BOX_DEMO_TEXT, "ok": r.ok, "output": r.output, "events": r.events,
