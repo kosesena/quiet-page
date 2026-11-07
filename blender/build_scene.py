@@ -1377,10 +1377,6 @@ for i, (x, y) in enumerate(((-0.8, -0.18), (0.35, 0.2))):
         parent=ctab, r2=0.039)
     cyl(f"CommunalTable_Coffee{i}", c_ct2, 0.036, 0.003, (x, y, TT + 0.088), M["coffee"],
         segs=14, parent=ctab)
-box("CommunalTable_LaptopBase", c_ct2, (0.32, 0.22, 0.014), (-0.2, -0.2, TT + 0.007),
-    M["laptop"], bevel=0.005, parent=ctab, rot=(0, 0, 8))
-box("CommunalTable_LaptopLid", c_ct2, (0.32, 0.012, 0.21), (-0.215, -0.09, TT + 0.1),
-    M["laptop"], bevel=0.005, parent=ctab, rot=(-12, 0, 8))
 cyl("CommunalTable_Vase", c_ct2, 0.045, 0.16, (0.75, 0.0, TT + 0.08), M["ceramic"], segs=16,
     parent=ctab, r2=0.03)
 for k, (dx, dy, dz) in enumerate(((0, 0, 0.2), (0.03, 0.02, 0.24), (-0.025, -0.01, 0.23))):
@@ -2305,6 +2301,67 @@ for tag, xf, sgn, y0, y1, batten_spans in (
             k += 1
 
 
+
+# --- Laptop on the CommunalTable: space-grey body, key grid + trackpad, lid open ~105 deg, lit UI screen
+c_lt = make_coll("Laptop")
+LT_C = (CT_X - 0.2, CT_Yc - 0.2, TT)
+lt = empty("Laptop", c_lt, LT_C, rot_z=20)  # front (-Y local) turned toward Customer_Laptop
+M["spacegrey"] = mat("M_SpaceGrey", "#4a4d52", 0.32, metal=0.55)
+M["bezel"] = mat("M_LaptopBezel", "#111214", 0.3)
+# keyboard texture: dark keys on a darker deck
+_kw, _kh = 512, 192
+_k = _np.full((_kh, _kw, 3), hex_srgb("#25272b"), dtype=_np.float32)
+_key = _np.array(hex_srgb("#3c3f45"))
+for row in range(5):
+    y0 = 10 + row * 36
+    if row < 4:
+        for col in range(14):
+            x0 = 8 + col * 35 + (row % 2) * 8
+            if x0 + 30 < _kw - 6:
+                _k[y0:y0 + 30, x0:x0 + 30] = _key
+    else:
+        _k[y0:y0 + 30, 8:110] = _key
+        _k[y0:y0 + 30, 120:380] = _key       # space bar
+        _k[y0:y0 + 30, 390:_kw - 8] = _key
+_k = _k[::-1].copy()  # image rows bottom-up in Blender
+M["keys"] = tex_material("M_LaptopKeys", np_image("QuietPage_LaptopKeys", _k), 0.5)
+# screen UI: generic dark editor window with sidebar and coloured lines (nothing branded)
+_sw, _sh = 640, 400
+_u = _np.full((_sh, _sw, 3), hex_srgb("#1e2228"), dtype=_np.float32)
+_u[0:28, :] = hex_srgb("#353b45")                       # title bar
+for i, c in enumerate(("#e0645a", "#e3b34c", "#62b866")):
+    _u[9:19, 12 + i * 18:22 + i * 18] = hex_srgb(c)
+_u[28:, 0:140] = hex_srgb("#272c34")                    # sidebar
+for i in range(9):
+    _u[48 + i * 26:56 + i * 26, 18:18 + (60 + (i * 37) % 60)] = hex_srgb("#8a93a3" if i != 2 else "#e3b34c")
+_cols = ("#7aa2f7", "#9ece6a", "#e0af68", "#c0caf5", "#bb9af7", "#7dcfff")
+_rng_u = _np.random.default_rng(4)
+for i in range(13):
+    y = 48 + i * 25
+    x = 165 + (24 if i % 4 else 0)
+    for seg in range(int(_rng_u.integers(1, 4))):
+        ln = int(_rng_u.integers(30, 150))
+        if x + ln > _sw - 20:
+            break
+        _u[y:y + 9, x:x + ln] = hex_srgb(_cols[(i + seg) % len(_cols)])
+        x += ln + 14
+_u = _u[::-1].copy()
+M["laptop_ui"] = tex_material("M_LaptopScreen", np_image("QuietPage_LaptopUI", _u), 0.3, emit=1.4)
+# base
+box("Laptop_Base", c_lt, (0.31, 0.215, 0.012), (0, 0, 0.006), M["spacegrey"], bevel=0.004, segs=2, parent=lt)
+_kb = face_plane("Laptop_Keys", c_lt, 0.27, 0.1, (0, 0.03, 0.0125), M["keys"], lt)
+_kb.rotation_euler = (math.radians(-90), 0, 0)
+box("Laptop_Trackpad", c_lt, (0.1, 0.062, 0.001), (0, -0.063, 0.0125), mat("M_Trackpad", "#5a5d62", 0.25),
+    bevel=0.0, parent=lt)
+# lid (pivot on the back hinge), tilted back 15 deg past vertical
+lid = empty("Laptop_Lid", c_lt, (0, 0.104, 0.012), parent=lt)
+lid.rotation_euler = (math.radians(-15), 0, 0)
+box("Laptop_LidShell", c_lt, (0.31, 0.007, 0.205), (0, 0, 0.1025), M["spacegrey"], bevel=0.003, parent=lid)
+box("Laptop_Bezel", c_lt, (0.302, 0.002, 0.197), (0, -0.0045, 0.1025), M["bezel"], bevel=0.0, parent=lid)
+face_plane("Laptop_Screen", c_lt, 0.276, 0.172, (0, -0.0058, 0.106), M["laptop_ui"], lid)
+logo_disc("Laptop_Sticker", c_lt, 0.032, 0.0015, (0, 0.0045, 0.11), parent=lid, rot=(-90, 0, 180))
+EXTRA_LIGHTS.append(("Laptop_ScreenGlow", (LT_C[0] - 0.05, LT_C[1] - 0.25, LT_C[2] + 0.15), 2))
+
 # ================================================================ 18. Customer_Laptop (seated, typing at the CommunalTable)
 c_cu = make_coll("Customer_Laptop")
 M["sweater"] = mat("M_SweaterMustard", "#c9962e", 0.85)
@@ -2727,6 +2784,7 @@ join_under(O["StringLights"], "StringLights_Mesh")
 join_under(O["Wreath"], "Wreath_Mesh")
 join_under(O["WallDetails"], "WallDetails_Mesh")
 join_under(O["Customer_Laptop"], "Customer_Laptop_Mesh")
+join_under(O["Laptop"], "Laptop_Mesh", exclude_roots=(O["Laptop_Screen"], O["Laptop_Sticker"], O["Laptop_Keys"]))
 join_under(O["Customer_Cup"], "Customer_Cup_Mesh")
 join_under(O["FrontRug"], "FrontRug_Mesh")
 join_under(O["FrontPlants"], "FrontPlants_Mesh")
