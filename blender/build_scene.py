@@ -3206,6 +3206,12 @@ join_under(O["Ledger"], "Ledger_Mesh")
 join_under(O["OwnerDesk"], "OwnerDesk_Mesh")
 # ---- figures: moving parts become pivot empties (parented to the figure), each pivot's meshes joined
 FPS = 30
+# Jonah's drink cycle (checked against test renders)
+BARISTA_POUR = (-14, 30, -28)
+BARISTA_SERVE = (-20, 0, -25)
+BARISTA_LOOK_CUP = 25
+BARISTA_LOOK_OUT = -20
+BARISTA_SLIDE = (0.0, -0.18, 0.0)
 scene.render.fps = FPS
 HEAD_KEYS = ("_Head", "_Hair", "_Eye", "_Glasses", "_Curl", "_Hood", "_HoodOpening")
 
@@ -3280,7 +3286,7 @@ _mw = _env.matrix_world.copy()
 _env.parent = RIG["InkwellCourier"]["ArmR"]
 _env.matrix_world = _mw
 join_under(_env, "InkwellCourier_EnvelopeMesh")
-_bparts = std_parts(O["Barista_Espresso"], arms=("ArmL",),
+_bparts = std_parts(O["Barista_Espresso"], arms=("ArmL", "ArmR"),
                     extra={"ArmL": [O["Barista_Espresso_Pitcher"], O["Barista_Espresso_PitcherHandle"]]})
 RIG["Barista_Espresso"] = rig(O["Barista_Espresso"], _bparts, (O["Barista_Espresso_Badge"],))
 for w in STEAM:  # wisps follow the figure in the hierarchy (animated individually)
@@ -3380,18 +3386,40 @@ rot_keys(pv["Head"], [(1, (0, 0, 0)), (50, (5, 0, 0)), (70, (5, 0, 2)), (F + 1, 
 push("Customer_Laptop_Idle", [pv["ArmL"], pv["ArmR"], pv["Head"]], F)
 # (no coffee-sip one-shot: the rigid single-pivot arm can't reach the mouth convincingly)
 
-# Barista_Espresso_Idle (4 s): pitcher makes small circles under the wand, steam rises and pulses
-F = 120
+# Barista_Espresso_Idle (24 s): one drink, start to finish, so Jonah is never stuck on a single motion:
+#   0-8 s   steams the milk: pitcher circles under the wand, wand steam rises
+#   8-14 s  turns to the cup under the group head and pours (pitcher swings over, tips)
+#   14-17 s the fresh cup steams; he sets the pitcher back
+#   17-21 s right hand slides the cup to the front of the counter, glances out to call the order
+#   21-24 s the cup is taken, a new empty cup is under the group head, back to the wand
+F = 720
 pv = RIG["Barista_Espresso"]
-rot_keys(pv["ArmL"], [(1 + k * 15, (3 * math.sin(k * math.pi / 4), 0, 3 * math.cos(k * math.pi / 4))) for k in range(9)])
-rot_keys(pv["Head"], [(1, (6, 0, 0)), (60, (8, 0, -4)), (F + 1, (6, 0, 0))])
-for i, w in enumerate(STEAM):  # rise + grow, then shrink to almost nothing so the loop jump is invisible
+arm, armr, head, cup = pv["ArmL"], pv["ArmR"], pv["Head"], O["Barista_HolidayCup"]
+POUR = BARISTA_POUR  # arm offset (deg) that brings the pitcher over the cup and tips it
+circles = [(1 + k * 15, (3 * math.sin(k * math.pi / 4), 0, 3 * math.cos(k * math.pi / 4))) for k in range(17)]  # to f 241
+rot_keys(arm, circles + [(270, (POUR[0] * 0.5, 0, POUR[2] * 0.6)), (300, (POUR[0], 0, POUR[2])),
+                         (330, POUR), (390, POUR), (420, (POUR[0], 0, POUR[2])), (480, (0, 0, 0)), (F + 1, (0, 0, 0))])
+SERVE = BARISTA_SERVE  # right-arm offset (deg) that reaches the cup
+rot_keys(armr, [(1, (0, 0, 0)), (500, (0, 0, 0)), (530, SERVE), (560, SERVE), (600, (SERVE[0] * 0.6, 0, SERVE[2] * 0.3)),
+                (630, (0, 0, 0)), (F + 1, (0, 0, 0))])
+rot_keys(head, [(1, (6, 0, 0)), (120, (8, 0, -4)), (240, (6, 0, 0)), (290, (8, 0, BARISTA_LOOK_CUP)),
+                (420, (8, 0, BARISTA_LOOK_CUP)), (520, (4, 0, BARISTA_LOOK_CUP * 0.5)), (600, (-2, 0, BARISTA_LOOK_OUT)),
+                (650, (-2, 0, BARISTA_LOOK_OUT)), (690, (6, 0, 0)), (F + 1, (6, 0, 0))])
+SLIDE = BARISTA_SLIDE  # cup offset at the front of the counter
+loc_keys(cup, [(1, (0, 0, 0)), (530, (0, 0, 0)), (575, SLIDE), (650, SLIDE), (651, (0, 0, 0)), (F + 1, (0, 0, 0))])
+bs = tuple(base(cup)[2])
+scale_keys(cup, [(1, bs), (650, bs), (651, (0.001, 0.001, 0.001)), (690, (0.001, 0.001, 0.001)), (705, bs), (F + 1, bs)])
+for i, w in enumerate(STEAM):
     bl = base(w)[0]
-    mid = int(F * (0.35 + 0.08 * i))
-    for f, dz, sc in ((1, 0.0, 0.12), (mid, 0.05 + 0.01 * i, 1.0), (F + 1, 0.12 + 0.01 * i, 0.12)):
+    if i >= 3:  # wand steam: only while steaming
+        fr = [(1, 0.0, 0.12), (60 + 20 * i, 0.06 + 0.01 * i, 1.0), (180, 0.1, 0.9), (250, 0.14, 0.05), (F + 1, 0.14, 0.05)]
+    else:       # steam off the fresh drink, after the pour, before the cup is slid away
+        fr = [(1, 0.0, 0.01), (400, 0.0, 0.01), (440 + 15 * i, 0.05 + 0.01 * i, 1.0), (505, 0.1, 0.5), (525, 0.12, 0.01),
+              (F + 1, 0.0, 0.01)]
+    for f, dz, sc in fr:
         key(w, "location", f, (bl[0], bl[1], bl[2] + dz))
         key(w, "scale", f, (0.7 * sc, 0.7 * sc, 2.0 * sc))
-push("Barista_Espresso_Idle", [pv["ArmL"], pv["Head"]] + STEAM, F)
+push("Barista_Espresso_Idle", [arm, armr, head, cup] + STEAM, F)
 
 # Ivy_Idle (6 s): head tilts while reading, left hand moves over the papers
 F = 180

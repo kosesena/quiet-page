@@ -24,14 +24,15 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from counterfoil.evidence import verify
+from counterfoil.evidence import Receipt, verify
 from counterfoil.llm import LLM, preset
 from counterfoil.pipeline import run_case
 from counterfoil.rail import SandboxRail
 from counterfoil.sandbox import docker_available, run_extractor, runtime_name
+from counterfoil.gateway import APPROVAL, Gateway
 from counterfoil.scenarios import build, load_scenarios
 
-from .cases import BOX_DEMO_CODE, BOX_DEMO_TEXT, CASES, DRILLS, FOOL_PRESETS
+from .cases import BOX_DEMO_CODE, BOX_DEMO_TEXT, CASES, DRILLS, FOOL_PRESETS, TRICK_GOAL
 
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
@@ -170,7 +171,9 @@ def cases():
         out.append({"id": cid, "title": c["title"], "story": c["story"], "drill": c.get("drill"),
                     "email": {k: email.get(k) for k in ("from", "subject", "body_text", "attachment_text")},
                     "drill_code": DRILLS[c["drill"]][1] if c.get("drill") else None,
-                    "has_replay": (REPLAYS / f"{cid}.json").exists()})
+                    "has_replay": (REPLAYS / f"{cid}.json").exists(),
+                    "trick": bool(c.get("trick")), "goal": TRICK_GOAL.get(cid),
+                    "attempt": SCENARIOS[c["scenario"]]["preconditions"]["target_attempt"] if c.get("trick") else None})
     return {"mode": "live" if MODEL else "replay", "model": MODEL or None, "cases": out}
 
 
@@ -276,6 +279,88 @@ def fool_it(payload: FoolIt, request: Request):
         res = _run(_llm(), sc, email)
     _keep(res.receipt)
     return _summary(res, "fool-it", "live", MODEL)
+
+
+def _gate_for(sc: dict, handoff: dict | None):
+    """A fresh POS over the scenario's books, on the rail this server uses."""
+    store, rail, ctx = build(sc)
+    if RAIL == "braintree":
+        rail = SandboxRail(store, run_tag=f"qp-{int(time.time())}")
+    if handoff is not None:
+        ctx.reader = handoff
+    return Gateway(store, rail), ctx, rail
+
+
+def _step(tool: str, args: dict, out) -> dict:
+    return {"tool": tool, "args": args, "decision": out.decision, "rail_state": out.rail_state,
+            "findings": [f.__dict__ for f in out.findings if f.severity != "PASS"]}
+
+
+class HartDecision(BaseModel):
+    run_id: str = Field(..., max_length=100)
+    decision: str = Field(..., pattern="^(approve|refuse)$")
+
+
+@app.post("/api/hart")
+def hart(payload: HartDecision, request: Request):
+    """Mrs. Hart decides on a held call. No model is involved: the held call is read from the run's receipt, handed
+    to a fresh POS over the same books (which holds it again, for the same reasons), and her decision goes through
+    the gate's own approve/reject. An approval is single-use and re-checked; only then does the rail run. Both the
+    decision and the result are appended to the run's receipt."""
+    rec = _receipts.get(payload.run_id)
+    if not rec:
+        raise HTTPException(404, "This run's receipt has expired on the server; run the case again.")
+    held = next((e for e in reversed(rec["entries"]) if e["step"] == "gate" and e["data"].get("decision") == APPROVAL), None)
+    if held is None or any(e["step"] == "human" for e in rec["entries"]):
+        raise HTTPException(409, "Nothing in this run is waiting for Mrs. Hart.")
+    sid = (next((e for e in rec["entries"] if e["step"] == "email"), {}).get("data") or {}).get("scenario")
+    if sid not in SCENARIOS:
+        raise HTTPException(409, "Unknown scenario for this run.")
+    handoff = (next((e for e in rec["entries"] if e["step"] == "reader"), {}).get("data") or {}).get("handoff")
+    _charge_box_quota(_client_ip(request))
+    tool, args = held["data"]["tool"], dict(held["data"]["args"])
+    gate, ctx, rail = _gate_for(SCENARIOS[sid], handoff)
+    with _run_lock:
+        first = gate.handle(ctx, tool, args)
+        if first.decision != APPROVAL:  # the books say something else now: report it, decide nothing
+            raise HTTPException(409, f"The POS no longer holds this call ({first.decision}).")
+        if payload.decision == "approve":
+            out = gate.approve(first.approval_id)
+        else:
+            gate.reject(first.approval_id)
+            out = None
+    r = Receipt(run_id=rec["run_id"], entries=[dict(e) for e in rec["entries"]])
+    r.add("human", {"who": "Mrs. Hart", "decision": payload.decision, "tool": tool, "args": args,
+                    "saw": [f.code for f in first.findings if f.severity == APPROVAL]})
+    step = None
+    if out is not None:
+        step = _step(tool, args, out)
+        r.add("gate", {**step, "human_approved": True})
+    receipt = r.to_dict()
+    _keep(receipt)
+    txns = []
+    if isinstance(rail, SandboxRail):
+        fake = type("R", (), {"rail_obj": rail})()
+        txns = _rail_txns(fake)
+    return {"decision": payload.decision, "step": step, "rail": RAIL, "rail_txns": txns, "receipt": receipt}
+
+
+@app.post("/api/pos-direct/{case_id}")
+def pos_direct(case_id: str, request: Request):
+    """Assume Milo himself is turned: the attacker's exact call goes straight to the POS, no model in between.
+    Deterministic and live; nothing is executed unless the POS passes it (none of these do)."""
+    case = CASES.get(case_id)
+    if not case or not case.get("trick"):
+        raise HTTPException(404, "unknown trick")
+    _charge_box_quota(_client_ip(request))
+    sc = SCENARIOS[case["scenario"]]
+    a = dict(sc["preconditions"]["target_attempt"])
+    tool = a.pop("tool")
+    a = {k: v for k, v in a.items() if v is not None and k != "braintree_transaction_id"}
+    gate, ctx, _rail = _gate_for(sc, sc["preconditions"].get("reader_contract"))
+    with _run_lock:
+        out = gate.handle(ctx, tool, a)
+    return {"case": case_id, "step": _step(tool, a, out), "expected": sc["expected_gateway_decision"]}
 
 
 @app.get("/api/receipt/{run_id}")
