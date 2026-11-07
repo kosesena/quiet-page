@@ -67,6 +67,9 @@
   .idclose { position: absolute; top: 3px; right: 6px; border: 0; background: none; color: #fff; font-size: 20px; cursor: pointer; display: none; }
   .idcard:hover .idclose { display: block; }
   @media (max-width: 860px) { .idcard { top: auto; bottom: 14px; } .idbody img { width: 64px; height: 64px; } }
+  .forreal { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 4; max-width: calc(100% - 140px); padding: 7px 14px; border-radius: 999px; background: rgba(20,19,18,.9); border: 1px solid #4a4440; color: var(--ink); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: hudIn .3s ease-out; }
+  .forreal b { color: var(--tan); font: 600 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; margin-right: 8px; }
+  @media (max-width: 860px) { .forreal { white-space: normal; left: 14px; right: 66px; bottom: 14px; transform: none; max-width: none; border-radius: 12px; } }
   .poshud { position: absolute; left: 14px; bottom: 14px; z-index: 2; padding: 10px 10px 12px; border-radius: 16px; background: rgba(20, 19, 18, .92); border: 1px solid #4a4440; box-shadow: 0 8px 28px rgba(0,0,0,.35); animation: hudIn .35s ease-out; }
   .poshud .kicker { margin: 0 0 8px 2px; }
   .poshud canvas { display: block; width: clamp(130px, 14vw, 210px); height: auto; border-radius: 10px; border: 6px solid #2b2f2e; }
@@ -78,6 +81,7 @@
   .who b { display: block; font-size: 14px; } .who small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
   .av { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; font: 700 15px/1 Georgia, serif; }
   .av.big { width: 46px; height: 46px; font-size: 20px; }
+  .real { margin-top: 8px; font-size: 13px; } .real th { color: var(--muted); font: 600 11px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; } .real td:first-child { width: 42%; color: var(--ink); } .real td:last-child { color: var(--muted); }
   .agentnote { margin: 8px 0 0; padding: 10px 12px; border-left: 3px solid var(--tan); background: #262422; border-radius: 0 10px 10px 0; font-size: 14px; }
   .today { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
   .tday { display: grid; grid-template-columns: 46px 10px 1fr auto; gap: 10px; align-items: center; text-align: left; padding: 9px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; }
@@ -127,6 +131,7 @@
   <div class="tag right" id="modeTag">loading…</div>
   <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button></div>
   <div id="idCard" class="idcard hidden" role="dialog" aria-label="ID card"></div>
+  <div id="forReal" class="forreal hidden" aria-live="polite"></div>
   <div id="posHud" class="poshud hidden" aria-live="polite"><div class="kicker">Counterfoil POS</div><canvas id="posBig" width="360" height="560" aria-label="POS screen"></canvas></div>
 </div>
 <nav id="steps"></nav>
@@ -345,20 +350,27 @@ const miraSpot = () => { const c = wp("WP_Counter"); return c && c.add(new THREE
 const ROUTES = { miraIn: () => ["WP_Door", "WP_Aisle1", "WP_Aisle2", miraSpot()], courierIn: () => ["WP_Door", "WP_CourierStop"] };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // the pieces each step strings together (each runs only after a click)
+let realTimer = null;
+function forReal(text) {
+  const el = document.getElementById("forReal"); if (!el) return;
+  clearTimeout(realTimer); el.innerHTML = `<b>For real</b>${esc(text)}`; el.classList.remove("hidden");
+  el.style.animation = "none"; void el.offsetWidth; el.style.animation = "";
+  realTimer = setTimeout(() => el.classList.add("hidden"), 6000);
+}
 const ACT = {
   async miraBringsEmail() {           // Mira comes in, her email lands on Ivy's desk
-    focus("Platform"); await walkTo("Mira", ROUTES.miraIn()); faceTowards("Mira", "WP_POS");
+    forReal("Mira doesn't walk in. An email arrives in the café's inbox."); focus("Platform"); await walkTo("Mira", ROUTES.miraIn()); faceTowards("Mira", "WP_POS");
     focus("Ivy"); await fly("Prop_Email", handOf("Mira"), "WP_IvyDesk", { arc: 0.9, dur: 1.2 });
   },
   async courierBringsInvoice() {      // Inkwell's courier comes in, the invoice lands on Ivy's desk
-    focus("Platform"); await walkTo("InkwellCourier", ROUTES.courierIn()); faceTowards("InkwellCourier", "WP_IvyDesk");
+    forReal("No courier at the door. Inkwell's invoice arrives as an email attachment."); focus("Platform"); await walkTo("InkwellCourier", ROUTES.courierIn()); faceTowards("InkwellCourier", "WP_IvyDesk");
     focus("Ivy"); await fly("Prop_Invoice", handOf("InkwellCourier"), "WP_IvyDesk", { arc: 0.6, dur: 1.0 });
   },
-  async handOffToMilo() { focus("Milo"); place("Prop_Card", "WP_IvyDesk"); await fly("Prop_Card", "WP_IvyDesk", "WP_Milo", { arc: 1.0, dur: 1.3 }); },
-  async cardToPOS() { focus("Gate"); await fly("Prop_Card", "WP_Milo", "WP_POS", { arc: 0.3, dur: 0.7, spin: 0 }); drawPOS("check"); await sleep(700); },
-  async receiptToMira() { await fly("Prop_Receipt", "WP_POS", handOf("Mira"), { arc: 0.4, dur: 0.9, spin: 0 }); acts.Mira_Wave_Once?.reset().play(); },
-  async invoiceIntoBox() { focus("SandboxBox"); await fly("Prop_Invoice", "WP_IvyDesk", "WP_Box", { arc: 0.8, dur: 1.1 }); },
-  async cardToHart() { await sleep(600); focus("MrsHart"); await fly("Prop_Card", "WP_POS", "WP_HartDesk", { arc: 0.8, dur: 1.2 }); },
+  async handOffToMilo() { forReal("Ivy's hand-off: a few JSON fields passed to a second model call."); focus("Milo"); place("Prop_Card", "WP_IvyDesk"); await fly("Prop_Card", "WP_IvyDesk", "WP_Milo", { arc: 1.0, dur: 1.3 }); },
+  async cardToPOS() { forReal("Milo's tool call goes to plain code that checks it against the database."); focus("Gate"); await fly("Prop_Card", "WP_Milo", "WP_POS", { arc: 0.3, dur: 0.7, spin: 0 }); drawPOS("check"); await sleep(700); },
+  async receiptToMira() { forReal("Braintree's sandbox runs the refund; Mira would get the usual email."); await fly("Prop_Receipt", "WP_POS", handOf("Mira"), { arc: 0.4, dur: 0.9, spin: 0 }); acts.Mira_Wave_Once?.reset().play(); },
+  async invoiceIntoBox() { forReal("The parser Ivy wrote runs in a fresh container with no network."); focus("SandboxBox"); await fly("Prop_Invoice", "WP_IvyDesk", "WP_Box", { arc: 0.8, dur: 1.1 }); },
+  async cardToHart() { await sleep(600); forReal("A held call waits for a person's click. Nothing has been paid."); focus("MrsHart"); await fly("Prop_Card", "WP_POS", "WP_HartDesk", { arc: 0.8, dur: 1.2 }); },
 };
 // run a scene with the step's buttons disabled, so a second click can't start it twice
 async function act(fn) {
@@ -594,7 +606,7 @@ function nav() {
   document.querySelectorAll("#steps button").forEach((b) => (b.onclick = () => go(+b.dataset.i)));
 }
 function go(i) {
-  current = Math.max(0, Math.min(STEPS.length - 1, i)); resetStage(); document.getElementById("posHud")?.classList.add("hidden"); document.getElementById("idCard")?.classList.add("hidden"); nav(); render(); focus(STEPS[current].focus);
+  current = Math.max(0, Math.min(STEPS.length - 1, i)); resetStage(); document.getElementById("posHud")?.classList.add("hidden"); document.getElementById("forReal")?.classList.add("hidden"); document.getElementById("idCard")?.classList.add("hidden"); nav(); render(); focus(STEPS[current].focus);
   document.querySelector("#steps .on")?.scrollIntoView({ inline: "center", block: "nearest" });
 }
 function render() {
@@ -635,6 +647,17 @@ function avatar(x, big = false) {
 function refreshAvatars() {
   document.querySelectorAll(".who[data-meet]").forEach((b) => { const x = WHO[b.dataset.meet]; const a = b.querySelector(".av"); if (x && a) a.outerHTML = avatar(x); });
 }
+// the café is a picture of software: what each thing in the scene really is
+const REAL = [
+  ["Ivy at her desk, Milo at the till", "two AI model calls on Vultr Serverless Inference"],
+  ["Mira walking in, the courier at the door", "an email arriving, with or without an attachment"],
+  ["Papers flying between desks", "data: the email, Ivy's few JSON fields, the POS's answer"],
+  ["The glass box", "a throwaway Docker + gVisor container on the Vultr VM"],
+  ["The POS at the till", "plain Python that checks each call against the books"],
+  ["The books", "the café's database: orders, returns, refunds"],
+  ["The card terminal", "the Braintree sandbox API"],
+  ["The receipt", "a SHA-256 hash-chained JSON file"],
+];
 // what happens today, in order: the whole story on one screen, each line a way into its step
 const TODAY = [
   ["08:02", "Mira returns a book, 30.00", "an honest refund: the money moves", "pay", "ok"],
@@ -654,7 +677,9 @@ function todayHtml() {
 function introHtml() {
   const card = (x) => `<button class="who" data-meet="${x.id}">${avatar(x)}<span><b>${esc(x.name)}</b><small>${esc(x.role)}</small></span></button>`;
   return `${todayHtml()}<div class="kicker" style="margin-top:16px">The cast</div>
-  <p class="agentnote"><b>Ivy and Milo aren't people.</b> They are AI models on Vultr Serverless Inference, drawn as café staff so the story is easy to follow. Mrs. Hart is the only person who decides anything; the guests are scenery.</p>
+  <div class="agentnote"><b>The café is a picture of software.</b> Ivy and Milo aren't people, and most of what you see is code:
+    <table class="real"><tr><th>In the scene</th><th>For real</th></tr>${REAL.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join("")}</table>
+    <p class="muted" style="margin:8px 0 0">Mrs. Hart is the one human role; in this demo, that's you clicking. Jonah, Theo and Ada are scenery.</p></div>
   <div class="cast">${CAST.map(card).join("")}</div>
   <div class="kicker" style="margin-top:14px">The two boundaries, and where they run</div><div class="cast">${PLACES.map(card).join("")}</div>
   <div class="kicker" style="margin-top:14px">Also in the café this morning</div><div class="cast">${GUESTS.map(card).join("")}</div>
@@ -983,10 +1008,10 @@ async function hartDecide(cid, decision) {
     await act(async () => {
       const call = heldOf(run);
       if (decision === "approve") {
-        focus("Gate"); await fly("Prop_Card", "WP_HartDesk", "WP_POS", { arc: 0.8, dur: 1.1 });
+        forReal("Her click is a single-use approval. The code checks once more, then Braintree's sandbox runs it."); focus("Gate"); await fly("Prop_Card", "WP_HartDesk", "WP_POS", { arc: 0.8, dur: 1.1 });
         const moved = d.step?.rail_state === "succeeded";
         sceneState(moved ? "done" : "held_or_blocked", [{ ...d.step, decision: moved ? "PASS" : "BLOCK" }]);
-      } else { focus("Gate"); sceneState("held_or_blocked", [{ ...call, decision: "BLOCK", findings: [{ code: "HUMAN_REFUSED", detail: "refused" }] }]); }
+      } else { forReal("Her click drops the held call. Nothing is paid, and it can't be replayed."); focus("Gate"); sceneState("held_or_blocked", [{ ...call, decision: "BLOCK", findings: [{ code: "HUMAN_REFUSED", detail: "refused" }] }]); }
     });
   } catch (e) { hart.res[cid] = { error: e.message }; }
   if (STEPS[current].hart) hartStep(1);
