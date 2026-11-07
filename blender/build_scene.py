@@ -2723,6 +2723,82 @@ figure("MrsHart", (0.85, COUNTER_Y + 0.66, 0), -8, M["white"], M["pants_dark"], 
 figure("InkwellCourier", (-0.3, -4.2, 0), -128, M["hood"], M["pants_dark"], hair_courier,
        arms=("down", "forward"), eyes=False, extras=courier_extras)
 
+# --- Barista_Espresso: second barista at the espresso machine (milk pitcher under the steam wand)
+def barista_extras(name, coll, root):
+    box(f"{name}_Apron", coll, (0.34, 0.03, 0.52), (0, -0.14, 0.98), M["brand_green"], bevel=0.02, parent=root)
+    box(f"{name}_ApronBib", coll, (0.22, 0.03, 0.2), (0, -0.14, 1.27), M["brand_green"], bevel=0.015, parent=root)
+    box(f"{name}_ApronPocket", coll, (0.16, 0.008, 0.07), (0, -0.157, 0.92), M["dark_wood"], bevel=0.004,
+        parent=root)
+    logo_disc(f"{name}_Badge", coll, 0.033, 0.006, (0.06, -0.158, 1.31), parent=root)
+    # steel milk pitcher in the left hand (forward pose hand at local (-0.175, -0.26, 1.02))
+    cyl(f"{name}_Pitcher", coll, 0.034, 0.1, (-0.175, -0.29, 1.07), M["steel"], segs=16, parent=root, r2=0.04)
+    torus(f"{name}_PitcherHandle", coll, 0.025, 0.006, (-0.175, -0.245, 1.07), M["steel"], parent=root,
+          rot=(0, 90, 0))
+
+
+figure("Barista_Espresso", (2.68, COUNTER_Y + 0.55, 0), -44, M["cream"], M["pants_dark"], hair_milo,
+       arms=("forward", "forward"), extras=barista_extras)
+c_be = bpy.data.collections["Barista_Espresso"]
+# steam wand from the machine's back corner down into the pitcher, a holiday cup under the group head
+capsule_between("Barista_Espresso_SteamWand", c_be, 0.008, (2.2, COUNTER_Y + 0.27, 1.33), (2.33, COUNTER_Y + 0.45, 1.13),
+                M["steel"])
+holiday_cup("Barista_HolidayCup", (2.0, COUNTER_Y - 0.1, 1.02), h=0.09, r_bot=0.024, r_top=0.031, lid=False)
+M["steam"] = mat("M_Steam", "#ffffff", 0.5, emit="#ffffff", emit_strength=0.25, alpha=0.32)
+STEAM = []
+for k, (x, y, z) in enumerate(((2.0, COUNTER_Y - 0.1, 1.17), (2.015, COUNTER_Y - 0.1, 1.23), (1.99, COUNTER_Y - 0.1, 1.29),
+                               (2.35, COUNTER_Y + 0.46, 1.19), (2.36, COUNTER_Y + 0.46, 1.26))):
+    w = sphere(f"Barista_Espresso_Steam{k}", c_be, 0.022, (x, y, z), M["steam"], scale=(0.7, 0.7, 2.0), segs=10,
+               rings=6)
+    STEAM.append(w)
+
+# --- Reader_Nook: reading in the rust armchair of the ReadingNook
+bpy.context.view_layer.update()
+_ch = bpy.data.objects["ReadingNook_ChairRust"].matrix_world
+c_rd = make_coll("Reader_Nook")
+rd = empty("Reader_Nook", c_rd, tuple(_ch.translation), rot_z=math.degrees(_ch.to_euler().z))
+M["knit"] = mat("M_KnitCream", "#e9dcc4", 0.95)
+M["trousers"] = mat("M_TrousersBrown", "#5a4636", 0.8)
+SR = 0.38  # seat cushion top
+for sx in (-1, 1):
+    t = "L" if sx < 0 else "R"
+    capsule_between(f"Reader_Nook_Thigh{t}", c_rd, 0.072, (sx * 0.085, 0.03, SR + 0.07), (sx * 0.09, -0.36, SR + 0.12),
+                    M["trousers"], parent=rd)
+    capsule_between(f"Reader_Nook_Shin{t}", c_rd, 0.065, (sx * 0.09, -0.38, SR + 0.1), (sx * 0.09, -0.42, 0.08),
+                    M["trousers"], parent=rd)
+    box(f"Reader_Nook_Shoe{t}", c_rd, (0.1, 0.17, 0.06), (sx * 0.09, -0.46, 0.03), M["walnut"], bevel=0.025, parent=rd)
+capsule("Reader_Nook_Torso", c_rd, 0.19, 0.62, (0, 0.03, SR + 0.33), M["knit"], parent=rd, sy=0.72, rot=(6, 0, 0))
+torus("Reader_Nook_Scarf", c_rd, 0.085, 0.032, (0, 0.02, SR + 0.66), M["rust"], parent=rd, rot=(0, 0, 0))
+box("Reader_Nook_ScarfTail", c_rd, (0.06, 0.02, 0.2), (0.05, -0.1, SR + 0.55), M["rust"], bevel=0.008, parent=rd,
+    rot=(-8, 0, -6))
+cyl("Reader_Nook_Neck", c_rd, 0.05, 0.08, (0, 0.04, SR + 0.71), M["skin"], segs=12, parent=rd)
+RH = (0, 0.03, SR + 0.84)
+sphere("Reader_Nook_Head", c_rd, 0.135, RH, M["skin"], parent=rd)
+sphere("Reader_Nook_Hair", c_rd, 0.148, (RH[0], RH[1] + 0.02, RH[2] + 0.01), M["hair_auburn"], parent=rd,
+       scale=(1.02, 1.0, 0.95), cut_below=-0.25)
+for sx in (-1, 1):
+    sphere(f"Reader_Nook_Eye{'L' if sx < 0 else 'R'}", c_rd, 0.013, (sx * 0.045, RH[1] - 0.124, RH[2] - 0.03),
+           M["eye"], parent=rd, segs=8, rings=6)
+BOOK = (0.0, -0.32, SR + 0.47)
+for sx in (-1, 1):
+    t = "L" if sx < 0 else "R"
+    sh = Vector((sx * 0.215, 0.03, SR + 0.6))
+    el = Vector((sx * 0.25, -0.1, SR + 0.32))
+    hd = Vector((sx * 0.17, BOOK[1], BOOK[2]))
+    capsule_between(f"Reader_Nook_UpperArm{t}", c_rd, 0.055, sh, el, M["knit"], parent=rd)
+    fdir = (hd - el).normalized()
+    capsule_between(f"Reader_Nook_Forearm{t}", c_rd, 0.05, el, hd - fdir * 0.06, M["knit"], parent=rd)
+    sphere(f"Reader_Nook_Hand{t}", c_rd, 0.045, tuple(hd), M["skin"], parent=rd, segs=12, rings=8)
+bk = empty("Reader_Nook_Book", c_rd, BOOK, parent=rd)
+bk.rotation_euler = (math.radians(-50), 0, 0)  # pages face the reader
+box("Reader_Nook_BookCover", c_rd, (0.32, 0.22, 0.012), (0, 0, 0), M["xmas_green"], bevel=0.003, parent=bk)
+for sx in (-1, 1):
+    box(f"Reader_Nook_Pages{sx}", c_rd, (0.15, 0.205, 0.016), (sx * 0.078, 0, 0.012), M["paper"], bevel=0.002, segs=1,
+        parent=bk, rot=(0, -sx * 5, 0))
+leaf = empty("Reader_Nook_PageLeaf", c_rd, (0, 0, 0.021), parent=bk)   # pivot on the spine, turns about local Y
+box("Reader_Nook_PageLeafSheet", c_rd, (0.148, 0.2, 0.002), (0.075, 0, 0), M["paper"], bevel=0.0, parent=leaf)
+leaf.scale = (0, 0, 0)  # only visible while a page is being turned
+
+
 
 # ================================================================ 10. Lights / world / camera
 c_env = make_coll("Environment")
@@ -2910,9 +2986,242 @@ join_under(O["VultrVM"], "VultrVM_Mesh", exclude_roots=(O["VultrVM_Status"],))
 join_under(O["Gate_Light"], "Gate_Light_Mesh")
 join_under(O["Gate"], "Gate_Mesh", exclude_roots=(O["Gate_Light"], O["Gate_Screen"]))
 join_under(O["Ledger"], "Ledger_Mesh")
-for who in ("Ivy", "Milo", "MrsHart", "InkwellCourier"):
-    join_under(O[who], f"{who}_Mesh",
-               exclude_roots=(O["Logo_Badge"],) if who == "Milo" else ())
+# ---- figures: moving parts become pivot empties (parented to the figure), each pivot's meshes joined
+FPS = 30
+scene.render.fps = FPS
+HEAD_KEYS = ("_Head", "_Hair", "_Eye", "_Glasses", "_Curl", "_Hood", "_HoodOpening")
+
+
+def _names(root, keys, exclude=("HoodDrape",)):
+    out = []
+    for o in descendants(root):
+        if o.type == "MESH" and any(k in o.name for k in keys) and not any(e in o.name for e in exclude):
+            out.append(o)
+    return out
+
+
+def make_pivot(root, pname, loc):
+    pv = bpy.data.objects.new(pname, None)
+    pv.empty_display_size = 0.08
+    root.users_collection[0].objects.link(pv)
+    pv.parent = root
+    pv.location = loc
+    return pv
+
+
+def rig(root, parts, extra_excl=()):
+    """parts: {suffix: (pivot_local, [objects])}. Returns {suffix: pivot}."""
+    pivots = {}
+    for suf, (loc, _obs) in parts.items():
+        pivots[suf] = make_pivot(root, f"{root.name}_{suf}", loc)
+    bpy.context.view_layer.update()
+    for suf, (loc, obs) in parts.items():
+        for ob in obs:
+            mw = ob.matrix_world.copy()
+            ob.parent = pivots[suf]
+            ob.matrix_world = mw
+    bpy.context.view_layer.update()
+    for suf, pv in pivots.items():
+        if any(c.type == "MESH" for c in descendants(pv)):
+            join_under(pv, f"{root.name}_{suf}Mesh")
+    join_under(root, f"{root.name}_Mesh", exclude_roots=tuple(pivots.values()) + tuple(extra_excl))
+    for suf, pv in pivots.items():  # the joins freed the original mesh names; give pivots their clean names
+        want = f"{root.name}_{suf}"
+        clash = bpy.data.objects.get(want)
+        if clash is not None and clash is not pv:
+            clash.name = want + "_old"
+        pv.name = want
+    return pivots
+
+
+STAND = {"Head": (0, 0, 1.42), "ArmL": (-0.215, 0, 1.29), "ArmR": (0.215, 0, 1.29)}
+
+
+def std_parts(root, arms=("ArmL", "ArmR"), extra=None):
+    parts = {"Head": (STAND["Head"], _names(root, HEAD_KEYS))}
+    for a in arms:
+        side = a[-1]
+        parts[a] = (STAND[a], _names(root, (f"_UpperArm{side}", f"_Forearm{side}", f"_Hand{side}")))
+    for suf, obs in (extra or {}).items():
+        parts[suf][1].extend(obs)
+    return parts
+
+
+bpy.context.view_layer.update()
+RIG = {}
+RIG["Ivy"] = rig(O["Ivy"], std_parts(O["Ivy"], arms=("ArmL",)))
+RIG["Milo"] = rig(O["Milo"], {"Head": (STAND["Head"], _names(O["Milo"], HEAD_KEYS))}, (O["Logo_Badge"],))
+RIG["MrsHart"] = rig(O["MrsHart"], {"Head": (STAND["Head"], _names(O["MrsHart"], HEAD_KEYS))})
+_env = O["InkwellCourier_Envelope"]
+_cparts = std_parts(O["InkwellCourier"], arms=("ArmR",))
+RIG["InkwellCourier"] = rig(O["InkwellCourier"], _cparts, (_env,))
+bpy.context.view_layer.update()
+_mw = _env.matrix_world.copy()
+_env.parent = RIG["InkwellCourier"]["ArmR"]
+_env.matrix_world = _mw
+join_under(_env, "InkwellCourier_EnvelopeMesh")
+_bparts = std_parts(O["Barista_Espresso"], arms=("ArmL",),
+                    extra={"ArmL": [O["Barista_Espresso_Pitcher"], O["Barista_Espresso_PitcherHandle"]]})
+RIG["Barista_Espresso"] = rig(O["Barista_Espresso"], _bparts, (O["Barista_Espresso_Badge"],))
+for w in STEAM:  # wisps follow the figure in the hierarchy (animated individually)
+    _mw = w.matrix_world.copy()
+    w.parent = O["Barista_Espresso"]
+    w.matrix_world = _mw
+_cu = O["Customer_Laptop"]
+RIG["Customer_Laptop"] = rig(_cu, {
+    "Head": ((0, -0.07, 1.2), _names(_cu, ("Customer_Head", "Customer_Hair", "Customer_Eye"))),
+    "ArmL": ((-0.215, -0.06, 1.09), _names(_cu, ("_UpperArmL", "_ForearmL", "_HandL"))),
+    "ArmR": ((0.215, -0.06, 1.09), _names(_cu, ("_UpperArmR", "_ForearmR", "_HandR")))})
+_rd = O["Reader_Nook"]
+RIG["Reader_Nook"] = rig(_rd, {
+    "Head": ((0, 0.04, SR + 0.72), _names(_rd, ("Reader_Nook_Head", "Reader_Nook_Hair", "Reader_Nook_Eye"))),
+    "Torso": ((0, 0.03, SR + 0.02), _names(_rd, ("Reader_Nook_Torso", "Reader_Nook_Scarf"))),
+    "ArmR": ((0.215, 0.03, SR + 0.6), _names(_rd, ("_UpperArmR", "_ForearmR", "_HandR"))),
+    "LegR": ((0.085, 0.03, SR + 0.07), _names(_rd, ("_ThighR", "_ShinR", "_ShoeR")))},
+    (O["Reader_Nook_Book"],))
+join_under(O["Reader_Nook_Book"], "Reader_Nook_BookMesh", exclude_roots=(O["Reader_Nook_PageLeaf"],))
+
+# ---- idle / one-shot clips: keyframes per object, pushed to NLA tracks named after the clip
+CLIPS = {}
+
+
+def _r(v):
+    return math.radians(v)
+
+
+def key(ob, path, frame, value):
+    setattr(ob, path, value)
+    ob.keyframe_insert(path, frame=frame)
+
+
+def push(clip, obs, frames):
+    CLIPS[clip] = frames / FPS
+    for ob in obs:
+        ad = ob.animation_data
+        act = ad.action
+        act.name = f"{clip}__{ob.name}"
+        tr = ad.nla_tracks.new()
+        tr.name = clip
+        st = tr.strips.new(clip, 1, act)
+        if hasattr(st, "action_slot") and hasattr(act, "slots") and len(act.slots):
+            try:
+                st.action_slot = act.slots[0]
+            except Exception:
+                pass
+        ad.action = None
+
+
+BASE = {}
+
+
+def base(ob):
+    if ob.name not in BASE:
+        BASE[ob.name] = (tuple(ob.location), tuple(ob.rotation_euler), tuple(ob.scale))
+    return BASE[ob.name]
+
+
+def rot_keys(ob, seq):
+    """seq: [(frame, (dx, dy, dz) degrees)] added to the base rotation."""
+    b = base(ob)[1]
+    for f, (dx, dy, dz) in seq:
+        key(ob, "rotation_euler", f, (b[0] + _r(dx), b[1] + _r(dy), b[2] + _r(dz)))
+
+
+def loc_keys(ob, seq):
+    b = base(ob)[0]
+    for f, (dx, dy, dz) in seq:
+        key(ob, "location", f, (b[0] + dx, b[1] + dy, b[2] + dz))
+
+
+def scale_keys(ob, seq):
+    for f, sc in seq:
+        key(ob, "scale", f, sc)
+
+
+def restore():
+    for nm, (l, r_, sc) in BASE.items():
+        ob = bpy.data.objects[nm]
+        ob.location, ob.rotation_euler, ob.scale = l, r_, sc
+
+
+# Customer_Laptop_Idle (4 s): alternating typing, a small nod
+F = 120
+pv = RIG["Customer_Laptop"]
+rot_keys(pv["ArmL"], [(1 + k * 6, ((2.5 if k % 2 else -1.5), 0, 0)) for k in range(21)])
+rot_keys(pv["ArmR"], [(1 + k * 6, ((-1.5 if k % 2 else 2.5), 0, 0)) for k in range(21)])
+rot_keys(pv["Head"], [(1, (0, 0, 0)), (50, (5, 0, 0)), (70, (5, 0, 2)), (F + 1, (0, 0, 0))])
+push("Customer_Laptop_Idle", [pv["ArmL"], pv["ArmR"], pv["Head"]], F)
+# (no coffee-sip one-shot: the rigid single-pivot arm can't reach the mouth convincingly)
+
+# Barista_Espresso_Idle (4 s): pitcher makes small circles under the wand, steam rises and pulses
+F = 120
+pv = RIG["Barista_Espresso"]
+rot_keys(pv["ArmL"], [(1 + k * 15, (3 * math.sin(k * math.pi / 4), 0, 3 * math.cos(k * math.pi / 4))) for k in range(9)])
+rot_keys(pv["Head"], [(1, (6, 0, 0)), (60, (8, 0, -4)), (F + 1, (6, 0, 0))])
+for i, w in enumerate(STEAM):  # rise + grow, then shrink to almost nothing so the loop jump is invisible
+    bl = base(w)[0]
+    mid = int(F * (0.35 + 0.08 * i))
+    for f, dz, sc in ((1, 0.0, 0.12), (mid, 0.05 + 0.01 * i, 1.0), (F + 1, 0.12 + 0.01 * i, 0.12)):
+        key(w, "location", f, (bl[0], bl[1], bl[2] + dz))
+        key(w, "scale", f, (0.7 * sc, 0.7 * sc, 2.0 * sc))
+push("Barista_Espresso_Idle", [pv["ArmL"], pv["Head"]] + STEAM, F)
+
+# Ivy_Idle (6 s): head tilts while reading, left hand moves over the papers
+F = 180
+pv = RIG["Ivy"]
+rot_keys(pv["Head"], [(1, (8, 0, 0)), (60, (12, 4, 0)), (120, (10, -3, 0)), (F + 1, (8, 0, 0))])
+rot_keys(pv["ArmL"], [(1, (-14, 0, 0)), (50, (-26, 0, 4)), (100, (-22, 0, -3)), (150, (-16, 0, 0)), (F + 1, (-14, 0, 0))])
+push("Ivy_Idle", [pv["Head"], pv["ArmL"]], F)
+
+# Milo_Idle (5 s): small weight shift, glances down at the POS and back up
+F = 150
+root = O["Milo"]
+loc_keys(root, [(1, (0, 0, 0)), (75, (0.012, 0, 0)), (F + 1, (0, 0, 0))])
+rot_keys(RIG["Milo"]["Head"], [(1, (0, 0, 0)), (35, (14, 0, 0)), (90, (14, 0, 3)), (120, (0, 0, 0)), (F + 1, (0, 0, 0))])
+push("Milo_Idle", [root, RIG["Milo"]["Head"]], F)
+
+# MrsHart_Idle (6 s): slow sway, head turns
+F = 180
+root = O["MrsHart"]
+rot_keys(root, [(1, (0, 0, 0)), (90, (0, 0, 2.5)), (F + 1, (0, 0, 0))])
+rot_keys(RIG["MrsHart"]["Head"], [(1, (0, 0, 0)), (60, (0, 0, 10)), (120, (4, 0, -6)), (F + 1, (0, 0, 0))])
+push("MrsHart_Idle", [root, RIG["MrsHart"]["Head"]], F)
+
+# InkwellCourier_Idle (4 s): weight shift, the envelope arm bobs
+F = 120
+root = O["InkwellCourier"]
+loc_keys(root, [(1, (0, 0, 0)), (60, (0.015, 0.0, 0.0)), (F + 1, (0, 0, 0))])
+rot_keys(RIG["InkwellCourier"]["ArmR"], [(1, (0, 0, 0)), (30, (-3, 0, 0)), (60, (1, 0, 0)), (90, (-3, 0, 0)), (F + 1, (0, 0, 0))])
+rot_keys(RIG["InkwellCourier"]["Head"], [(1, (0, 0, 0)), (60, (0, 0, 5)), (F + 1, (0, 0, 0))])
+push("InkwellCourier_Idle", [root, RIG["InkwellCourier"]["ArmR"], RIG["InkwellCourier"]["Head"]], F)
+
+# Reader_Nook_Idle (7 s, loop): breathing + eyes/head moving down the page and back up. No legs, no page leaf.
+F = 210
+pv = RIG["Reader_Nook"]
+scale_keys(pv["Torso"], [(1, (1, 1, 1)), (52, (1, 1.012, 1.012)), (105, (1, 1, 1)), (157, (1, 1.012, 1.012)), (F + 1, (1, 1, 1))])
+rot_keys(pv["Head"], [(1, (16, 0, 0)), (90, (22, 0, 2)), (170, (26, 0, -2)), (F + 1, (16, 0, 0))])
+push("Reader_Nook_Idle", [pv["Torso"], pv["Head"]], F)
+
+# Reader_Nook_PageTurn_Once (1.5 s): hand lifts a single page leaf and turns it over; ends in the start pose
+F = 45
+leafp = O["Reader_Nook_PageLeaf"]
+base(leafp)
+scale_keys(leafp, [(1, (0, 0, 0)), (3, (1, 1, 1)), (42, (1, 1, 1)), (44, (0, 0, 0)), (F + 1, (0, 0, 0))])
+rot_keys(leafp, [(1, (0, 0, 0)), (6, (0, -15, 0)), (24, (0, -95, 0)), (40, (0, -180, 0)), (44, (0, -180, 0)), (F + 1, (0, 0, 0))])
+rot_keys(pv["ArmR"], [(1, (0, 0, 0)), (12, (-8, 0, -10)), (28, (-6, 0, -22)), (40, (0, 0, -4)), (F + 1, (0, 0, 0))])
+rot_keys(pv["Head"], [(1, (16, 0, 0)), (24, (16, 0, -6)), (F + 1, (16, 0, 0))])
+push("Reader_Nook_PageTurn_Once", [leafp, pv["ArmR"], pv["Head"]], F)
+
+# Reader_Nook_CrossLegs_Once (2.5 s): right leg crosses over the left, small settle; ENDS crossed
+F = 75
+CROSS = (-20, 0, -24)
+rot_keys(pv["LegR"], [(1, (0, 0, 0)), (30, (-26, 0, -26)), (42, CROSS), (60, (-18, 0, -23)), (F + 1, CROSS)])
+push("Reader_Nook_CrossLegs_Once", [pv["LegR"]], F)
+# Reader_Nook_UncrossLegs_Once (2.5 s): crossed back to the start pose
+rot_keys(pv["LegR"], [(1, CROSS), (25, (-26, 0, -20)), (55, (-4, 0, -3)), (F + 1, (0, 0, 0))])
+push("Reader_Nook_UncrossLegs_Once", [pv["LegR"]], F)
+restore()
+print("QP_CLIPS", {k: round(v, 2) for k, v in CLIPS.items()})
 join_under(O["MenuBoard"], "MenuBoard_Mesh", exclude_roots=(O["MenuBoard_Image"], O["MenuBoard_HaloGlow"]))
 join_under(O["PendantLamps"], "PendantLamps_Mesh")
 join_under(O["PastryCase"], "PastryCase_Mesh", exclude_roots=(O["PastryCase_Glass"], O["PastryCase_GlassFront"]))
@@ -2928,7 +3237,6 @@ join_under(O["HolidayTree"], "HolidayTree_Mesh")
 join_under(O["StringLights"], "StringLights_Mesh")
 join_under(O["Wreath"], "Wreath_Mesh")
 join_under(O["WallDetails"], "WallDetails_Mesh")
-join_under(O["Customer_Laptop"], "Customer_Laptop_Mesh")
 join_under(O["Laptop"], "Laptop_Mesh", exclude_roots=(O["Laptop_Screen"], O["Laptop_Sticker"], O["Laptop_Keys"]))
 join_under(O["Customer_Cup"], "Customer_Cup_Mesh")
 join_under(O["FrontRug"], "FrontRug_Mesh")
@@ -2965,13 +3273,26 @@ alarm.hide_render = False
 alarm.hide_set(False)
 gltf_kwargs = dict(filepath=os.path.join(OUT, "quiet-page.glb"), export_format="GLB",
                    use_selection=False, export_apply=True, export_extras=True,
-                   export_cameras=True, export_lights=True, export_yup=True)
-try:
-    bpy.ops.export_scene.gltf(**gltf_kwargs)
-except TypeError as exc:
-    print("gltf kwargs issue:", exc)
-    gltf_kwargs.pop("export_lights", None)
-    bpy.ops.export_scene.gltf(**gltf_kwargs)
+                   export_cameras=True, export_lights=True, export_yup=True,
+                   export_animations=True, export_animation_mode="NLA_TRACKS",
+                   export_anim_slide_to_zero=True, export_force_sampling=True)
+for _attempt in range(6):  # drop any option this exporter version does not know, then retry
+    try:
+        bpy.ops.export_scene.gltf(**gltf_kwargs)
+        break
+    except TypeError as exc:
+        msg = str(exc)
+        bad = [k for k in list(gltf_kwargs) if f'"{k}"' in msg or f"'{k}'" in msg]
+        print("gltf kwargs issue:", msg[:200], "-> dropping", bad)
+        if not bad:
+            raise
+        for k in bad:
+            gltf_kwargs.pop(k, None)
+# still previews show the rest pose: mute the clip tracks after export
+for _ob in scene.objects:
+    if _ob.animation_data:
+        for _tr in _ob.animation_data.nla_tracks:
+            _tr.mute = True
 alarm.hide_viewport = True
 alarm.hide_render = True
 
@@ -2999,6 +3320,7 @@ if DO_RENDER:
     render_to(os.path.join(OUT, "preview-walls.png"), (1.2, -1.8, 2.1), (-5.2, 3.0, 1.45), 22)
     render_to(os.path.join(OUT, "preview-customer.png"), (0.15, -1.75, 1.45), (1.95, -0.85, 0.8), 36)
     render_to(os.path.join(OUT, "preview-cups.png"), (2.85, 2.95, 1.32), (3.17, 3.5, 1.17), 55)
+    render_to(os.path.join(OUT, "preview-reader.png"), (7.6, -5.4, 1.5), (6.55, -2.75, 0.85), 40)
     render_to(os.path.join(OUT, "preview-nook.png"), (3.9, -8.0, 2.7), (6.3, -2.9, 0.8), 30)
     render_to(os.path.join(OUT, "preview-gate.png"), (0.75, 2.3, 1.5), (0.5, 3.4, 1.12), 40)
     aim(cam, *OVERVIEW)
