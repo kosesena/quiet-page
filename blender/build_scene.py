@@ -304,10 +304,12 @@ platform = rounded_slab("Platform", c_plat, 16.0, 10.0, PLAT_T, 0.3, (0, 0, -PLA
                         M["platform"], edge_bevel=0.06)
 
 def text_mesh(name, coll, body, size, mat_, loc, rot=(90, 0, 0), parent=None, max_w=None,
-              extrude=0.0):
+              extrude=0.0, font=None):
     """Blender text converted to a flat mesh (centred), optionally scaled to max_w."""
     cu = bpy.data.curves.new(name + "_curve", "FONT")
     cu.resolution_u = 2  # light glyph tessellation for the web
+    if font is not None:
+        cu.font = font
     cu.body = body
     cu.size = size
     cu.extrude = extrude
@@ -1564,7 +1566,7 @@ def tag(name, x, z):
 
 # level 3: branded tumblers (winter bands) with a small logo decal
 z0 = SH[3] + 0.03
-for k in range(8):
+for k in range(4):  # right half of this shelf holds the HolidayBears mugs
     col = ("brand_green", "cream", "rust")[k % 3]
     x = -0.77 + k * 0.22
     cyl(f"Merch_Tumbler{k}", c_ms, 0.036, 0.2, (x, FRONT + 0.03, z0 + 0.1), M[col], segs=18, parent=ms, r2=0.034)
@@ -1573,7 +1575,7 @@ for k in range(8):
     cyl(f"Merch_TumblerLid{k}", c_ms, 0.035, 0.025, (x, FRONT + 0.03, z0 + 0.212),
         M["graphite"] if col != "brand_green" else M["cream"], segs=18, parent=ms)
     logo_disc(f"Merch_TumblerLogo{k}", c_ms, 0.022, 0.002, (x, FRONT + 0.03 - 0.0365, z0 + 0.1), parent=decals)
-tag("Merch_Price3", 0.0, z0)
+tag("Merch_Price3", -0.45, z0)
 # level 2: ceramic mugs + tea tins
 z1 = SH[2] + 0.03
 for k, col in enumerate(("cream", "brand_green", "cream", "rust", "brand_green")):
@@ -1641,6 +1643,124 @@ for k, (dx, dz) in enumerate(((0.0, 0.17), (0.04, 0.2), (-0.035, 0.19))):
     sphere(f"Merch_PlantLeaf{k}", c_ms, 0.05, (0.62 + dx, 0.0, z4 + dz), M["leaf"] if k % 2 == 0 else M["leaf_light"],
            parent=ms, segs=10, rings=6)
 EXTRA_LIGHTS.append(("MerchShelf_Light", (-5.75, WALL_FRONT - 0.45, 1.6), 8))
+
+
+# --- HolidayBears: wicker basket of plush bears by the MerchShelf + bear-face mugs on the eye-level shelf
+c_hb = make_coll("HolidayBears")
+M["bear_brown"] = mat("M_PlushBrown", "#8f6040", 0.95)
+M["bear_cream"] = mat("M_PlushCream", "#e8d6b6", 0.95)
+M["bear_nose"] = mat("M_PlushNose", "#3a2a22", 0.6)
+M["wicker"] = mat("M_Wicker", "#c79a5e", 0.85)
+M["wicker_dark"] = mat("M_WickerWeave", "#9b7142", 0.85)
+M["xmas_green"] = mat("M_HolidayGreen", "#2f6b45", 0.6)
+_serif = None
+for _fp in ("/System/Library/Fonts/Supplemental/Georgia.ttf",
+            "/System/Library/Fonts/Supplemental/Times New Roman.ttf"):
+    if os.path.exists(_fp):
+        try:
+            _serif = bpy.data.fonts.load(_fp)
+            break
+        except Exception:
+            pass
+
+
+def plush_bear(name, coll, loc, rot_z, s_, fur, accent, parent, accessory="scarf"):
+    """Sitting low-poly plush bear (local -Y is its front), ~0.24 m tall at s_=1."""
+    root = empty(name, coll, loc, rot_z=rot_z, parent=parent)
+    light = M["bear_cream"] if fur is M["bear_brown"] else M["bear_brown"]
+    sphere(f"{name}_Body", coll, 0.075 * s_, (0, 0, 0.07 * s_), fur, parent=root, scale=(1, 0.9, 1.1),
+           segs=10, rings=7)
+    sphere(f"{name}_Belly", coll, 0.045 * s_, (0, -0.05 * s_, 0.065 * s_), light, parent=root,
+           scale=(1, 0.5, 1.1), segs=9, rings=6)
+    sphere(f"{name}_Head", coll, 0.06 * s_, (0, -0.005 * s_, 0.18 * s_), fur, parent=root, segs=10, rings=7)
+    sphere(f"{name}_Muzzle", coll, 0.026 * s_, (0, -0.055 * s_, 0.17 * s_), light, parent=root,
+           scale=(1.1, 0.8, 0.85), segs=8, rings=5)
+    sphere(f"{name}_Nose", coll, 0.009 * s_, (0, -0.078 * s_, 0.18 * s_), M["bear_nose"], parent=root,
+           segs=6, rings=4)
+    for sx in (-1, 1):
+        sphere(f"{name}_Ear{sx}", coll, 0.022 * s_, (sx * 0.045 * s_, 0.0, 0.232 * s_), fur, parent=root,
+               scale=(1, 0.6, 1), segs=8, rings=5)
+        sphere(f"{name}_EarIn{sx}", coll, 0.012 * s_, (sx * 0.045 * s_, -0.012 * s_, 0.232 * s_), light,
+               parent=root, scale=(1, 0.4, 1), segs=6, rings=4)
+        sphere(f"{name}_Eye{sx}", coll, 0.007 * s_, (sx * 0.022 * s_, -0.052 * s_, 0.2 * s_), M["eye"],
+               parent=root, segs=6, rings=4)
+        sphere(f"{name}_Arm{sx}", coll, 0.025 * s_, (sx * 0.07 * s_, -0.025 * s_, 0.085 * s_), fur, parent=root,
+               scale=(0.8, 0.8, 1.4), segs=8, rings=5)
+        sphere(f"{name}_Leg{sx}", coll, 0.03 * s_, (sx * 0.04 * s_, -0.065 * s_, 0.025 * s_), fur, parent=root,
+               scale=(0.9, 1.3, 0.8), segs=8, rings=5)
+        sphere(f"{name}_Pad{sx}", coll, 0.016 * s_, (sx * 0.04 * s_, -0.103 * s_, 0.025 * s_), light,
+               parent=root, scale=(1, 0.4, 1), segs=6, rings=4)
+    if accessory == "scarf":
+        torus(f"{name}_Scarf", coll, 0.05 * s_, 0.012 * s_, (0, -0.003 * s_, 0.128 * s_), accent, parent=root,
+              rot=(0, 0, 0))
+        box(f"{name}_ScarfTail", coll, (0.02 * s_, 0.008 * s_, 0.05 * s_), (0.025 * s_, -0.052 * s_, 0.105 * s_),
+            accent, bevel=0.0, parent=root, rot=(0, -15, 0))
+    else:  # little Santa hat
+        cyl(f"{name}_Hat", coll, 0.05 * s_, 0.07 * s_, (0.0, 0.0, 0.255 * s_), M["holiday_red"], segs=12,
+            parent=root, r2=0.008 * s_, rot=(-10, 12, 0))
+        torus(f"{name}_HatBrim", coll, 0.048 * s_, 0.01 * s_, (0, 0, 0.225 * s_), M["cream"], parent=root,
+              rot=(0, 0, 0))
+        sphere(f"{name}_HatPom", coll, 0.012 * s_, (0.01 * s_, 0.01 * s_, 0.3 * s_), M["cream"], parent=root,
+               segs=6, rings=4)
+    return root
+
+
+# wicker basket on the floor, counter side of the MerchShelf
+BK = (-4.1, 4.1)
+hb = empty("HolidayBears", c_hb, (BK[0], BK[1], 0))
+_bm = bmesh.new()
+bmesh.ops.create_cone(_bm, cap_ends=False, segments=28, radius1=0.24, radius2=0.275, depth=0.35)
+finish_mesh(_bm, "HolidayBears_Basket", c_hb, M["wicker"], (0, 0, 0.175), hb, 60)
+cyl("HolidayBears_BasketBase", c_hb, 0.24, 0.02, (0, 0, 0.01), M["wicker_dark"], segs=28, parent=hb)
+for k in range(6):
+    z = 0.04 + k * 0.055
+    torus(f"HolidayBears_Weave{k}", c_hb, 0.243 + 0.035 * z / 0.35, 0.007, (0, 0, z), M["wicker_dark"], parent=hb,
+          rot=(0, 0, 0))
+torus("HolidayBears_Rim", c_hb, 0.275, 0.016, (0, 0, 0.35), M["wicker"], parent=hb, rot=(0, 0, 0))
+cyl("HolidayBears_Fill", c_hb, 0.255, 0.01, (0, 0, 0.24), M["cream"], segs=24, parent=hb)
+for sx in (-1, 1):  # red ribbon bow on the front rim
+    sphere(f"HolidayBears_BowLoop{sx}", c_hb, 0.035, (sx * 0.035, -0.28, 0.35), M["holiday_red"], parent=hb,
+           scale=(1.3, 0.5, 0.8), segs=10, rings=6)
+    box(f"HolidayBears_BowTail{sx}", c_hb, (0.025, 0.008, 0.08), (sx * 0.018, -0.285, 0.3), M["holiday_red"],
+        bevel=0.003, parent=hb, rot=(0, sx * 15, 0))
+sphere("HolidayBears_BowKnot", c_hb, 0.016, (0, -0.29, 0.35), M["holiday_red"], parent=hb, segs=8, rings=6)
+for k, (bx, by, rz, fur, acc, kind) in enumerate((
+        (-0.1, 0.06, 15, "bear_brown", "holiday_red", "scarf"),
+        (0.1, 0.07, -15, "bear_cream", "xmas_green", "hat"),
+        (0.0, -0.08, 0, "bear_brown", "xmas_green", "hat"),
+        (-0.14, -0.1, 30, "bear_cream", "holiday_red", "scarf"),
+        (0.14, -0.09, -30, "bear_brown", "holiday_red", "scarf"))):
+    plush_bear(f"HolidayBears_Bear{k}", c_hb, (bx, by, 0.245), rz, 1.0, M[fur], M[acc], hb, kind)
+# small label card on a stick at the basket front, our serif style
+box("HolidayBears_CardStick", c_hb, (0.006, 0.006, 0.16), (0.17, -0.2, 0.36), M["wood_dark"], bevel=0.0,
+    parent=hb)
+box("HolidayBears_Card", c_hb, (0.17, 0.004, 0.07), (0.17, -0.205, 0.45), M["cream"], bevel=0.002, parent=hb)
+text_mesh("HolidayBears_CardText", c_hb, "HOLIDAY BEARS", 0.022, M["bear_nose"], (0.17, -0.208, 0.45),
+          rot=(90, 0, 0), parent=hb, max_w=0.15, font=_serif)
+
+# bear-face holiday mugs + one small bear on the eye-level MerchShelf shelf
+hbs = empty("HolidayBears_Shelf", c_hb, (ms.location.x, ms.location.y, 0))
+_zs = SH[3] + 0.03
+for k in range(4):
+    x = 0.1 + k * 0.155
+    yf = FRONT + 0.02
+    band = M["holiday_red"] if k % 2 == 0 else M["xmas_green"]
+    cyl(f"HolidayBears_Mug{k}", c_hb, 0.042, 0.095, (x, yf, _zs + 0.0475), M["cream"], segs=16, parent=hbs)
+    cyl(f"HolidayBears_MugBand{k}", c_hb, 0.0425, 0.016, (x, yf, _zs + 0.083), band, segs=16, parent=hbs)
+    torus(f"HolidayBears_MugHandle{k}", c_hb, 0.022, 0.006, (x + 0.05, yf, _zs + 0.05), M["cream"], parent=hbs,
+          rot=(90, 0, 0))
+    fy = yf - 0.042
+    sphere(f"HolidayBears_MugFace{k}", c_hb, 0.022, (x, fy, _zs + 0.042), M["bear_brown"], parent=hbs,
+           scale=(1, 0.18, 1), segs=12, rings=8)
+    sphere(f"HolidayBears_MugMuzzle{k}", c_hb, 0.009, (x, fy - 0.004, _zs + 0.036), M["bear_cream"], parent=hbs,
+           scale=(1.2, 0.25, 0.9), segs=8, rings=6)
+    for sx in (-1, 1):
+        sphere(f"HolidayBears_MugEar{k}{sx}", c_hb, 0.009, (x + sx * 0.017, fy + 0.001, _zs + 0.062),
+               M["bear_brown"], parent=hbs, scale=(1, 0.2, 1), segs=8, rings=6)
+        sphere(f"HolidayBears_MugEye{k}{sx}", c_hb, 0.003, (x + sx * 0.008, fy - 0.004, _zs + 0.047), M["eye"],
+               parent=hbs, segs=6, rings=4)
+plush_bear("HolidayBears_ShelfBear", c_hb, (0.78, FRONT + 0.06, _zs), 0, 0.85, M["bear_cream"],
+           M["holiday_red"], hbs, "scarf")
 
 # ================================================================ 14. Holiday season
 # --- HolidayTree: stylized layered fir, baubles, spiral fairy lights, star
@@ -2551,6 +2671,8 @@ join_under(O["PickupCorner"], "PickupCorner_Mesh", exclude_roots=(O["PickupCorne
 join_under(O["ReadingNook"], "ReadingNook_Mesh")
 join_under(O["ReadingDivider"], "ReadingDivider_Mesh")
 join_under(O["MerchShelf"], "MerchShelf_Mesh", exclude_roots=(O["MerchShelf_Decals"],))
+join_under(O["HolidayBears"], "HolidayBears_Mesh")
+join_under(O["HolidayBears_Shelf"], "HolidayBears_ShelfMesh")
 join_under(O["HolidayTree"], "HolidayTree_Mesh")
 join_under(O["StringLights"], "StringLights_Mesh")
 join_under(O["Wreath"], "Wreath_Mesh")
@@ -2618,7 +2740,7 @@ if DO_RENDER:
     render_to(os.path.join(OUT, "preview-ivy.png"), (-2.9, -3.7, 1.95), (-4.5, -1.2, 1.05), 42)
     render_to(os.path.join(OUT, "preview-counter.png"), (0.55, 0.9, 2.45), (0.25, 3.85, 1.15), 16)
     render_to(os.path.join(OUT, "preview-seating.png"), (0.5, -8.6, 6.2), (0.0, 1.4, 0.6), 19)
-    render_to(os.path.join(OUT, "preview-merch.png"), (-4.4, 1.2, 1.7), (-5.75, 4.4, 1.05), 30)
+    render_to(os.path.join(OUT, "preview-merch.png"), (-3.7, 0.7, 1.75), (-5.2, 4.25, 0.9), 27)
     render_to(os.path.join(OUT, "preview-holiday.png"), (4.2, -8.2, 2.8), (6.6, -3.2, 1.1), 26)
     render_to(os.path.join(OUT, "preview-walls.png"), (1.2, -1.8, 2.1), (-5.2, 3.0, 1.45), 22)
     render_to(os.path.join(OUT, "preview-nook.png"), (3.9, -8.0, 2.7), (6.3, -2.9, 0.8), 30)
