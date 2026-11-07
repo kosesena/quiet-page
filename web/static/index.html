@@ -56,6 +56,17 @@
   textarea, input { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 13px/1.4 inherit; background: #262422; color: var(--ink); margin-bottom: 8px; }
   textarea { min-height: 90px; resize: vertical; }
   .hidden { display: none !important; }
+  .idcard { position: absolute; right: 14px; top: 54px; z-index: 3; width: min(320px, calc(100% - 28px)); border-radius: 16px; overflow: hidden; background: #f6efe3; color: #1e1c1b; box-shadow: 0 14px 40px rgba(0,0,0,.4); animation: hudIn .3s ease-out; }
+  .idhead { display: flex; justify-content: space-between; padding: 8px 14px; background: var(--badge, #2F5D50); color: #fff; font: 700 11px/1.2 var(--mono); letter-spacing: .12em; }
+  .idbody { display: flex; gap: 12px; align-items: center; padding: 12px 14px 6px; }
+  .idbody img { width: 86px; height: 86px; border-radius: 12px; object-fit: cover; border: 3px solid var(--badge, #2F5D50); background: #e9dfd0; flex: none; }
+  .idname { font: 700 20px/1.15 Georgia, serif; } .idrole { font-size: 13px; color: #5d554c; margin-top: 2px; } .idkind { font: 600 11px/1.4 var(--mono); color: #7a7066; margin-top: 6px; }
+  .idlist { list-style: none; margin: 6px 0 0; padding: 4px 14px 10px; font-size: 13px; } .idlist li { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; }
+  .idlist .ck { flex: none; margin-top: 1px; } .idlist .ck.ok { background: #d8eee2; color: #1e6b45; } .idlist .ck.bad { background: #f6dcd6; color: #a3352a; }
+  .idnote { margin: 0; padding: 8px 14px 12px; font-size: 13px; color: #5d554c; border-top: 1px dashed #d6cbbb; }
+  .idclose { position: absolute; top: 3px; right: 6px; border: 0; background: none; color: #fff; font-size: 20px; cursor: pointer; display: none; }
+  .idcard:hover .idclose { display: block; }
+  @media (max-width: 860px) { .idcard { top: auto; bottom: 14px; } .idbody img { width: 64px; height: 64px; } }
   .poshud { position: absolute; left: 14px; bottom: 14px; z-index: 2; padding: 10px 10px 12px; border-radius: 16px; background: rgba(20, 19, 18, .92); border: 1px solid #4a4440; box-shadow: 0 8px 28px rgba(0,0,0,.35); animation: hudIn .35s ease-out; }
   .poshud .kicker { margin: 0 0 8px 2px; }
   .poshud canvas { display: block; width: clamp(130px, 14vw, 210px); height: auto; border-radius: 10px; border: 6px solid #2b2f2e; }
@@ -108,6 +119,7 @@
   <div class="tag" id="stageTag">The Quiet Page · book café</div>
   <div class="tag right" id="modeTag">loading…</div>
   <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button></div>
+  <div id="idCard" class="idcard hidden" role="dialog" aria-label="ID card"></div>
   <div id="posHud" class="poshud hidden" aria-live="polite"><div class="kicker">Counterfoil POS</div><canvas id="posBig" width="360" height="560" aria-label="POS screen"></canvas></div>
 </div>
 <nav id="steps"></nav>
@@ -152,7 +164,27 @@ const PLACES = [
   { id: "Gate", name: "Counterfoil POS", role: "Boundary 2 · money", c: "#E0A126", line: "Milo's payments pass through it. Money moves only if it matches the books." },
   { id: "VultrVM", name: "Vultr", role: "Where it all runs", c: "#3B82C4", line: "A Vultr VM hosts the box, the POS and this page. Ivy and Milo think on Vultr Serverless Inference." },
 ];
-const WHO = Object.fromEntries([...CAST, ...PLACES].map((x) => [x.id, x]));
+const GUESTS = [
+  { id: "Mira", name: "Mira Velden", role: "Customer", c: "#B07A4F", line: "Returning her copy of Winter Atlas today." },
+  { id: "Barista_Espresso", name: "Jonah", role: "Barista", c: "#2F5D50", line: "Makes the coffee. Has nothing to do with the inbox or the till's agent." },
+  { id: "Customer_Laptop", name: "Theo", role: "Regular", c: "#C99A2E", line: "Writing a novel at the long table, one flat white at a time." },
+  { id: "Reader_Nook", name: "Ada", role: "Regular", c: "#A5512F", line: "In the reading nook with Poems for Rain." },
+];
+const WHO = Object.fromEntries([...CAST, ...PLACES, ...GUESTS].map((x) => [x.id, x]));
+// what each one may and may not do: the security story, told as staff badges
+const BADGE = {
+  Ivy: { kind: "AI agent", runs: "Vultr Serverless Inference", can: ["read every email and attachment", "write a small parser for an attachment", "hand Milo six fixed fields"], cannot: ["move money", "let her parser reach the network"] },
+  Milo: { kind: "AI agent", runs: "Vultr Serverless Inference", can: ["look up an order", "ask the POS for a refund or a charge"], cannot: ["read the email itself", "pay anything the books don't back"] },
+  MrsHart: { kind: "Human", runs: "her own desk", can: ["approve or refuse what the POS holds", "see the exact difference that stopped it"], cannot: ["be bypassed: held money waits for her"] },
+  InkwellCourier: { kind: "Supplier · untrusted", runs: "outside the café", can: ["deliver books", "send invoices by email"], cannot: ["reach anything but Ivy's inbox"], note: "Today's invoice carries instructions for whoever parses it." },
+  SandboxBox: { kind: "Boundary 1 · code", runs: "Docker + gVisor on the Vultr VM", can: ["run one parser on one document", "use /tmp, 16 MB"], cannot: ["open any network connection", "write anywhere else", "go past 128 MB, 32 processes or 8 s"] },
+  Gate: { kind: "Boundary 2 · money", runs: "plain code on the Vultr VM", can: ["pass calls that match the books", "hold mismatches for Mrs. Hart"], cannot: ["be talked into anything: it asks no model"] },
+  VultrVM: { kind: "Infrastructure", runs: "Vultr Cloud Compute", can: ["host this page, the box, the POS and the receipts"], cannot: ["hold model keys in the repo: they live in a root-only file"] },
+  Mira: { kind: "Visitor", runs: "", can: ["email the café", "come to the till"], cannot: ["see Ivy, Milo or the books"], note: "Order ST-1042 · return RMA-1042 · 30.00 USD" },
+  Barista_Espresso: { kind: "Staff · human", runs: "", can: ["make coffee", "serve from the pastry case"], cannot: [] },
+  Customer_Laptop: { kind: "Visitor", runs: "", can: ["stay as long as he likes"], cannot: [] },
+  Reader_Nook: { kind: "Visitor", runs: "", can: ["read anything on the shelves"], cannot: [] },
+};
 
 // ---------- steps ----------
 const STEPS = [
@@ -533,7 +565,7 @@ function nav() {
   document.querySelectorAll("#steps button").forEach((b) => (b.onclick = () => go(+b.dataset.i)));
 }
 function go(i) {
-  current = Math.max(0, Math.min(STEPS.length - 1, i)); resetStage(); document.getElementById("posHud")?.classList.add("hidden"); nav(); render(); focus(STEPS[current].focus);
+  current = Math.max(0, Math.min(STEPS.length - 1, i)); resetStage(); document.getElementById("posHud")?.classList.add("hidden"); document.getElementById("idCard")?.classList.add("hidden"); nav(); render(); focus(STEPS[current].focus);
   document.querySelector("#steps .on")?.scrollIntoView({ inline: "center", block: "nearest" });
 }
 function render() {
@@ -567,11 +599,45 @@ function introHtml() {
   const card = (x) => `<button class="who" data-meet="${x.id}"><span class="av" style="background:${x.c}">${esc(x.name[0])}</span><span><b>${esc(x.name)}</b><small>${esc(x.role)}</small></span></button>`;
   return `<div class="kicker" style="margin-top:16px">The cast</div><div class="cast">${CAST.map(card).join("")}</div>
   <div class="kicker" style="margin-top:14px">The two boundaries, and where they run</div><div class="cast">${PLACES.map(card).join("")}</div>
-  <p class="muted" style="margin-top:12px">Tap anyone, here or in the café, to meet them. <button class="linkish" data-meet="Platform">Whole café</button></p>`;
+  <div class="kicker" style="margin-top:14px">Also in the café this morning</div><div class="cast">${GUESTS.map(card).join("")}</div>
+  <p class="muted" style="margin-top:12px">Tap anyone, here or in the café, to see their ID card. <button class="linkish" data-meet="Platform">Whole café</button></p>`;
+}
+// ---------- ID cards: a portrait taken from the scene itself, and what this one may and may not do ----------
+let portraitR = null; const portraits = {};
+function portrait(id) {
+  if (portraits[id]) return portraits[id];
+  const o = (id === "Gate" && named.Gate_Screen) || named[id]; if (!o) return "";
+  if (!portraitR) { portraitR = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); portraitR.setSize(256, 256); portraitR.outputColorSpace = THREE.SRGBColorSpace; portraitR.toneMapping = THREE.ACESFilmicToneMapping; portraitR.toneMappingExposure = 1.15; }
+  const box = new THREE.Box3().setFromObject(o), c = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
+  const person = !!BADGE[id] && !["SandboxBox", "Gate", "VultrVM"].includes(id);
+  const aim = person ? new THREE.Vector3(c.x, box.max.y - 0.2, c.z) : c;
+  const toFront = (overviewCam ? overviewCam.clone() : new THREE.Vector3(0, 8, 12)).sub(aim).setY(0).normalize();
+  const fwd = person ? o.getWorldDirection(new THREE.Vector3()).setY(0).normalize() : toFront;
+  const dir = fwd.multiplyScalar(0.6).add(toFront.multiplyScalar(0.4)).normalize();
+  const dist = person ? 0.95 : Math.max(1.2, size.length() * 1.6);
+  // for a person, the near plane sits just in front of them, so a till or a desk between camera and face is clipped away
+  const cam = new THREE.PerspectiveCamera(30, 1, person ? Math.max(0.05, dist - 0.32) : 0.05, 60);
+  cam.position.copy(aim).add(dir.multiplyScalar(dist)).add(new THREE.Vector3(0, person ? 0.06 : 0.35, 0)); cam.lookAt(aim);
+  const bg = scene.background; scene.background = new THREE.Color(0xe9dfd0);
+  portraitR.render(scene, cam); scene.background = bg;
+  return (portraits[id] = portraitR.domElement.toDataURL("image/jpeg", 0.9));
+}
+function showCard(id) {
+  const x = WHO[id], b = BADGE[id], el = $("#idCard"); if (!x || !b) { el.classList.add("hidden"); return; }
+  const system = ["SandboxBox", "Gate", "VultrVM"].includes(id), staff = ["Ivy", "Milo", "MrsHart", "Barista_Espresso"].includes(id);
+  el.style.setProperty("--badge", x.c);
+  el.innerHTML = `<div class="idhead"><span>THE QUIET PAGE</span><span>${system ? "SYSTEM" : staff ? "STAFF" : "VISITOR"}</span></div>
+    <div class="idbody"><img alt="" src="${portrait(id)}"><div><div class="idname">${esc(x.name)}</div><div class="idrole">${esc(x.role)}</div><div class="idkind">${esc([b.kind !== x.role ? b.kind : "", b.runs].filter(Boolean).join(" · "))}</div></div></div>
+    ${b.can.length ? `<ul class="idlist">${b.can.map((t) => `<li><span class="ck ok">✓</span>${esc(t)}</li>`).join("")}${b.cannot.map((t) => `<li><span class="ck bad">✕</span>${esc(t)}</li>`).join("")}</ul>` : ""}
+    ${b.note || (!b.can.length && x.line) ? `<p class="idnote">${esc(b.note || x.line)}</p>` : ""}
+    <button class="idclose" aria-label="Close">×</button>`;
+  el.classList.remove("hidden");
+  el.querySelector(".idclose").onclick = () => el.classList.add("hidden");
 }
 function meet(id) {
   if (STEPS[current].intro !== true) go(0);
-  focus(id);
+  if (stage.getBoundingClientRect().bottom < stage.clientHeight * 0.6) stage.scrollIntoView({ behavior: "smooth", block: "start" });
+  focus(id); showCard(id);
   document.querySelectorAll("[data-meet]").forEach((b) => b.classList.toggle("on", b.dataset.meet === id));
   const x = WHO[id];
   $("#side").innerHTML = x ? `<div class="card meet"><div style="display:flex;gap:12px;align-items:center"><span class="av big" style="background:${x.c}">${esc(x.name[0])}</span><div><div class="kicker">${esc(x.role)}</div><h3 style="margin:4px 0 0;font:700 20px/1.2 Georgia,serif">${esc(x.name)}</h3></div></div><p style="margin-top:12px">${esc(x.line)}</p></div>` : sideIntro(STEPS[0]);
