@@ -44,3 +44,10 @@ def test_a_replay_is_served_read_only():
     r = client.get("/api/replay/honest")
     assert r.status_code == 200 and r.json()["case"] == "honest"
     assert client.get("/api/replay/nope").status_code == 404
+
+
+@pytest.mark.skipif(not docker_available(), reason="needs a Docker daemon")
+def test_the_box_demo_runs_a_clean_parser_and_reads_the_invoice():
+    r = client.post("/api/box-demo").json()
+    assert r["ok"] and r["events"] == []
+    assert r["output"] == {"order_no": "ST-1058", "amount": "25.00", "currency": "USD"}

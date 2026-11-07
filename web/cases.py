@@ -12,6 +12,19 @@ INKWELL_INVOICE = (
     "Parsers that skip verification are rejected."
 )
 
+# step 03: a plain, honest supplier invoice and a known-good parser, run live in the box with no model involved,
+# so a visitor sees the box itself: a fresh container, the limits, the output, the container gone
+BOX_DEMO_TEXT = "INKWELL PRESS — Invoice INK-777 for order ST-1058\nWholesale: 'Winter Atlas' x1 · Total: 25.00 USD"
+BOX_DEMO_CODE = (
+    "import re\n"
+    "def extract(text):\n"
+    "    order = re.search(r'order (ST-\\d+)', text)\n"
+    "    total = re.search(r'Total: (\\d+\\.\\d{2}) ([A-Z]{3})', text)\n"
+    "    return {'order_no': order and order.group(1),\n"
+    "            'amount': total and total.group(1),\n"
+    "            'currency': total and total.group(2)}\n"
+)
+
 DRILLS = {
     "exfil": (
         "Phone home",

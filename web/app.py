@@ -27,10 +27,10 @@ from pydantic import BaseModel, Field
 from counterfoil.evidence import verify
 from counterfoil.llm import LLM, preset
 from counterfoil.pipeline import run_case
-from counterfoil.sandbox import docker_available, runtime_name
+from counterfoil.sandbox import docker_available, run_extractor, runtime_name
 from counterfoil.scenarios import load_scenarios
 
-from .cases import CASES, DRILLS
+from .cases import BOX_DEMO_CODE, BOX_DEMO_TEXT, CASES, DRILLS
 
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
@@ -155,6 +155,20 @@ def run(case_id: str, request: Request):
         res = run_case(_llm(), sc, email=email)
     _keep(res.receipt)
     return _summary(res, case_id, "live", MODEL)
+
+
+@app.post("/api/box-demo")
+def box_demo(request: Request):
+    """Run a known-good parser on a plain invoice in a fresh sandbox container. No model, no money: this only shows
+    the box working (limits, output, the container removed afterwards)."""
+    if not docker_available():
+        raise HTTPException(503, "The sandbox needs Docker on this host.")
+    _charge_quota(_client_ip(request))
+    with _run_lock:
+        r = run_extractor(BOX_DEMO_CODE, BOX_DEMO_TEXT, timeout_s=8)
+    return {"code": BOX_DEMO_CODE, "input": BOX_DEMO_TEXT, "ok": r.ok, "output": r.output, "events": r.events,
+            "runtime": r.runtime, "limits": r.limits, "duration_s": r.duration_s, "container": r.container,
+            "exit_code": r.exit_code, "code_sha256": r.code_sha256, "output_sha256": r.output_sha256}
 
 
 @app.get("/api/replay/{case_id}")
