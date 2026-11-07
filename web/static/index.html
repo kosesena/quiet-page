@@ -235,6 +235,7 @@ const labels = new CSS2DRenderer(); labels.setSize(stage.clientWidth, stage.clie
 Object.assign(labels.domElement.style, { position: "absolute", top: 0, left: 0, pointerEvents: "none" });
 stage.appendChild(labels.domElement);
 
+const maxAniso = renderer.capabilities.getMaxAnisotropy();
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xc9bfb1);
 const camera = new THREE.PerspectiveCamera(30, stage.clientWidth / stage.clientHeight, 0.1, 200);
@@ -245,11 +246,13 @@ controls.enableDamping = true; controls.minDistance = 0.6; controls.maxDistance 
 scene.add(new THREE.HemisphereLight(0xfff6ea, 0x8a7a6a, 1.25));
 const key = new THREE.DirectionalLight(0xfff0dc, 2.0); key.position.set(6, 10, 5); key.castShadow = true;
 key.shadow.mapSize.set(2048, 2048); key.shadow.camera.left = -8; key.shadow.camera.right = 8; key.shadow.camera.top = 8; key.shadow.camera.bottom = -8; key.shadow.radius = 6;
+key.shadow.bias = -0.0004; key.shadow.normalBias = 0.025; // no striped self-shadow ("acne") on curved surfaces like the pots
 scene.add(key);
 const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.35 }));
 shadowPlane.rotation.x = -Math.PI / 2; shadowPlane.position.y = -0.9; shadowPlane.receiveShadow = true; scene.add(shadowPlane);
 
-const composer = new EffectComposer(renderer);
+// the bloom pass would otherwise draw without antialiasing: fine stripes (pot flutes, floor joints) shimmer as the camera moves
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(stage.clientWidth * renderer.getPixelRatio(), stage.clientHeight * renderer.getPixelRatio(), { samples: 4, type: THREE.HalfFloatType }));
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(stage.clientWidth, stage.clientHeight), 0.35, 0.6, 0.86);
 composer.addPass(bloom); composer.addPass(new OutputPass());
@@ -426,7 +429,15 @@ function wrap(g, text, x, y, maxW, lh) {
 new GLTFLoader().load("/static/quiet-page.glb?v=" + Date.now(), (gltf) => {
   const root = gltf.scene;
   root.traverse((o) => {
-    if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
+    if (o.isMesh) {
+      o.castShadow = true; o.receiveShadow = true;
+      // sharp textures at grazing angles (the floor, the slats) without moiré
+      for (const m of [].concat(o.material || [])) {
+        for (const k of ["map", "normalMap", "roughnessMap", "emissiveMap"]) if (m[k]) { m[k].anisotropy = maxAniso; m[k].needsUpdate = true; }
+        // the soil discs sit flush with the pots' top caps; pull them forward in depth so they don't flicker through
+        if (m.name === "M_Soil") { m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2; }
+      }
+    }
     if (o.name) named[o.name] = o;
     if (o.isLight) glbLights.push(o);
   });
