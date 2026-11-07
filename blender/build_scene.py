@@ -1384,7 +1384,7 @@ cyl("CommunalTable_Vase", c_ct2, 0.045, 0.16, (0.75, 0.0, TT + 0.08), M["ceramic
 for k, (dx, dy, dz) in enumerate(((0, 0, 0.2), (0.03, 0.02, 0.24), (-0.025, -0.01, 0.23))):
     sphere(f"CommunalTable_Sprig{k}", c_ct2, 0.03, (0.75 + dx, dy, TT + dz), M["leaf_light"],
            parent=ctab, segs=10, rings=6)
-# (lit by the LinearPendants bar above; the three small pendants were replaced)
+# (the three small pendants were removed; lit by the room lights)
 
 # --- 2. Banquette along a short left side wall, 2 walnut tables + chairs, WallArt above
 c_bq = make_coll("Banquette")
@@ -2102,21 +2102,6 @@ for k in range(11):
         parent=cn)
 EXTRA_LIGHTS.append(("Canopy_LightFront", (0.0, CN_Y0, 2.42), 22))
 
-# --- linear LED pendant bars over the seating floor, on slim black rails between the side walls
-c_lp = make_coll("LinearPendants")
-lpd = empty("LinearPendants", c_lp)
-for i, ry in enumerate((-0.4, 2.6)):
-    box(f"LinearPendants_Rail{i}", c_lp, (2 * SIDE_IN, 0.014, 0.014), (0, ry, 2.66), M["black_metal"], bevel=0.0,
-        parent=lpd)
-for i, (bx, by, L) in enumerate(((CT_X, CT_Yc, 2.4), (LC_X, 2.6, 1.6), (BQ_X + 0.52, 2.6, 1.2))):
-    box(f"LinearPendants_Bar{i}", c_lp, (L, 0.05, 0.04), (bx, by, 2.27), M["black_metal"], bevel=0.006, parent=lpd)
-    box(f"LinearPendants_Glow{i}", c_lp, (L - 0.04, 0.036, 0.004), (bx, by, 2.248), M["led_warm"], bevel=0.0,
-        parent=lpd)
-    for sx in (-1, 1):
-        cyl(f"LinearPendants_Wire{i}{sx}", c_lp, 0.0025, 0.37, (bx + sx * (L / 2 - 0.08), by, 2.47), M["black_metal"],
-            segs=4, parent=lpd)
-    EXTRA_LIGHTS.append((f"LinearPendant_Light{i}", (bx, by, 2.15), 24))
-
 # --- wood-clad square column between the communal table and the lounge
 c_wc = make_coll("WoodColumn")
 wc = empty("WoodColumn", c_wc, (4.2, 1.2, 0))
@@ -2525,7 +2510,6 @@ join_under(O["WallCladding"], "WallCladding_Mesh", exclude_roots=(O["WallCladdin
 join_under(O["LoungeArt"], "LoungeArt_Mesh")
 join_under(O["Shopfront"], "Shopfront_Mesh")
 join_under(O["Canopy"], "Canopy_Mesh")
-join_under(O["LinearPendants"], "LinearPendants_Mesh")
 join_under(O["WoodColumn"], "WoodColumn_Mesh")
 join_under(O["CommunalTable"], "CommunalTable_Mesh")
 join_under(O["Banquette"], "Banquette_Mesh")
