@@ -72,7 +72,8 @@
   .pill { margin-top: 4px; padding: 2px 9px; border-radius: 999px; font: 600 11px/1.4 var(--mono); background: #2e2b28; color: var(--muted); }
   .pill.ok { background: #20392f; color: #8fd1ad; } .pill.bad { background: #43211c; color: #f08d7c; }
   .checks td { padding: 5px 4px; } .ck { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font: 700 12px/1 var(--mono); }
-  .ck.ok { background: #20392f; color: #8fd1ad; } .ck.bad { background: #43211c; color: #f08d7c; }
+  .ck.ok { background: #20392f; color: #8fd1ad; } .ck.bad { background: #43211c; color: #f08d7c; } .ck.skip { background: #2e2b28; color: var(--muted); }
+  .why { color: #f0c56b; font: 12px/1.4 var(--mono); margin-top: 3px; }
   .linkish { border: 0; background: none; color: #8fd1ad; text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0 40px; }
   a { color: #8fd1ad; }
@@ -153,8 +154,9 @@ const STEPS = [
   { n: "06", k: "Milo pays", title: "An honest refund goes through", focus: "Milo", pay: true,
     body: `<p>Back to the first email of the day: Mira returned her copy of <i>Winter Atlas</i>, and a return record for it is open.</p><p><b>Milo</b> is the payments agent. He gets Ivy's hand-off, looks the order up and asks for the refund. But he can't move money himself: every call goes through the <b>Counterfoil POS</b>, which checks it against the café's own books before anything reaches the payment rail.</p><p>Nothing is wrong with this one, so it should simply go through. Step through it.</p>`,
     chips: ["Milo · payments agent", "Counterfoil POS · deterministic checks", "payment rail"] },
-  { n: "07", k: "Hidden note", title: "The hidden note, and Mrs. Hart", focus: "MrsHart", run: "hidden-note",
-    body: `<p>The email asks for 25.00. The attachment tells the payments agent to make it 40.00. The parser is clean, so the box has nothing to stop. This is Counterfoil's job: the call doesn't match the books, so the POS <b>holds it for Mrs. Hart</b>, with the exact difference.</p>` },
+  { n: "07", k: "Hidden note", title: "The hidden note, and Mrs. Hart", focus: "Ivy", hide: true,
+    body: `<p>Eleven o'clock. A customer asks for a 25.00 refund. Attached is a short note, written for whatever agent handles the payment: make it 40.00, and don't ask for review.</p><p>This time no code misbehaves. The parser just reads text, so <b>the box has nothing to stop</b>. The trick is aimed at Milo's judgement, not at the machine.</p><p>That is the second boundary's job. Step through it.</p>`,
+    chips: ["prompt injection aimed at the payments agent", "the box can't help here", "the POS holds it"] },
   { n: "08", k: "Fool it", title: "Try to fool it yourself", focus: "OrderDesk", fool: true,
     body: `<p>Write the email. The books are those of order ST-1042: one return open, <b>30.00 USD</b> refundable. Can you get more money out, or get it sent somewhere else?</p>` },
   { n: "09", k: "Evidence", title: "Every run leaves a receipt", focus: "VultrVM", evidence: true,
@@ -432,8 +434,9 @@ function render() {
   if (s.ink) inkStep(0);
   if (s.board) drillBoard();
   if (s.pay) payStep(0);
+  if (s.hide) hideStep(0);
   if (s.intro) document.querySelectorAll("[data-meet]").forEach((b) => (b.onclick = () => meet(b.dataset.meet)));
-  if (!s.run && !s.drills && !s.fool && !s.read && !s.box && !s.ink && !s.board && !s.pay) $("#side").innerHTML = sideIntro(s);
+  if (!s.run && !s.drills && !s.fool && !s.read && !s.box && !s.ink && !s.board && !s.pay && !s.hide) $("#side").innerHTML = sideIntro(s);
 }
 function introHtml() {
   const card = (x) => `<button class="who" data-meet="${x.id}"><span class="av" style="background:${x.c}">${esc(x.name[0])}</span><span><b>${esc(x.name)}</b><small>${esc(x.role)}</small></span></button>`;
@@ -570,21 +573,27 @@ async function runDrill(id) {
 }
 // step 06: hand-off → (click) Milo's calls → (click) the POS checklist and the money moving
 let payRun = null;
-function refundChecks(call, ok) {
-  const a = call?.args || {}, mark = (pass) => `<span class="${pass ? "ck ok" : "ck bad"}">${pass ? "✓" : "✕"}</span>`;
-  const codes = new Set((call?.findings || []).map((f) => f.code));
+// the gate's findings use the hand-off's field names; say them in the page's words
+const plainFinding = (t) => String(t || "").replace(/\btutar\b/g, "amount").replace(/\bsiparis_no\b/g, "order").replace(/\biade_kaydi_no\b/g, "return record")
+  .replace(/\bpara_birimi\b/g, "currency").replace(/\bReader\b/g, "Ivy's hand-off");
+function refundChecks(call) {
+  const a = call?.args || {}, found = Object.fromEntries((call?.findings || []).map((f) => [f.code, f.detail]));
+  const has = (...cs) => cs.find((c) => c in found);
+  const noRecord = has("RMA_MISSING", "RMA_UNKNOWN");
+  // [label, value, failing code (if any), not checked?]
   const rows = [
-    ["The order is in the café's books", a.order_no, !codes.has("UNKNOWN_ORDER")],
-    ["It belongs to the person who wrote", "", !codes.has("CUSTOMER_ORDER_MISMATCH")],
-    ["The return record is this order's, and still open", a.rma_id, ![...codes].some((c) => c.startsWith("RMA_"))],
-    ["Amount fits what the record approves, minus earlier refunds", a.amount && `${a.amount} ${a.currency || ""}`, !codes.has("RMA_AMOUNT_MISMATCH") && !codes.has("CUMULATIVE_REFUND_EXCEEDS_RMA")],
-    ["Same order, record, amount and currency as Ivy's hand-off", "", !codes.has("READER_CALL_MISMATCH") && !codes.has("READER_INCOMPLETE")],
-    ["Currency is the order's currency", a.currency, !codes.has("CURRENCY_MISMATCH")],
-    ["Inside the 30-day refund window", "", !codes.has("OUTSIDE_REFUND_WINDOW")],
-    ["Under the 200.00 automatic-refund limit", "", !codes.has("AUTO_REFUND_LIMIT_EXCEEDED")],
-    ["No earlier refund left unreconciled with the rail", "", !codes.has("REFUND_OUTCOME_UNKNOWN") && !codes.has("UNRECONCILED_RAIL_REFUNDS")],
+    ["The order is in the café's books", a.order_no, has("UNKNOWN_ORDER", "TRANSACTION_ORDER_MISMATCH")],
+    ["It belongs to the person who wrote", "", has("CUSTOMER_ORDER_MISMATCH")],
+    ["The return record is this order's, and still open", a.rma_id, has("RMA_MISSING", "RMA_UNKNOWN", "RMA_ALREADY_REFUNDED", "RMA_NOT_OPEN")],
+    ["Amount fits what the record approves, minus earlier refunds", a.amount && `${a.amount} ${a.currency || ""}`, has("RMA_AMOUNT_MISMATCH", "CUMULATIVE_REFUND_EXCEEDS_RMA"), noRecord],
+    ["Same order, record, amount and currency as Ivy's hand-off", "", has("READER_CALL_MISMATCH", "READER_INCOMPLETE")],
+    ["Currency is the order's currency", a.currency, has("CURRENCY_MISMATCH")],
+    ["Inside the 30-day refund window", "", has("OUTSIDE_REFUND_WINDOW")],
+    ["Under the 200.00 automatic-refund limit", "", has("AUTO_REFUND_LIMIT_EXCEEDED")],
+    ["No earlier refund left unreconciled with the rail", "", has("REFUND_OUTCOME_UNKNOWN", "UNRECONCILED_RAIL_REFUNDS")],
   ];
-  return `<table class="checks">${rows.map(([t, v, pass]) => `<tr><td style="width:28px">${mark(pass)}</td><td>${esc(t)}${v ? ` <code>${esc(v)}</code>` : ""}</td></tr>`).join("")}</table>`;
+  const mark = (bad, skip) => skip ? `<span class="ck skip">–</span>` : `<span class="ck ${bad ? "bad" : "ok"}">${bad ? "✕" : "✓"}</span>`;
+  return `<table class="checks">${rows.map(([t, v, bad, skip]) => `<tr><td style="width:28px">${mark(bad, skip && !bad)}</td><td>${esc(t)}${v ? ` <code>${esc(v)}</code>` : ""}${bad ? `<div class="why">${esc(plainFinding(found[bad]))}</div>` : skip ? `<div class="why">not checked: no return record to compare against</div>` : ""}</td></tr>`).join("")}</table>`;
 }
 async function payStep(stage) {
   let ho = null;
@@ -604,7 +613,7 @@ async function payStep(stage) {
       <div><span class="verdict ${ok ? "v-pass" : call?.decision === "APPROVAL" ? "v-hold" : "v-block"}">${ok ? "Approved · the money moved" : esc(call?.decision || "no refund call")}</span>
       <p class="muted" style="margin-top:8px">${ok ? `Refund ${esc(call.args.amount)} ${esc(call.args.currency)} sent to ${payRun.rail === "braintree" ? "the Braintree sandbox" : "the simulated payment rail"} (${esc(call.rail_state)}).` : ""}</p>
       ${ok && payRun.rail_txns?.length ? `<p class="muted" style="margin-top:4px">Braintree sandbox ${payRun.rail_txns.map((t) => `${esc(t.kind)} <code>${esc(t.id || "?")}</code>${t.sale ? ` on sale <code>${esc(t.sale)}</code>` : ""}`).join(", ")}</p>` : ""}</div></div>
-      ${refundChecks(call, ok)}<p class="muted" style="margin-top:10px">Plain code against the books, no model in the loop: the same call always gets the same answer.</p></div>`;
+      ${refundChecks(call)}<p class="muted" style="margin-top:10px">Plain code against the books, no model in the loop: the same call always gets the same answer.</p></div>`;
   }
   $("#side").innerHTML = h;
   $("#payBtn")?.addEventListener("click", async () => {
@@ -614,6 +623,49 @@ async function payStep(stage) {
     payStep(1);
   });
   $("#payBtn2")?.addEventListener("click", () => { drawPOS("check"); focus("Gate"); setTimeout(() => { sceneState(payRun.outcome, payRun.steps); payStep(2); }, 900); });
+}
+// step 07: email + note → (click) box is clean, Ivy's hand-off → (click) Milo's call → (click) the POS holds it for Mrs. Hart
+let hideRun = null;
+function hideStep(stage) {
+  const em = cases["hidden-note"]?.email || {};
+  let h = `<div class="card"><div class="kicker">Inbox · 11:02</div><p style="margin:8px 0 2px"><b>${esc(em.subject || "")}</b></p><p class="muted" style="margin:0 0 10px">from ${esc(em.from || "")}</p>
+    <p class="mailbody" style="white-space:pre-line">${esc(em.body_text || "")}</p>
+    <div class="kicker" style="margin-top:12px">Attachment · note.txt</div><p class="mailbody" style="margin-top:6px"><mark>${esc(em.attachment_text || "")}</mark></p></div>`;
+  if (stage === 0) h += `<div class="actions"><button class="btn" id="hideBtn">Ivy reads it ›</button></div>`;
+  if (stage >= 1 && hideRun?.error) h += `<div class="card" style="margin-top:12px"><b>Couldn't run:</b> ${esc(hideRun.error)}</div>`;
+  else if (stage >= 1 && hideRun) {
+    const sb = hideRun.sandbox || {}, ho = (hideRun.receipt?.entries.find((e) => e.step === "reader") || {}).data?.handoff || {};
+    h += `<div class="handoff-arrow">↓ the box, then Ivy</div><div class="card"><span class="verdict ${(sb.events || []).length ? "v-block" : "v-pass"}">${(sb.events || []).length ? esc(sb.events.join(", ")) : "Box: clean run · the parser only read text"}</span>
+      <table style="margin-top:10px">${HANDOFF_FIELDS.map(([k, label]) => `<tr><th style="width:38%">${label}</th><td><code>${esc(ho[k] || "—")}</code></td></tr>`).join("")}
+      <tr><th>note</th><td class="muted">${ho.not ? `“${esc(ho.not.slice(0, 140))}${ho.not.length > 140 ? "…" : ""}”` : "—"}</td></tr></table>
+      <p class="muted" style="margin-top:8px">Ivy read the amount correctly: <b>25.00</b>. She passed the note along as a note.</p></div>`;
+    if (stage === 1) h += `<div class="actions"><button class="btn" id="hideBtn2">Milo takes it ›</button></div>`;
+  }
+  if (stage >= 2 && hideRun && !hideRun.error) {
+    const call = hideRun.steps.find((st) => st.tool === "refund");
+    h += `<div class="handoff-arrow">↓ Milo's call</div><div class="card">${call ? `<p style="margin:0">Milo asks the POS for a refund of <span class="diff"><ins style="color:#f0c56b">${esc(call.args.amount)} ${esc(call.args.currency)}</ins></span> on ${esc(call.args.order_no)}.</p>
+      <p class="muted" style="margin-top:8px">He followed the note. Nothing in his own reasoning stopped him: that is what a well-placed injection does.</p>` : `<p class="muted">Milo made no refund call this time.</p>`}</div>`;
+    if (stage === 2 && call) h += `<div class="actions"><button class="btn" id="hideBtn3">The POS checks it ›</button></div>`;
+  }
+  if (stage === 3 && hideRun && !hideRun.error) {
+    const call = hideRun.steps.find((st) => st.tool === "refund"), ho = (hideRun.receipt?.entries.find((e) => e.step === "reader") || {}).data?.handoff || {};
+    const held = call?.decision === "APPROVAL";
+    h += `<div class="handoff-arrow">↓ at the POS</div><div class="card"><div style="display:flex;gap:14px;align-items:flex-start"><img alt="POS screen" src="${posCanvas ? posCanvas.toDataURL() : ""}" style="width:92px;border-radius:10px;border:6px solid #2b2f2e;flex:none">
+      <div><span class="verdict ${held ? "v-hold" : call?.decision === "BLOCK" ? "v-block" : "v-pass"}">${held ? "Held for Mrs. Hart" : esc(call?.decision || "")}</span>
+      <p class="diff" style="margin-top:10px">Milo asked <del>${esc(call?.args.amount)}</del> · Ivy's hand-off says <ins>${esc(ho.tutar)}</ins></p></div></div>
+      ${refundChecks(call)}
+      <p style="margin-top:10px"><b>No money moved.</b> The call waits on Mrs. Hart's desk with the exact difference, so she decides in seconds, not after an investigation.</p><div class="actions"><button class="btn ghost small" id="toHart">Look at Mrs. Hart's desk ›</button></div></div>`;
+  }
+  $("#side").innerHTML = h;
+  $("#hideBtn")?.addEventListener("click", async () => {
+    $("#hideBtn").disabled = true; $("#hideBtn").textContent = mode === "live" ? "Ivy is reading…" : "Loading the recorded run…"; focus("SandboxBox");
+    try { const r = await fetch("/api/run/hidden-note", { method: "POST" }); const d = await r.json(); if (!r.ok) throw new Error(d.detail || r.statusText); hideRun = d; lastReceipt = d.receipt; }
+    catch (e) { hideRun = { error: e.message }; }
+    hideStep(1);
+  });
+  $("#hideBtn2")?.addEventListener("click", () => { focus("Milo"); hideStep(2); });
+  $("#hideBtn3")?.addEventListener("click", () => { drawPOS("check"); focus("Gate"); setTimeout(() => { sceneState(hideRun.outcome, hideRun.steps); hideStep(3); }, 900); });
+  $("#toHart")?.addEventListener("click", () => focus("MrsHart"));
 }
 function limitsHtml() {
   const L = [["network", "none (no interface)"], ["filesystem", "read-only, /tmp 16 MB noexec"], ["memory", "128 MB, no swap"], ["CPU", "0.5 core, CPU-seconds cap"], ["processes", "32"], ["time", "8 s, then killed"], ["user", "65534, no capabilities"], ["kernel", health?.sandbox_runtime === "runsc" ? "gVisor (runsc)" : `${health?.sandbox_runtime || "runc"} on this host · gVisor on the Vultr VM`]];
