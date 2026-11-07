@@ -2304,6 +2304,55 @@ for tag, xf, sgn, y0, y1, batten_spans in (
             y += 0.25
             k += 1
 
+
+# ================================================================ 18. Customer_Laptop (seated, typing at the CommunalTable)
+c_cu = make_coll("Customer_Laptop")
+M["sweater"] = mat("M_SweaterMustard", "#c9962e", 0.85)
+M["jeans"] = mat("M_JeansDark", "#2f3a4f", 0.8)
+# sits on the middle south chair (local x 0.08, y -0.7 of the table), turned ~20 deg toward the laptop
+cu = empty("Customer_Laptop", c_cu, (CT_X + 0.0, CT_Yc - 0.72, 0), rot_z=-160)  # local -Y faces the laptop
+SEAT_Z = 0.49
+# legs: thighs forward on the seat, shins down, shoes on the floor
+for sx in (-1, 1):
+    tag = "L" if sx < 0 else "R"
+    capsule_between(f"Customer_Thigh{tag}", c_cu, 0.075, (sx * 0.085, 0.02, SEAT_Z + 0.06),
+                    (sx * 0.09, -0.38, SEAT_Z + 0.07), M["jeans"], parent=cu)
+    capsule_between(f"Customer_Shin{tag}", c_cu, 0.068, (sx * 0.09, -0.4, SEAT_Z + 0.05),
+                    (sx * 0.09, -0.43, 0.1), M["jeans"], parent=cu)
+    box(f"Customer_Shoe{tag}", c_cu, (0.11, 0.19, 0.06), (sx * 0.09, -0.47, 0.03), M["graphite"], bevel=0.025,
+        parent=cu)
+# torso (leaning slightly forward), neck, head, hair
+capsule("Customer_Torso", c_cu, 0.19, 0.66, (0, -0.03, SEAT_Z + 0.35), M["sweater"], parent=cu, sy=0.72,
+        rot=(-8, 0, 0))
+cyl("Customer_Neck", c_cu, 0.05, 0.08, (0, -0.07, SEAT_Z + 0.71), M["skin"], segs=12, parent=cu)
+HEAD = (0, -0.09, SEAT_Z + 0.83)
+sphere("Customer_Head", c_cu, 0.135, HEAD, M["skin"], parent=cu)
+sphere("Customer_Hair", c_cu, 0.145, (HEAD[0], HEAD[1] + 0.015, HEAD[2] + 0.035), M["hair_dark"], parent=cu,
+       scale=(1.0, 1.0, 0.85), cut_below=0.05)
+for sx in (-1, 1):
+    sphere(f"Customer_Eye{'L' if sx < 0 else 'R'}", c_cu, 0.014, (sx * 0.045, HEAD[1] - 0.123, HEAD[2] - 0.02),
+           M["eye"], parent=cu, segs=8, rings=6)
+# arms: shoulders -> elbows near the body -> hands on the keyboard
+KB = (0.0, -0.5, 0.79)  # laptop keyboard (local)
+for sx in (-1, 1):
+    tag = "L" if sx < 0 else "R"
+    sh = Vector((sx * 0.215, -0.06, SEAT_Z + 0.6))
+    el = Vector((sx * 0.235, -0.2, SEAT_Z + 0.36))
+    hd = Vector((sx * 0.09, KB[1] + 0.06, KB[2] + 0.03))
+    capsule_between(f"Customer_UpperArm{tag}", c_cu, 0.055, sh, el, M["sweater"], parent=cu)
+    fdir = (hd - el).normalized()
+    capsule_between(f"Customer_Forearm{tag}", c_cu, 0.05, el, hd - fdir * 0.06, M["sweater"], parent=cu)
+    sphere(f"Customer_Hand{tag}", c_cu, 0.045, tuple(hd), M["skin"], parent=cu, scale=(1, 1.2, 0.7), segs=12,
+           rings=8)
+# branded takeaway cup next to the laptop (on the table, in reach of the right hand)
+tc = empty("Customer_Cup", c_cu, (CT_X + 0.22, CT_Yc - 0.2, 0.762))
+cyl("Customer_CupBody", c_cu, 0.03, 0.12, (0, 0, 0.06), M["cup"], segs=16, parent=tc, r2=0.038)
+cyl("Customer_CupSleeve", c_cu, 0.0345, 0.045, (0, 0, 0.065), M["kraft"], segs=16, parent=tc, r2=0.0365)
+cyl("Customer_CupLid", c_cu, 0.039, 0.012, (0, 0, 0.126), M["cup"], segs=16, parent=tc, r2=0.035)
+cyl("Customer_CupLidTop", c_cu, 0.029, 0.008, (0, 0, 0.136), M["cup"], segs=16, parent=tc)
+logo_disc("Customer_CupLogo", c_cu, 0.016, 0.002, (0, -0.0375, 0.098), parent=None, rot=(90, 0, 0))
+bpy.data.objects["Customer_CupLogo"].location = (CT_X + 0.22, CT_Yc - 0.2 - 0.0375, 0.762 + 0.098)
+
 # ================================================================ 9. Characters
 def figure(name, loc, rot_z, top, pants, hair_fn, arms=("down", "down"), eyes=True,
            extras=None, sleeve=None):
@@ -2677,6 +2726,8 @@ join_under(O["HolidayTree"], "HolidayTree_Mesh")
 join_under(O["StringLights"], "StringLights_Mesh")
 join_under(O["Wreath"], "Wreath_Mesh")
 join_under(O["WallDetails"], "WallDetails_Mesh")
+join_under(O["Customer_Laptop"], "Customer_Laptop_Mesh")
+join_under(O["Customer_Cup"], "Customer_Cup_Mesh")
 join_under(O["FrontRug"], "FrontRug_Mesh")
 join_under(O["FrontPlants"], "FrontPlants_Mesh")
 join_under(O["UpperWallDetail"], "UpperWallDetail_Mesh")
@@ -2743,6 +2794,7 @@ if DO_RENDER:
     render_to(os.path.join(OUT, "preview-merch.png"), (-3.7, 0.7, 1.75), (-5.2, 4.25, 0.9), 27)
     render_to(os.path.join(OUT, "preview-holiday.png"), (4.2, -8.2, 2.8), (6.6, -3.2, 1.1), 26)
     render_to(os.path.join(OUT, "preview-walls.png"), (1.2, -1.8, 2.1), (-5.2, 3.0, 1.45), 22)
+    render_to(os.path.join(OUT, "preview-customer.png"), (0.15, -1.75, 1.45), (1.95, -0.85, 0.8), 36)
     render_to(os.path.join(OUT, "preview-nook.png"), (3.9, -8.0, 2.7), (6.3, -2.9, 0.8), 30)
     render_to(os.path.join(OUT, "preview-gate.png"), (0.75, 2.3, 1.5), (0.5, 3.4, 1.12), 40)
     aim(cam, *OVERVIEW)

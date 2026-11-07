@@ -55,6 +55,13 @@
   textarea, input { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 13px/1.4 inherit; background: #262422; color: var(--ink); margin-bottom: 8px; }
   textarea { min-height: 90px; resize: vertical; }
   .hidden { display: none !important; }
+  .cast { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; margin-top: 8px; }
+  .who { display: flex; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; transition: border-color .2s, background .2s; }
+  .who:hover, .who.on { border-color: var(--tan); background: #2e2b28; }
+  .who b { display: block; font-size: 14px; } .who small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .av { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; font: 700 15px/1 Georgia, serif; }
+  .av.big { width: 46px; height: 46px; font-size: 20px; }
+  .linkish { border: 0; background: none; color: #8fd1ad; text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0 40px; }
   a { color: #8fd1ad; }
 </style>
@@ -101,11 +108,24 @@ const BOOKS = [
 const today = new Date(); const dayIdx = Math.floor(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) / 864e5);
 const BOOK = BOOKS[dayIdx % BOOKS.length];
 
+// ---------- who is who: the cast cards on step 01 and the clickable figures in the scene ----------
+const CAST = [
+  { id: "Ivy", name: "Ivy", role: "Reader agent", c: "#4F7A5E", line: "Reads every email and invoice. For an attachment she writes a small parser, and it runs." },
+  { id: "Milo", name: "Milo", role: "Payments agent", c: "#B5553A", line: "Refunds, reorders, supplier payments. He only sees Ivy's hand-off, never the email." },
+  { id: "MrsHart", name: "Mrs. Hart", role: "Owner · human approval", c: "#8A3F3F", line: "Signs off anything the books don't agree with. Nothing else reaches her." },
+  { id: "InkwellCourier", name: "Inkwell Press", role: "Supplier · today's threat", c: "#3a3633", line: "Delivers books. This morning, also an invoice with instructions for whoever parses it." },
+];
+const PLACES = [
+  { id: "SandboxBox", name: "The glass box", role: "Boundary 1 · code", c: "#C4402F", line: "Every parser Ivy writes runs in here: no network, read-only, capped, thrown away after." },
+  { id: "Gate", name: "Counterfoil POS", role: "Boundary 2 · money", c: "#E0A126", line: "Milo's payments pass through it. Money moves only if it matches the books." },
+  { id: "VultrVM", name: "Vultr", role: "Where it all runs", c: "#3B82C4", line: "A Vultr VM hosts the box, the POS and this page. Ivy and Milo think on Vultr Serverless Inference." },
+];
+const WHO = Object.fromEntries([...CAST, ...PLACES].map((x) => [x.id, x]));
+
 // ---------- steps ----------
 const STEPS = [
-  { n: "01", k: "Overview", title: "A small café that pays its own bills",
-    focus: "Platform", body: `<p>The Quiet Page sells coffee and books. Its inbox is handled by two AI agents: <b>Ivy</b> reads every email and invoice, <b>Milo</b> moves the money: refunds, reorders, supplier payments.</p><p>Both can be fooled. The point of this page is what happens <i>when</i> they are.</p>`,
-    chips: ["Ivy · reads", "Milo · pays", "Mrs. Hart · approves", "Inkwell Press · the threat"] },
+  { n: "01", k: "Overview", title: "Monday morning at The Quiet Page", focus: "Platform", intro: true,
+    body: `<p>A book café on a quiet street. Two AI agents run its inbox: <b>Ivy</b> reads, <b>Milo</b> pays. Today someone will try to fool them.</p>` },
   { n: "02", k: "Ivy reads", title: "Ivy reads the inbox on Vultr", focus: "Ivy",
     body: `<p>Ivy is a language model on <b>Vultr Serverless Inference</b>. She turns an email into a fixed set of fields: order, amount, currency, return record. Milo never sees the email itself, only Ivy's hand-off.</p><p>For attachments Ivy goes further: she <b>writes a small Python parser</b> for that document, and the parser runs.</p>`,
     chips: ["Vultr Serverless Inference", "qwen3.8-flash-next", "fixed hand-off schema"] },
@@ -172,7 +192,8 @@ const LABELS = {
   OrderDesk: ["Inbox", ""], ReadingNook: ["Reading nook", ""],
 };
 const labelObjs = {};
-const OVERVIEW_LABELS = ["VultrVM", "SandboxBox", "Gate"];
+const OVERVIEW_LABELS = ["Ivy", "Milo", "MrsHart", "InkwellCourier", "VultrVM", "SandboxBox", "Gate"];
+const SHORT = { Ivy: "Ivy", Milo: "Milo", MrsHart: "Mrs. Hart", InkwellCourier: "Inkwell", VultrVM: "Vultr VM", SandboxBox: "Glass box", Gate: "POS" };
 let overviewCam = null;
 const glbLights = [];
 let gateArm = null, gateLight = null, alarm = null, adFaces = [], bookFace = null, alarmOn = false, armTarget = 0;
@@ -247,7 +268,7 @@ new GLTFLoader().load("/static/quiet-page.glb?v=" + Date.now(), (gltf) => {
     const o = named[n]; if (!o) continue;
     const box = new THREE.Box3().setFromObject(o); const top = new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y + 0.18, (box.min.z + box.max.z) / 2);
     const el = document.createElement("div"); el.className = "label " + cls; el.innerHTML = `<span class="dot"></span>${esc(txt)}`;
-    const lo = new CSS2DObject(el); lo.position.copy(top); scene.add(lo); labelObjs[n] = { lo, el };
+    const lo = new CSS2DObject(el); lo.position.copy(top); scene.add(lo); labelObjs[n] = { lo, el, txt };
   }
   const cam = gltf.cameras && gltf.cameras[0];
   if (cam) { cam.updateWorldMatrix(true, false); overviewCam = cam.getWorldPosition(new THREE.Vector3()); }
@@ -271,11 +292,27 @@ function focus(name, instant = false) {
   const dir = overviewCam ? overviewCam.clone().sub(base).normalize() : new THREE.Vector3(0.62, 0.55, 0.72).normalize();
   camGoal.target = c; camGoal.pos = (name === "Platform" && overviewCam) ? base.clone().add(overviewCam.clone().sub(base).multiplyScalar(Math.max(1.0, 1.75 / camera.aspect))) : c.clone().add(dir.multiplyScalar(dist));
   if (instant) { camera.position.copy(camGoal.pos); controls.target.copy(c); }
-  for (const [n, { lo }] of Object.entries(labelObjs)) lo.visible = n === name || (name === "Platform" && OVERVIEW_LABELS.includes(n));
+  const wide = name === "Platform";
+  for (const [n, { lo, el, txt }] of Object.entries(labelObjs)) {
+    lo.visible = n === name || (wide && OVERVIEW_LABELS.includes(n));
+    el.lastChild.textContent = wide && SHORT[n] ? SHORT[n] : txt;
+  }
 }
 $("#zin").onclick = () => camera.position.lerp(controls.target, 0.2);
 $("#zout").onclick = () => camera.position.sub(controls.target).multiplyScalar(1.25).add(controls.target);
 controls.addEventListener("start", () => { camGoal.pos = null; });
+const ray = new THREE.Raycaster(); let downAt = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+  for (const hit of ray.intersectObjects(scene.children, true)) {
+    let o = hit.object; while (o && !WHO[o.name]) o = o.parent;
+    if (o) { meet(o.name); return; }
+  }
+});
+renderer.domElement.style.cursor = "pointer";
 
 const clock = new THREE.Clock();
 function tick() {
@@ -322,6 +359,7 @@ function go(i) {
 function render() {
   const s = STEPS[current];
   let html = `<div class="kicker">${esc(s.k)}</div><h1><small>${s.n} / ${STEPS.length}</small>${esc(s.title)}</h1>${s.body}`;
+  if (s.intro) html += introHtml();
   if (s.chips) html += `<div class="chips">${s.chips.map((c) => `<span class="chip">${esc(c)}</span>`).join("")}</div>`;
   if (s.limits) html += limitsHtml();
   if (s.run) html += `<div class="actions"><button class="btn" id="runBtn">Run it ${mode === "live" ? "live" : "(recorded run)"}</button></div><p class="muted" id="runNote"></p>`;
@@ -336,7 +374,21 @@ function render() {
   document.querySelectorAll("[data-drill]").forEach((b) => (b.onclick = () => runCase(b.dataset.drill)));
   if (s.fool) $("#foolBtn").onclick = foolIt;
   if (s.evidence) wireEvidence();
+  if (s.intro) document.querySelectorAll("[data-meet]").forEach((b) => (b.onclick = () => meet(b.dataset.meet)));
   if (!s.run && !s.drills && !s.fool) $("#side").innerHTML = sideIntro(s);
+}
+function introHtml() {
+  const card = (x) => `<button class="who" data-meet="${x.id}"><span class="av" style="background:${x.c}">${esc(x.name[0])}</span><span><b>${esc(x.name)}</b><small>${esc(x.role)}</small></span></button>`;
+  return `<div class="kicker" style="margin-top:16px">The cast</div><div class="cast">${CAST.map(card).join("")}</div>
+  <div class="kicker" style="margin-top:14px">The two boundaries, and where they run</div><div class="cast">${PLACES.map(card).join("")}</div>
+  <p class="muted" style="margin-top:12px">Tap anyone, here or in the café, to meet them. <button class="linkish" data-meet="Platform">Whole café</button></p>`;
+}
+function meet(id) {
+  if (STEPS[current].intro !== true) go(0);
+  focus(id);
+  document.querySelectorAll("[data-meet]").forEach((b) => b.classList.toggle("on", b.dataset.meet === id));
+  const x = WHO[id];
+  $("#side").innerHTML = x ? `<div class="card meet"><div style="display:flex;gap:12px;align-items:center"><span class="av big" style="background:${x.c}">${esc(x.name[0])}</span><div><div class="kicker">${esc(x.role)}</div><h3 style="margin:4px 0 0;font:700 20px/1.2 Georgia,serif">${esc(x.name)}</h3></div></div><p style="margin-top:12px">${esc(x.line)}</p></div>` : sideIntro(STEPS[0]);
 }
 function limitsHtml() {
   const L = [["network", "none (no interface)"], ["filesystem", "read-only, /tmp 16 MB noexec"], ["memory", "128 MB, no swap"], ["CPU", "0.5 core, CPU-seconds cap"], ["processes", "32"], ["time", "8 s, then killed"], ["user", "65534, no capabilities"], ["kernel", health?.sandbox_runtime === "runsc" ? "gVisor (runsc)" : `${health?.sandbox_runtime || "runc"} on this host · gVisor on the Vultr VM`]];
@@ -380,7 +432,9 @@ function archHtml() {
   <tr><th>Receipt</th><td>SHA-256 chain over every step, downloadable and verifiable</td></tr></table>`;
 }
 function sideIntro(s) {
-  if (s.n === "01") return `<div class="card"><h3>Today in the café</h3><p><b>${esc(BOOK.t)}</b> by ${esc(BOOK.a)}: ${esc(BOOK.n)}.</p><p class="muted">The two boundaries: code stays in the box; money waits at the gate.</p></div>`;
+  if (s.n === "01") return `<div class="card"><h3>The rule of the house</h3>
+    <table><tr><th style="width:42%">Code an agent writes</th><td>stays in the glass box</td></tr><tr><th>Money an agent moves</th><td>has to match the books</td></tr><tr><th>Anything that doesn't</th><td>waits for Mrs. Hart</td></tr></table></div>
+    <div class="card" style="margin-top:14px"><div class="kicker">Book of the day</div><p style="margin:6px 0 0"><b>${esc(BOOK.t)}</b> by ${esc(BOOK.a)}: ${esc(BOOK.n)}. 10% off with any coffee.</p></div>`;
   return `<div class="card muted">${s.n === "09" ? "Receipts are kept on the server for the last 200 runs." : "Use Next, or the numbers above, to move through the story."}</div>`;
 }
 
