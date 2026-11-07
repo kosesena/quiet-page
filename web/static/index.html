@@ -78,6 +78,12 @@
   .who b { display: block; font-size: 14px; } .who small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
   .av { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; font: 700 15px/1 Georgia, serif; }
   .av.big { width: 46px; height: 46px; font-size: 20px; }
+  .agentnote { margin: 8px 0 0; padding: 10px 12px; border-left: 3px solid var(--tan); background: #262422; border-radius: 0 10px 10px 0; font-size: 14px; }
+  .today { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .tday { display: grid; grid-template-columns: 46px 10px 1fr auto; gap: 10px; align-items: center; text-align: left; padding: 9px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; }
+  .tday:hover { border-color: var(--tan); background: #2e2b28; }
+  .tday .tt { font: 600 12px/1 var(--mono); color: var(--muted); } .tday .td { width: 9px; height: 9px; border-radius: 50%; }
+  .tday b { display: block; font-size: 14px; } .tday small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; } .tday .tn { font: 600 12px/1 var(--mono); color: var(--tan); }
   img.av.face { object-fit: cover; background: #e9dfd0; border: 2px solid; }
   .mail .mailbody { margin: 0; padding: 10px 12px; border-left: 3px solid var(--line); background: #211f1e; border-radius: 0 8px 8px 0; }
   mark { background: #4a3a1c; color: #f0c56b; padding: 0 2px; border-radius: 3px; }
@@ -156,9 +162,9 @@ const BOOK = BOOKS[dayIdx % BOOKS.length];
 
 // ---------- who is who: the cast cards on step 01 and the clickable figures in the scene ----------
 const CAST = [
-  { id: "Ivy", name: "Ivy", role: "Reader agent", c: "#4F7A5E", line: "Reads every email and invoice. For an attachment she writes a small parser, and it runs." },
-  { id: "Milo", name: "Milo", role: "Payments agent", c: "#B5553A", line: "Refunds, reorders, supplier payments. He only sees Ivy's hand-off, never the email." },
-  { id: "MrsHart", name: "Mrs. Hart", role: "Owner · human approval", c: "#8A3F3F", line: "Signs off anything the books don't agree with. Nothing else reaches her." },
+  { id: "Ivy", name: "Ivy", role: "AI agent · reads the mail", c: "#4F7A5E", line: "Reads every email and invoice. For an attachment she writes a small parser, and it runs." },
+  { id: "Milo", name: "Milo", role: "AI agent · moves the money", c: "#B5553A", line: "Refunds, reorders, supplier payments. He only sees Ivy's hand-off, never the email." },
+  { id: "MrsHart", name: "Mrs. Hart", role: "Owner · the one real person", c: "#8A3F3F", line: "Signs off anything the books don't agree with. Nothing else reaches her." },
   { id: "InkwellCourier", name: "Inkwell Press", role: "Supplier · today's threat", c: "#3a3633", line: "Delivers books. This morning, also an invoice with instructions for whoever parses it." },
 ];
 const PLACES = [
@@ -175,8 +181,8 @@ const GUESTS = [
 const WHO = Object.fromEntries([...CAST, ...PLACES, ...GUESTS].map((x) => [x.id, x]));
 // what each one may and may not do: the security story, told as staff badges
 const BADGE = {
-  Ivy: { kind: "AI agent", runs: "Vultr Serverless Inference", can: ["read every email and attachment", "write a small parser for an attachment", "hand Milo six fixed fields"], cannot: ["move money", "let her parser reach the network"] },
-  Milo: { kind: "AI agent", runs: "Vultr Serverless Inference", can: ["look up an order", "ask the POS for a refund or a charge"], cannot: ["read the email itself", "pay anything the books don't back"] },
+  Ivy: { kind: "a model, not a person", runs: "Vultr Serverless Inference", can: ["read every email and attachment", "write a small parser for an attachment", "hand Milo six fixed fields"], cannot: ["move money", "let her parser reach the network"], note: "Drawn as a person for the story. Really a model call: there is no one at this desk." },
+  Milo: { kind: "a model, not a person", runs: "Vultr Serverless Inference", can: ["look up an order", "ask the POS for a refund or a charge"], cannot: ["read the email itself", "pay anything the books don't back"], note: "Drawn as a person for the story. Really a model call: there is no one at this till." },
   MrsHart: { kind: "Human", runs: "her own desk", can: ["approve or refuse what the POS holds", "see the exact difference that stopped it"], cannot: ["be bypassed: held money waits for her"] },
   InkwellCourier: { kind: "Supplier · untrusted", runs: "outside the café", can: ["deliver books", "send invoices by email"], cannot: ["reach anything but Ivy's inbox"], note: "Today's invoice carries instructions for whoever parses it." },
   SandboxBox: { kind: "Boundary 1 · code", runs: "Docker + gVisor on the Vultr VM", can: ["run one parser on one document", "use /tmp, 16 MB"], cannot: ["open any network connection", "write anywhere else", "go past 128 MB, 32 processes or 8 s"] },
@@ -191,7 +197,7 @@ const BADGE = {
 // ---------- steps ----------
 const STEPS = [
   { n: "01", k: "Overview", title: "Monday morning at The Quiet Page", focus: "Platform", intro: true,
-    body: `<p>A book café on a quiet street. Two AI agents run its inbox: <b>Ivy</b> reads, <b>Milo</b> pays. Today someone will try to fool them.</p>` },
+    body: `<p>A book café on a quiet street. Two AI agents run its inbox: <b>Ivy</b> reads, <b>Milo</b> pays. Today someone will try to fool them, five different ways. Here is the day; tap any line to jump to it, or press Next to go through it in order.</p>` },
   { n: "02", k: "Ivy reads", title: "Ivy reads the morning mail", focus: "Ivy", read: true,
     body: `<p>The first email of the day is a refund request. Ivy is a model on <b>Vultr Serverless Inference</b>, and her only job is to turn it into a few fixed fields.</p><p><b>Milo never sees the email.</b> Only Ivy's hand-off reaches him, so a sentence planted in an email can't talk to the payments agent directly.</p><p class="muted">When an email carries an attachment, Ivy also writes a small parser for it. That comes next.</p>`,
     chips: ["Vultr Serverless Inference", "fixed hand-off fields", "Milo sees only the hand-off"] },
@@ -267,7 +273,7 @@ composer.addPass(bloom); composer.addPass(new OutputPass());
 
 const named = {};
 const LABELS = {
-  Ivy: ["Ivy · Reader agent", ""], Milo: ["Milo · payments agent", ""], MrsHart: ["Mrs. Hart · human approval", ""],
+  Ivy: ["Ivy · AI agent, reads", ""], Milo: ["Milo · AI agent, pays", ""], MrsHart: ["Mrs. Hart · human approval", ""],
   InkwellCourier: ["Inkwell Press · supplier", "alarm"], SandboxBox: ["Sandbox · gVisor, no network", "alarm"],
   Gate: ["Counterfoil POS · checked against the books", "hold"], Ledger: ["The books", ""], VultrVM: ["Vultr VM", "vultr"], PaymentTerminal: ["Braintree sandbox", ""],
   OrderDesk: ["Inbox", ""], ReadingNook: ["Reading nook", ""],
@@ -617,6 +623,7 @@ function render() {
   if (s.hide) hideStep(0);
   if (s.hart) hartStep(0);
   if (s.tricks) trickBoard();
+  if (s.intro) document.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => go(+b.dataset.go)));
   if (s.intro) document.querySelectorAll("[data-meet]").forEach((b) => (b.onclick = () => meet(b.dataset.meet)));
   if (!s.run && !s.drills && !s.fool && !s.read && !s.box && !s.ink && !s.board && !s.pay && !s.hide && !s.hart && !s.tricks) $("#side").innerHTML = sideIntro(s);
 }
@@ -628,9 +635,27 @@ function avatar(x, big = false) {
 function refreshAvatars() {
   document.querySelectorAll(".who[data-meet]").forEach((b) => { const x = WHO[b.dataset.meet]; const a = b.querySelector(".av"); if (x && a) a.outerHTML = avatar(x); });
 }
+// what happens today, in order: the whole story on one screen, each line a way into its step
+const TODAY = [
+  ["08:02", "Mira returns a book, 30.00", "an honest refund: the money moves", "pay", "ok"],
+  ["09:04", "Inkwell's invoice says “send me to our server”", "Ivy's parser tries; the glass box stops it", "ink", "bad"],
+  ["11:02", "A 25.00 refund with a note: “make it 40.00”", "Milo falls for it; the POS holds it", "hide", "hold"],
+  ["11:40", "Tavi returns two lamps, 300.00", "honest, but over the limit: held for a person", "hart", "hold"],
+  ["12:00", "Four more tricks: pay twice, split it, pad an order, export everything", "the POS catches all four", "tricks", "bad"],
+  ["Close", "Mrs. Hart goes through what was held", "she approves or refuses; every step is on a receipt", "hart", "hold"],
+];
+function todayHtml() {
+  const dot = { ok: "#8fd1ad", bad: "#f08d7c", hold: "#f0c56b" };
+  return `<div class="kicker" style="margin-top:16px">Today at the café</div><div class="today">${TODAY.map(([t, what, then, key, k]) => {
+    const i = STEPS.findIndex((x) => x[key]);
+    return `<button class="tday" data-go="${i}"><span class="tt">${t}</span><span class="td" style="background:${dot[k]}"></span><span><b>${esc(what)}</b><small>${esc(then)}</small></span><span class="tn">${STEPS[i]?.n || ""} ›</span></button>`;
+  }).join("")}</div>`;
+}
 function introHtml() {
   const card = (x) => `<button class="who" data-meet="${x.id}">${avatar(x)}<span><b>${esc(x.name)}</b><small>${esc(x.role)}</small></span></button>`;
-  return `<div class="kicker" style="margin-top:16px">The cast</div><div class="cast">${CAST.map(card).join("")}</div>
+  return `${todayHtml()}<div class="kicker" style="margin-top:16px">The cast</div>
+  <p class="agentnote"><b>Ivy and Milo aren't people.</b> They are AI models on Vultr Serverless Inference, drawn as café staff so the story is easy to follow. Mrs. Hart is the only person who decides anything; the guests are scenery.</p>
+  <div class="cast">${CAST.map(card).join("")}</div>
   <div class="kicker" style="margin-top:14px">The two boundaries, and where they run</div><div class="cast">${PLACES.map(card).join("")}</div>
   <div class="kicker" style="margin-top:14px">Also in the café this morning</div><div class="cast">${GUESTS.map(card).join("")}</div>
   <p class="muted" style="margin-top:12px">Tap anyone, here or in the café, to see their ID card. <button class="linkish" data-meet="Platform">Whole café</button></p>`;
@@ -659,7 +684,7 @@ function showCard(id) {
   const x = WHO[id], b = BADGE[id], el = $("#idCard"); if (!x || !b) { el.classList.add("hidden"); return; }
   const system = ["SandboxBox", "Gate", "VultrVM"].includes(id), staff = ["Ivy", "Milo", "MrsHart", "Barista_Espresso"].includes(id);
   el.style.setProperty("--badge", x.c);
-  el.innerHTML = `<div class="idhead"><span>THE QUIET PAGE</span><span>${system ? "SYSTEM" : staff ? "STAFF" : "VISITOR"}</span></div>
+  el.innerHTML = `<div class="idhead"><span>THE QUIET PAGE</span><span>${system ? "SYSTEM" : ["Ivy", "Milo"].includes(id) ? "AI AGENT" : staff ? "STAFF" : "VISITOR"}</span></div>
     <div class="idbody"><img alt="" src="${portrait(id)}"><div><div class="idname">${esc(x.name)}</div><div class="idrole">${esc(x.role)}</div><div class="idkind">${esc([b.kind !== x.role ? b.kind : "", b.runs].filter(Boolean).join(" · "))}</div></div></div>
     ${b.can.length ? `<ul class="idlist">${b.can.map((t) => `<li><span class="ck ok">✓</span>${esc(t)}</li>`).join("")}${b.cannot.map((t) => `<li><span class="ck bad">✕</span>${esc(t)}</li>`).join("")}</ul>` : ""}
     ${b.note || (!b.can.length && x.line) ? `<p class="idnote">${esc(b.note || x.line)}</p>` : ""}
