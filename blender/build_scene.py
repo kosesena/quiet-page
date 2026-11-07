@@ -987,10 +987,10 @@ def plant(tag, loc, h, pot="rust", parent=None, coll=None, s=1.0):
 
 
 plant("Shelves", (4.8, 4.35, 0), 1.05)
-plant("VultrVM", (-6.4, 4.35, 0), 0.8)
+plant("VultrVM", (-7.55, 3.78, 0), 0.8)
 plant("Corner", (-7.5, -0.95, 0), 1.55, pot="pot_cream", s=1.3)
 plant("BackRight", (7.3, 4.2, 0), 1.1, pot="pot_char", s=1.1)
-plant("BackLeft", (-4.9, 4.35, 0), 0.65, pot="pot_cream", s=0.8)
+plant("BackLeft", (-4.6, 4.3, 0), 0.65, pot="pot_cream", s=0.8)
 plant("Divider", (5.0, -1.75, 0), 1.6, pot="pot_cream", s=1.3)  # tall plant at the divider end
 
 # (no bar stools: normal cafe seating lives in CafeTables)
@@ -1533,102 +1533,114 @@ M["botd"] = mat("M_BookOfTheDay", "#1d2127", 0.35, emit="#28313d", emit_strength
 face_plane("BookOfTheDay_Face", c_bd, 0.4, 0.7, (0, -0.0035, 0.92), M["botd"], bd)
 
 
-# --- MerchShelf: freestanding retail unit at the queue/entrance end of the counter
+# --- MerchShelf: built-in walnut wall unit set into the chevron section of the back wall's left end
 c_ms = make_coll("MerchShelf")
-ms = empty("MerchShelf", c_ms, (-4.2, 2.2, 0), rot_z=45)  # faces the queue and the camera
-MW, MD, MH = 1.1, 0.38, 1.5
+MW, MD, MH = 1.8, 0.32, 2.1
+ms = empty("MerchShelf", c_ms, (-5.75, WALL_FRONT - MD / 2 - 0.012, 0))  # front faces the room (-Y)
 M["brand_green"] = mat("M_BrandGreen", "#2f5d50", 0.4)
 M["tin_gold"] = mat("M_TinGold", "#c9a35f", 0.3, metal=0.6)
+M["merch_back"] = mat("M_MerchBacklight", "#f1e2c8", 0.6, emit="#ffd9a8", emit_strength=0.45)
+FR = 0.07  # walnut surround
 for sx in (-1, 1):
-    box(f"Merch_Side{sx}", c_ms, (0.035, MD, MH), (sx * (MW / 2 - 0.0175), 0, MH / 2),
+    box(f"Merch_Side{sx}", c_ms, (FR, MD + 0.02, MH + FR), (sx * (MW / 2 + FR / 2), 0, (MH + FR) / 2),
         M["walnut"], bevel=0.008, parent=ms)
-box("Merch_Back", c_ms, (MW - 0.07, 0.015, MH - 0.05), (0, MD / 2 - 0.008, MH / 2 + 0.01),
-    M["cream"], bevel=0.0, parent=ms)
-box("Merch_Plinth", c_ms, (MW - 0.07, MD - 0.02, 0.08), (0, 0, 0.04), M["walnut"], bevel=0.006,
-    parent=ms)
-SH = (0.08, 0.46, 0.84, 1.16)
-for i, z in enumerate(SH + (MH - 0.02,)):
-    box(f"Merch_Shelf{i}", c_ms, (MW - 0.07, MD - 0.02, 0.03), (0, 0, z + 0.015), M["oak"],
-        bevel=0.005, parent=ms)
+box("Merch_Top", c_ms, (MW + 2 * FR, MD + 0.02, FR), (0, 0, MH + FR / 2), M["walnut"], bevel=0.008, parent=ms)
+box("Merch_Plinth", c_ms, (MW, MD, 0.1), (0, 0, 0.05), M["walnut"], bevel=0.006, parent=ms)
+box("Merch_Back", c_ms, (MW, 0.015, MH - 0.1), (0, MD / 2 - 0.008, MH / 2 + 0.05), M["merch_back"],
+    bevel=0.0, parent=ms)  # warm back-lit panel
+SH = (0.1, 0.52, 0.94, 1.36, 1.74)
+for i, z in enumerate(SH[1:]):
+    box(f"Merch_Shelf{i}", c_ms, (MW, MD - 0.02, 0.03), (0, 0.01, z + 0.015), M["oak"], bevel=0.005, parent=ms)
+for i, z in enumerate(SH[1:] + (MH,)):
+    box(f"Merch_LED{i}", c_ms, (MW - 0.1, 0.012, 0.006), (0, -MD / 2 + 0.035, z - 0.004), M["led_2700_soft"],
+        bevel=0.0, parent=ms)  # thin warm LED under each shelf
 decals = empty("MerchShelf_Decals", c_ms, (0, 0, 0), parent=ms)
 FRONT = -MD / 2 + 0.06
 
 
 def tag(name, x, z):
-    box(name, c_ms, (0.05, 0.004, 0.025), (x, -MD / 2 + 0.008, z + 0.012), M["cream"],
-        bevel=0.0, parent=ms)
+    box(name, c_ms, (0.05, 0.004, 0.025), (x, -MD / 2 + 0.018, z + 0.012), M["cream"], bevel=0.0, parent=ms)
 
 
-# top shelf: branded tumblers in three colours with a small logo decal
+# level 3: branded tumblers (winter bands) with a small logo decal
 z0 = SH[3] + 0.03
-for k, col in enumerate(("brand_green", "cream", "rust", "brand_green", "cream", "rust")):
-    x = -0.42 + k * 0.168
-    cyl(f"Merch_Tumbler{k}", c_ms, 0.036, 0.2, (x, FRONT + 0.03, z0 + 0.1), M[col], segs=18,
-        parent=ms, r2=0.034)
+for k in range(8):
+    col = ("brand_green", "cream", "rust")[k % 3]
+    x = -0.77 + k * 0.22
+    cyl(f"Merch_Tumbler{k}", c_ms, 0.036, 0.2, (x, FRONT + 0.03, z0 + 0.1), M[col], segs=18, parent=ms, r2=0.034)
     cyl(f"Merch_TumblerBand{k}", c_ms, 0.0355, 0.03, (x, FRONT + 0.03, z0 + 0.165),
         M["holiday_red"] if col == "cream" else M["cream"], segs=18, parent=ms, r2=0.0345)
     cyl(f"Merch_TumblerLid{k}", c_ms, 0.035, 0.025, (x, FRONT + 0.03, z0 + 0.212),
         M["graphite"] if col != "brand_green" else M["cream"], segs=18, parent=ms)
-    logo_disc(f"Merch_TumblerLogo{k}", c_ms, 0.022, 0.002, (x, FRONT + 0.03 - 0.0365, z0 + 0.1),
-              parent=decals)
-tag("Merch_Price3", 0.0, SH[3] + 0.03)
-# second shelf: ceramic mugs + tea tins
+    logo_disc(f"Merch_TumblerLogo{k}", c_ms, 0.022, 0.002, (x, FRONT + 0.03 - 0.0365, z0 + 0.1), parent=decals)
+tag("Merch_Price3", 0.0, z0)
+# level 2: ceramic mugs + tea tins
 z1 = SH[2] + 0.03
-for k, col in enumerate(("cream", "brand_green", "cream", "rust")):
-    x = -0.42 + k * 0.11
-    cyl(f"Merch_Mug{k}", c_ms, 0.04, 0.09, (x, FRONT + 0.02, z1 + 0.045), M[col], segs=16,
-        parent=ms)
-    torus(f"Merch_MugHandle{k}", c_ms, 0.022, 0.006, (x + 0.048, FRONT + 0.02, z1 + 0.048), M[col],
-          parent=ms, rot=(90, 0, 0))
+for k, col in enumerate(("cream", "brand_green", "cream", "rust", "brand_green")):
+    x = -0.75 + k * 0.14
+    cyl(f"Merch_Mug{k}", c_ms, 0.04, 0.09, (x, FRONT + 0.02, z1 + 0.045), M[col], segs=16, parent=ms)
+    torus(f"Merch_MugHandle{k}", c_ms, 0.022, 0.006, (x + 0.048, FRONT + 0.02, z1 + 0.048), M[col], parent=ms,
+          rot=(90, 0, 0))
 for k, col in enumerate(("brand_green", "tin_gold", "rust", "navy")):
-    x = 0.08 + k * 0.105
-    cyl(f"Merch_Tin{k}", c_ms, 0.035, 0.11, (x, FRONT + 0.03, z1 + 0.055), M[col], segs=16,
-        parent=ms)
-    cyl(f"Merch_TinLid{k}", c_ms, 0.037, 0.015, (x, FRONT + 0.03, z1 + 0.115), M["tin_gold"],
-        segs=16, parent=ms)
-tag("Merch_Price2", -0.25, z1)
-tag("Merch_Price2b", 0.24, z1)
-# third shelf: kraft coffee bean pouches with labels
+    x = 0.15 + k * 0.17
+    cyl(f"Merch_Tin{k}", c_ms, 0.035, 0.11, (x, FRONT + 0.03, z1 + 0.055), M[col], segs=16, parent=ms)
+    cyl(f"Merch_TinLid{k}", c_ms, 0.037, 0.015, (x, FRONT + 0.03, z1 + 0.115), M["tin_gold"], segs=16, parent=ms)
+tag("Merch_Price2", -0.45, z1)
+tag("Merch_Price2b", 0.4, z1)
+# level 1: kraft coffee-bean pouches with labels
 z2 = SH[1] + 0.03
-for k in range(5):
-    x = -0.4 + k * 0.2
-    box(f"Merch_Pouch{k}", c_ms, (0.13, 0.065, 0.22), (x, FRONT + 0.04, z2 + 0.11), M["kraft"],
-        bevel=0.015, segs=2, parent=ms)
-    box(f"Merch_PouchFold{k}", c_ms, (0.13, 0.03, 0.025), (x, FRONT + 0.04, z2 + 0.232),
-        M["kraft"], bevel=0.006, parent=ms)
+for k in range(6):
+    x = -0.72 + k * 0.288
+    box(f"Merch_Pouch{k}", c_ms, (0.13, 0.065, 0.22), (x, FRONT + 0.04, z2 + 0.11), M["kraft"], bevel=0.015,
+        segs=2, parent=ms)
+    box(f"Merch_PouchFold{k}", c_ms, (0.13, 0.03, 0.025), (x, FRONT + 0.04, z2 + 0.232), M["kraft"], bevel=0.006,
+        parent=ms)
     box(f"Merch_PouchLabel{k}", c_ms, (0.08, 0.004, 0.07), (x, FRONT + 0.0065, z2 + 0.12),
         M["cream"] if k % 2 == 0 else M["brand_green"], bevel=0.0, parent=ms)
 tag("Merch_Price1", 0.0, z2)
-# bottom: folded tote bags stack + a tall thermos pair
-z3 = SH[0] + 0.03
+# level 0 (on the plinth): folded tote stack, thermoses, wrapped gift stack
+z3 = SH[0]
 for k, col in enumerate(("cream", "brand_green", "cream", "rust")):
-    box(f"Merch_Tote{k}", c_ms, (0.36, 0.26, 0.035), (-0.24, 0.0, z3 + 0.018 + k * 0.036),
-        M[col], bevel=0.01, segs=2, parent=ms, rot=(0, 0, (k - 1.5) * 2.5))
+    box(f"Merch_Tote{k}", c_ms, (0.36, 0.24, 0.035), (-0.55, 0.0, z3 + 0.018 + k * 0.036), M[col], bevel=0.01,
+        segs=2, parent=ms, rot=(0, 0, (k - 1.5) * 2.5))
 for k, col in enumerate(("brand_green", "rust")):
-    x = 0.18 + k * 0.16
-    cyl(f"Merch_Thermos{k}", c_ms, 0.045, 0.26, (x, FRONT + 0.03, z3 + 0.13), M[col], segs=18,
-        parent=ms)
-    cyl(f"Merch_ThermosCap{k}", c_ms, 0.042, 0.045, (x, FRONT + 0.03, z3 + 0.282), M["steel"],
-        segs=18, parent=ms)
-    logo_disc(f"Merch_ThermosLogo{k}", c_ms, 0.026, 0.002, (x, FRONT + 0.03 - 0.0455, z3 + 0.15),
-              parent=decals)
-tag("Merch_Price0", 0.25, z3)
-# small wrapped gift stack on top of the unit (kraft paper, green / red ribbon)
-for k, (w, d, h, dx, rib) in enumerate(((0.26, 0.2, 0.14, -0.22, "brand_green"),
-                                        (0.18, 0.15, 0.11, -0.2, "holiday_red"),
-                                        (0.16, 0.14, 0.12, 0.08, "holiday_red"))):
-    zb = MH + 0.0 + (0.14 if k == 1 else 0.0)
+    x = 0.02 + k * 0.17
+    cyl(f"Merch_Thermos{k}", c_ms, 0.045, 0.26, (x, FRONT + 0.03, z3 + 0.13), M[col], segs=18, parent=ms)
+    cyl(f"Merch_ThermosCap{k}", c_ms, 0.042, 0.045, (x, FRONT + 0.03, z3 + 0.282), M["steel"], segs=18, parent=ms)
+    logo_disc(f"Merch_ThermosLogo{k}", c_ms, 0.026, 0.002, (x, FRONT + 0.03 - 0.0455, z3 + 0.15), parent=decals)
+tag("Merch_Price0", 0.1, z3)
+for k, (w, d, h, dx, rib) in enumerate(((0.26, 0.2, 0.14, 0.6, "brand_green"),
+                                        (0.18, 0.15, 0.11, 0.62, "holiday_red"),
+                                        (0.16, 0.14, 0.12, 0.38, "holiday_red"))):
+    zb = z3 + (0.14 if k == 1 else 0.0)
     rz = (8, -12, 18)[k]
-    box(f"Merch_Gift{k}", c_ms, (w, d, h), (dx, 0.0, zb + h / 2), M["kraft"], bevel=0.006,
+    box(f"Merch_Gift{k}", c_ms, (w, d, h), (dx, 0.0, zb + h / 2), M["kraft"], bevel=0.006, parent=ms,
+        rot=(0, 0, rz))
+    box(f"Merch_GiftRibbonA{k}", c_ms, (w + 0.004, 0.02, h + 0.004), (dx, 0.0, zb + h / 2), M[rib], bevel=0.0,
         parent=ms, rot=(0, 0, rz))
-    box(f"Merch_GiftRibbonA{k}", c_ms, (w + 0.004, 0.02, h + 0.004), (dx, 0.0, zb + h / 2),
-        M[rib], bevel=0.0, parent=ms, rot=(0, 0, rz))
-    box(f"Merch_GiftRibbonB{k}", c_ms, (0.02, d + 0.004, h + 0.004), (dx, 0.0, zb + h / 2),
-        M[rib], bevel=0.0, parent=ms, rot=(0, 0, rz))
+    box(f"Merch_GiftRibbonB{k}", c_ms, (0.02, d + 0.004, h + 0.004), (dx, 0.0, zb + h / 2), M[rib], bevel=0.0,
+        parent=ms, rot=(0, 0, rz))
     for sx in (-1, 1):
-        sphere(f"Merch_GiftBow{k}{sx}", c_ms, 0.022, (dx + sx * 0.018, 0.0, zb + h + 0.012),
-               M[rib], parent=ms, scale=(1.2, 0.6, 0.7), segs=10, rings=6)
-
+        sphere(f"Merch_GiftBow{k}{sx}", c_ms, 0.022, (dx + sx * 0.018, 0.0, zb + h + 0.012), M[rib], parent=ms,
+               scale=(1.2, 0.6, 0.7), segs=10, rings=6)
+# level 4: coffee bags, glass jars, a small plant
+z4 = SH[4] + 0.03
+for k in range(3):
+    x = -0.72 + k * 0.2
+    box(f"Merch_Bag{k}", c_ms, (0.14, 0.08, 0.22), (x, FRONT + 0.04, z4 + 0.11), M["kraft"], bevel=0.014,
+        parent=ms)
+    box(f"Merch_BagLabel{k}", c_ms, (0.09, 0.004, 0.07), (x, FRONT - 0.0005, z4 + 0.12),
+        M["brand_green"] if k != 1 else M["cream"], bevel=0.0, parent=ms)
+for k in range(2):
+    x = 0.05 + k * 0.16
+    cyl(f"Merch_Jar{k}", c_ms, 0.055, 0.17, (x, FRONT + 0.03, z4 + 0.085), M["glass"], segs=16, parent=ms)
+    cyl(f"Merch_JarBeans{k}", c_ms, 0.05, 0.11, (x, FRONT + 0.03, z4 + 0.06), M["coffee"], segs=16, parent=ms)
+    cyl(f"Merch_JarLid{k}", c_ms, 0.057, 0.02, (x, FRONT + 0.03, z4 + 0.18), M["walnut"], segs=16, parent=ms)
+cyl("Merch_PlantPot", c_ms, 0.06, 0.1, (0.62, 0.0, z4 + 0.05), M["pot_cream"], segs=16, parent=ms, r2=0.07)
+for k, (dx, dz) in enumerate(((0.0, 0.17), (0.04, 0.2), (-0.035, 0.19))):
+    sphere(f"Merch_PlantLeaf{k}", c_ms, 0.05, (0.62 + dx, 0.0, z4 + dz), M["leaf"] if k % 2 == 0 else M["leaf_light"],
+           parent=ms, segs=10, rings=6)
+EXTRA_LIGHTS.append(("MerchShelf_Light", (-5.75, WALL_FRONT - 0.45, 1.6), 8))
 
 # ================================================================ 14. Holiday season
 # --- HolidayTree: stylized layered fir, baubles, spiral fairy lights, star
@@ -2606,7 +2618,7 @@ if DO_RENDER:
     render_to(os.path.join(OUT, "preview-ivy.png"), (-2.9, -3.7, 1.95), (-4.5, -1.2, 1.05), 42)
     render_to(os.path.join(OUT, "preview-counter.png"), (0.55, 0.9, 2.45), (0.25, 3.85, 1.15), 16)
     render_to(os.path.join(OUT, "preview-seating.png"), (0.5, -8.6, 6.2), (0.0, 1.4, 0.6), 19)
-    render_to(os.path.join(OUT, "preview-merch.png"), (-2.7, 0.45, 1.65), (-4.2, 2.2, 0.85), 38)
+    render_to(os.path.join(OUT, "preview-merch.png"), (-4.4, 1.2, 1.7), (-5.75, 4.4, 1.05), 30)
     render_to(os.path.join(OUT, "preview-holiday.png"), (4.2, -8.2, 2.8), (6.6, -3.2, 1.1), 26)
     render_to(os.path.join(OUT, "preview-walls.png"), (1.2, -1.8, 2.1), (-5.2, 3.0, 1.45), 22)
     render_to(os.path.join(OUT, "preview-nook.png"), (3.9, -8.0, 2.7), (6.3, -2.9, 0.8), 30)
