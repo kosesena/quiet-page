@@ -2081,43 +2081,29 @@ logo_disc("BladeSign_Front", c_bs, 0.34, 0.006, (-0.39, -0.028, 2.27), parent=bs
 logo_disc("BladeSign_Back", c_bs, 0.34, 0.006, (-0.39, 0.028, 2.27), parent=bs, rot=(-90, 0, 180),
           m_face=M["logo_lit"])
 
-# --- canopy: floating light-oak soffit frame over the counter zone, recessed downlights underneath
+# --- canopy: slim floating light-oak soffit frame over the counter, recessed downlights underneath.
+# Sits high and set back (front beam at y 3.0, underside 2.5 m) so from Cam_Overview it projects above the
+# lower edge of the cubby row and never covers the baristas or the POS.
 c_cn = make_coll("Canopy")
 cn = empty("Canopy", c_cn)
 M["downlight"] = mat("M_Downlight", "#fff1dd", 0.3, emit="#ffe2bd", emit_strength=3.0)
-CN_X, CN_Y0, CN_Y1 = 3.4, 0.9, 2.8
-box("Canopy_Front", c_cn, (2 * CN_X + 0.3, 0.3, 0.06), (0, CN_Y0, 2.57), M["light_oak"], bevel=0.01, parent=cn)
+CN_X, CN_Y0, CN_Y1 = 3.4, 3.0, 4.38
+CN_ZB = 2.5                       # underside
+box("Canopy_Front", c_cn, (2 * CN_X + 0.3, 0.26, 0.08), (0, CN_Y0, CN_ZB + 0.04), M["light_oak"], bevel=0.008,
+    parent=cn)
 for sx in (-1, 1):
-    box(f"Canopy_Side{sx}", c_cn, (0.3, CN_Y1 - CN_Y0, 0.35), (sx * CN_X, (CN_Y0 + CN_Y1) / 2, 2.425),
-        M["light_oak"], bevel=0.01, parent=cn)
-    for k in range(3):
-        box(f"Canopy_Seam{sx}{k}", c_cn, (0.004, CN_Y1 - CN_Y0, 0.006), (sx * CN_X - sx * 0.151,
-            (CN_Y0 + CN_Y1) / 2, 2.3 + k * 0.1), M["oak_edge"], bevel=0.0, parent=cn)
-    for k in range(5):
-        cyl(f"Canopy_DownlightS{sx}{k}", c_cn, 0.04, 0.006, (sx * CN_X, CN_Y0 + 0.2 + k * 0.38, 2.248),
-            M["downlight"], segs=14, parent=cn)
-    EXTRA_LIGHTS.append((f"Canopy_Light{sx}", (sx * CN_X, 1.85, 2.12), 22))
-for k in range(11):
-    cyl(f"Canopy_DownlightF{k}", c_cn, 0.04, 0.006, (-3.0 + k * 0.6, CN_Y0, 2.538), M["downlight"], segs=14,
-        parent=cn)
-EXTRA_LIGHTS.append(("Canopy_LightFront", (0.0, CN_Y0, 2.42), 22))
-
-# --- wood-clad square column between the communal table and the lounge
-c_wc = make_coll("WoodColumn")
-wc = empty("WoodColumn", c_wc, (4.2, 1.2, 0))
-box("WoodColumn_Core", c_wc, (0.37, 0.37, ROOM_H), (0, 0, ROOM_H / 2), M["dark_wood"], bevel=0.004, parent=wc)
-_tones = (M["light_oak"], M["slat_oak"], M["oak"], M["slat_oak2"])
-for face, (nx, ny) in enumerate(((0, -1), (1, 0), (0, 1), (-1, 0))):
+    box(f"Canopy_Side{sx}", c_cn, (0.26, CN_Y1 - CN_Y0, 0.18), (sx * CN_X, (CN_Y0 + CN_Y1) / 2, CN_ZB + 0.09),
+        M["light_oak"], bevel=0.008, parent=cn)
+    box(f"Canopy_Seam{sx}", c_cn, (0.004, CN_Y1 - CN_Y0, 0.006), (sx * CN_X - sx * 0.131,
+        (CN_Y0 + CN_Y1) / 2, CN_ZB + 0.09), M["oak_edge"], bevel=0.0, parent=cn)
     for k in range(4):
-        off = -0.15 + k * 0.1
-        if ny:
-            loc = (off, ny * 0.192, ROOM_H / 2)
-            size = (0.092, 0.016, ROOM_H - 0.04)
-        else:
-            loc = (nx * 0.192, off, ROOM_H / 2)
-            size = (0.016, 0.092, ROOM_H - 0.04)
-        box(f"WoodColumn_Plank{face}{k}", c_wc, size, loc, _tones[(face + k) % 4], bevel=0.003, parent=wc)
-box("WoodColumn_Base", c_wc, (0.42, 0.42, 0.06), (0, 0, 0.03), M["walnut"], bevel=0.006, parent=wc)
+        cyl(f"Canopy_DownlightS{sx}{k}", c_cn, 0.04, 0.006, (sx * CN_X, CN_Y0 + 0.2 + k * 0.32, CN_ZB - 0.003),
+            M["downlight"], segs=14, parent=cn)
+    EXTRA_LIGHTS.append((f"Canopy_Light{sx}", (sx * CN_X, 3.7, 2.38), 22))
+for k in range(11):
+    cyl(f"Canopy_DownlightF{k}", c_cn, 0.04, 0.006, (-3.0 + k * 0.6, CN_Y0, CN_ZB - 0.003), M["downlight"],
+        segs=14, parent=cn)
+EXTRA_LIGHTS.append(("Canopy_LightFront", (0.0, CN_Y0, 2.4), 22))
 
 # --- warm cove light under the counter lip (area strip, pointing down the fluted front)
 _cd = bpy.data.lights.new("Counter_CoveLight", "AREA")
@@ -2133,6 +2119,58 @@ _co["light_type"] = "AREA"
 _co["light_color"] = list(WARM_2700K)
 _co["light_power_w"] = 45
 _co["light_size_m"] = [CT_W - 0.2, 0.05]
+
+
+# ================================================================ 17. Front floor + upper side-wall detail
+# --- large low-pile rug in the front-middle (courier's spot ~1.5 m clear)
+c_fr = make_coll("FrontRug")
+fr = empty("FrontRug", c_fr, (2.2, -2.4, 0))
+box("FrontRug_Border", c_fr, (3.6, 1.6, 0.006), (0, 0, 0.003), mat("M_RugTerracotta", "#c27a55", 0.95),
+    bevel=0.0, parent=fr)
+box("FrontRug_Field", c_fr, (3.44, 1.44, 0.008), (0, 0, 0.004), mat("M_RugNeutral", "#e2d6c3", 0.95),
+    bevel=0.0, parent=fr)
+
+# --- tall potted plants spaced along the open front edge (fiddle-leaf / olive)
+c_fp = make_coll("FrontPlants")
+fpl = empty("FrontPlants", c_fp)
+M["fiddle"] = mat("M_FiddleLeaf", "#3f6b3c", 0.6)
+M["olive"] = mat("M_OliveLeaf", "#8a9a6e", 0.8)
+for i, (px, kind, pot) in enumerate(((-6.3, "fiddle", "rust"), (-2.8, "olive", "black_metal"),
+                                    (2.6, "fiddle", "black_metal"), (4.0, "olive", "rust"))):
+    root = empty(f"FrontPlant_{i}", c_fp, (px, -4.5, 0), parent=fpl)
+    cyl(f"FrontPlant_{i}_Pot", c_fp, 0.16, 0.42, (0, 0, 0.21), M[pot], segs=20, parent=root, r2=0.2)
+    cyl(f"FrontPlant_{i}_Soil", c_fp, 0.185, 0.01, (0, 0, 0.415), M["soil"], segs=20, parent=root)
+    cyl(f"FrontPlant_{i}_Trunk", c_fp, 0.018, 0.75, (0, 0, 0.78), M["wood_dark"], segs=8, parent=root)
+    rng_p = random.Random(20 + i)
+    if kind == "fiddle":
+        for k in range(10):
+            a = k * 2.4
+            z = 0.95 + (k % 5) * 0.08
+            sphere(f"FrontPlant_{i}_Leaf{k}", c_fp, 1.0, (0.13 * math.cos(a), 0.13 * math.sin(a), z), M["fiddle"],
+                   parent=root, scale=(0.11, 0.03, 0.15), segs=10, rings=6).rotation_euler = (
+                math.radians(rng_p.uniform(-25, 25)), 0, a)
+    else:
+        for k, (dx, dy, dz, r) in enumerate(((0, 0, 1.18, 0.2), (0.14, 0.05, 1.05, 0.15), (-0.13, -0.06, 1.08, 0.16),
+                                             (0.03, -0.1, 1.28, 0.13))):
+            sphere(f"FrontPlant_{i}_Crown{k}", c_fp, r, (dx, dy, dz), M["olive"], parent=root,
+                   scale=(1, 1, 0.8), segs=12, rings=8)
+
+# --- upper side walls: walnut picture rail at 2.1 m + light-oak battens above the wainscot
+c_uw = make_coll("UpperWallDetail")
+uw = empty("UpperWallDetail", c_uw)
+for tag, xf, sgn, y0, y1, batten_spans in (
+        ("Left", -SIDE_IN, 1, SHOP_Y1, SL_Y0, ((SHOP_Y1, SL_Y0),)),
+        ("Right", SIDE_IN, -1, ROOM_Y0, 1.2, ((ROOM_Y0 + 0.05, -1.6), (0.5, 1.15)))):
+    box(f"PictureRail_{tag}", c_uw, (0.04, y1 - y0, 0.035), (xf + sgn * 0.02, (y0 + y1) / 2, 2.1), M["walnut"],
+        bevel=0.006, parent=uw)
+    k = 0
+    for b0, b1 in batten_spans:
+        y = b0 + 0.12
+        while y < b1 - 0.05:
+            box(f"Batten_{tag}{k}", c_uw, (0.02, 0.035, 0.94), (xf + sgn * 0.01, y, 1.61), M["light_oak"],
+                bevel=0.004, parent=uw)
+            y += 0.25
+            k += 1
 
 # ================================================================ 9. Characters
 def figure(name, loc, rot_z, top, pants, hair_fn, arms=("down", "down"), eyes=True,
@@ -2505,12 +2543,14 @@ join_under(O["HolidayTree"], "HolidayTree_Mesh")
 join_under(O["StringLights"], "StringLights_Mesh")
 join_under(O["Wreath"], "Wreath_Mesh")
 join_under(O["WallDetails"], "WallDetails_Mesh")
+join_under(O["FrontRug"], "FrontRug_Mesh")
+join_under(O["FrontPlants"], "FrontPlants_Mesh")
+join_under(O["UpperWallDetail"], "UpperWallDetail_Mesh")
 join_under(O["BackBar"], "BackBar_Mesh")
 join_under(O["WallCladding"], "WallCladding_Mesh", exclude_roots=(O["WallCladding_Chevron"], O["LoungeWall_Back"], O["LoungeWall_Right"]))
 join_under(O["LoungeArt"], "LoungeArt_Mesh")
 join_under(O["Shopfront"], "Shopfront_Mesh")
 join_under(O["Canopy"], "Canopy_Mesh")
-join_under(O["WoodColumn"], "WoodColumn_Mesh")
 join_under(O["CommunalTable"], "CommunalTable_Mesh")
 join_under(O["Banquette"], "Banquette_Mesh")
 join_under(O["WallArt"], "WallArt_Mesh")
