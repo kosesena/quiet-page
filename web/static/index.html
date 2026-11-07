@@ -201,6 +201,23 @@ const SHORT = { Ivy: "Ivy", Milo: "Milo", MrsHart: "Mrs. Hart", InkwellCourier: 
 let overviewCam = null;
 const glbLights = [];
 let mixer = null;
+const ONCE_MIN_MS = 5 * 60e3, ONCE_MAX_MS = 10 * 60e3;
+function scheduleOnce(acts) {
+  // a cross-legs clip and its uncross partner alternate; other one-shots are picked at random
+  const cross = acts.find((a) => /_CrossLegs_Once$/.test(a.getClip().name)), uncross = acts.find((a) => /_UncrossLegs_Once$/.test(a.getClip().name));
+  let crossed = false;
+  const fire = () => {
+    let pool = acts.filter((a) => a !== cross && a !== uncross);
+    if (cross && uncross) pool.push(crossed ? uncross : cross);
+    const a = pool[Math.floor(Math.random() * pool.length)];
+    if (a) {
+      if (a === cross || a === uncross) { (a === cross ? uncross : cross).stop(); crossed = a === cross; }
+      a.reset().play();
+    }
+    setTimeout(fire, ONCE_MIN_MS + Math.random() * (ONCE_MAX_MS - ONCE_MIN_MS));
+  };
+  setTimeout(fire, ONCE_MIN_MS + Math.random() * (ONCE_MAX_MS - ONCE_MIN_MS));
+}
 let gateArm = null, gateLight = null, alarm = null, adFaces = [], bookFace = null, alarmOn = false, armTarget = 0;
 
 // screen textures drawn on canvases so the ads rotate and the book changes daily
@@ -259,8 +276,14 @@ new GLTFLoader().load("/static/quiet-page.glb?v=" + Date.now(), (gltf) => {
   // Blender's lamp powers don't translate to three's units; keep the positions, use warm lights of our own
   for (const L of glbLights) {
     const pos = L.getWorldPosition(new THREE.Vector3()); L.parent?.remove(L);
-    const warm = new THREE.PointLight(0xffc27a, 1.6, 4.0, 2); warm.position.copy(pos); scene.add(warm);
+    if (L.isDirectionalLight) continue; // the page has its own sun
+    // a screen's glow is a faint cool spill, not a lamp
+    const screen = /Screen|Laptop/i.test(L.name);
+    const warm = screen ? new THREE.PointLight(0xcfe0ff, 0.08, 0.9, 2) : new THREE.PointLight(0xffc27a, 1.6, 4.0, 2);
+    warm.position.copy(pos); scene.add(warm);
   }
+  // keep self-lit screens readable without blooming into a glare
+  root.traverse((o) => { if (o.isMesh && /Laptop_Screen/.test(o.name) && o.material?.emissive) { o.material.emissiveIntensity = 0.45; } });
   gateArm = named.Gate_Arm || null; gateLight = named.Gate_Light || null;
   alarm = named.SandboxBox_Alarm || null; if (alarm) alarm.visible = false;
   adFaces = ["AdScreen_L_Face", "AdScreen_R_Face"].map((n) => named[n]).filter(Boolean);
@@ -276,9 +299,17 @@ new GLTFLoader().load("/static/quiet-page.glb?v=" + Date.now(), (gltf) => {
     const lo = new CSS2DObject(el); lo.position.copy(top); scene.add(lo); labelObjs[n] = { lo, el, txt };
   }
   // idle loops baked in Blender (typing, steaming milk, reading…): ambient life only, the story never moves on its own
+  // clips named *_Once are rare one-shots (a page turn, crossing the legs, a sip): each figure plays one now and
+  // then, at a random 5-10 minute interval; everything else loops quietly
   if (gltf.animations?.length) {
     mixer = new THREE.AnimationMixer(root);
-    for (const clip of gltf.animations) { const a = mixer.clipAction(clip); a.time = Math.random() * clip.duration; a.play(); }
+    const once = {};
+    for (const clip of gltf.animations) {
+      const a = mixer.clipAction(clip);
+      if (clip.name.endsWith("_Once")) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; (once[clip.name.split("_").slice(0, -2).join("_")] ??= []).push(a); }
+      else { a.time = Math.random() * clip.duration; a.play(); }
+    }
+    for (const acts of Object.values(once)) scheduleOnce(acts);
   }
   const cam = gltf.cameras && gltf.cameras[0];
   if (cam) { cam.updateWorldMatrix(true, false); overviewCam = cam.getWorldPosition(new THREE.Vector3()); }
