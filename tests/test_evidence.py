@@ -32,3 +32,15 @@ def test_reordering_is_detected():
     r = _receipt()
     r["entries"][0], r["entries"][1] = r["entries"][1], r["entries"][0]
     assert verify(r)[0] is False
+
+
+def test_a_receipt_survives_a_trip_through_javascript():
+    import json as _json
+
+    from counterfoil.evidence import Receipt, verify
+
+    r = Receipt("rt")
+    r.add("sandbox", {"timeout_s": 8.0, "duration_s": 0.5, "limits": [1.0, 2]})
+    d = r.to_dict()
+    js = _json.loads(_json.dumps(d).replace("8.0", "8").replace("1.0", "1"))  # what JSON.stringify sends back
+    assert verify(js) == (True, None)

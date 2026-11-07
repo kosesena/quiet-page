@@ -15,8 +15,20 @@ from dataclasses import dataclass, field
 GENESIS = "0" * 64
 
 
+def _plain(obj):
+    """Whole-number floats as ints: a receipt that passes through JavaScript (the page's verify button) comes back
+    with 8.0 as 8, and that must not count as an edit."""
+    if isinstance(obj, float) and obj.is_integer():
+        return int(obj)
+    if isinstance(obj, dict):
+        return {k: _plain(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_plain(v) for v in obj]
+    return obj
+
+
 def _canonical(obj) -> bytes:
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str).encode()
+    return json.dumps(_plain(obj), sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str).encode()
 
 
 @dataclass

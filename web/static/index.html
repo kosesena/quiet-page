@@ -76,6 +76,14 @@
   .why { color: #f0c56b; font: 12px/1.4 var(--mono); margin-top: 3px; }
   .presetchip { cursor: pointer; color: var(--ink); font: inherit; font-size: 12px; } .presetchip.on, .presetchip:hover { border-color: var(--tan); }
   .callrow { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .chain { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .link { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: #211f1e; position: relative; }
+  .link + .link::before { content: ""; position: absolute; left: 22px; top: -7px; width: 2px; height: 7px; background: var(--line); }
+  .link.bad { border-color: #8a3a30; background: #2a1d1b; } .link.edited { box-shadow: 0 0 0 2px #f0c56b inset; }
+  .lk-n { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 600 11px/1 var(--mono); background: #2e2b28; color: var(--muted); }
+  .link.bad .lk-n { background: #43211c; color: #f08d7c; }
+  .lk-b { flex: 1; min-width: 0; } .lk-b b { display: block; font-size: 13px; } .lk-b small { color: var(--muted); font-size: 12px; }
+  .hashes { display: flex; gap: 12px; flex-wrap: wrap; font: 11px/1.4 var(--mono); color: #7a827e; margin-top: 2px; }
   .linkish { border: 0; background: none; color: #8fd1ad; text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0 40px; }
   a { color: #8fd1ad; }
@@ -161,8 +169,9 @@ const STEPS = [
     chips: ["prompt injection aimed at the payments agent", "the box can't help here", "the POS holds it"] },
   { n: "08", k: "Fool it", title: "Your turn: try to fool it", focus: "Ivy", fool: true,
     body: `<p>You are Mira. Your order <b>ST-1042</b> has one return open (RMA-1042), and the books say <b>30.00 USD</b> is refundable. Anything above that, to anyone else, or in another currency is a win for you.</p><p>Write the email Ivy will read. Hide instructions in the attachment, ask for more, claim someone else's order: whatever you like. Start from one of these, or write your own:</p>` },
-  { n: "09", k: "Evidence", title: "Every run leaves a receipt", focus: "VultrVM", evidence: true,
-    body: `<p>Each step (email, sandbox, hand-off, gate, payment) is chained with SHA-256 into a receipt you can download. Change any earlier step and verification fails at that step.</p>` },
+  { n: "09", k: "Evidence", title: "Every run leaves a receipt", focus: "MrsHart", evidence: true,
+    body: `<p>When Mrs. Hart is asked why a refund was held, or an auditor asks why one went through, "the agent decided" is not an answer. So every run writes a receipt: the email that came in, what the box saw, Ivy's hand-off, each POS decision, the payment.</p><p>Each entry's SHA-256 hash covers its own content <i>and the hash before it</i>. Edit any earlier entry and every hash after it stops matching, so verification points at the exact entry that changed.</p><p class="muted">A hash chain proves a receipt wasn't edited after the fact. It doesn't prove who wrote it; that would need a signature.</p>`,
+    chips: ["SHA-256 chain", "download it", "edit it and watch it break"] },
   { n: "10", k: "Architecture", title: "What runs where", focus: "VultrVM", arch: true, body: "" },
 ];
 
@@ -694,21 +703,58 @@ async function wireFool() {
     <p class="muted" style="margin-top:10px">Fooling both models isn't enough. The money still has to match the books.</p></div>`;
 }
 function evidenceHtml() {
-  return `<div class="card"><h3>Last receipt</h3><div id="rcpt" class="muted">Run any case first, then come back here.</div>
-  <div class="actions"><button class="btn ghost small" id="dl" disabled>Download receipt</button><button class="btn ghost small" id="vf" disabled>Verify</button><button class="btn ghost small" id="tamper" disabled>Tamper one step, then verify</button></div><div id="vres"></div></div>
-  <div class="card" style="margin-top:14px"><h3>Measured, not claimed</h3><div id="numbers" class="muted">loading…</div></div>`;
+  return `<div class="card" style="margin-top:16px"><h3>Measured, not claimed</h3><p class="muted" style="margin:0 0 8px">The same attack scenarios against eleven model setups, with and without the POS in front of the money.</p><div id="numbers" class="muted">loading…</div></div>`;
 }
-function wireEvidence() {
+// step 09: the receipt as a chain; edit any entry and the server-side verifier names the first broken one
+let rcptWork = null, rcptBroken = null, rcptEdited = null;
+const STEP_LABEL = (e) => {
+  const d = e.data || {};
+  if (e.step === "email") return ["Email in", `from ${d.from || "?"} · ${d.subject || ""}`];
+  if (e.step === "sandbox") return ["The box", (d.events || []).length ? `contained: ${d.events.join(", ")}` : "clean run"];
+  if (e.step === "quarantine") return ["Quarantine", "run stopped before Milo"];
+  if (e.step === "reader") return ["Ivy's hand-off", d.handoff ? `${d.handoff.siparis_no || "—"} · ${d.handoff.tutar || "—"} ${d.handoff.para_birimi || ""}` : ""];
+  if (e.step === "gate") return [`POS · ${d.tool}`, `${d.args?.amount ? d.args.amount + " " + (d.args.currency || "") + " · " : ""}${d.decision === "APPROVAL" ? "held" : d.decision === "BLOCK" ? "blocked" : "passed"}`];
+  if (e.step === "end") return ["End", d.stopped || ""];
+  return [e.step, ""];
+};
+async function wireEvidence() {
   fetch("/static/numbers.json").then((r) => r.ok ? r.json() : null).then((n) => {
     $("#numbers").innerHTML = n ? numbersHtml(n) : `The gate's model-by-model results are in <a href="https://github.com/kosesena/quiet-page/tree/main/results">results/</a>.`;
   });
-  if (!lastReceipt) return;
-  $("#rcpt").innerHTML = `<code>${esc(lastReceipt.run_id)}</code> · ${lastReceipt.entries.length} steps · head <code>${lastReceipt.head.slice(0, 16)}…</code><br>${lastReceipt.entries.map((e) => esc(e.step)).join(" → ")}`;
-  ["dl", "vf", "tamper"].forEach((id) => ($("#" + id).disabled = false));
-  $("#dl").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(lastReceipt, null, 1)], { type: "application/json" })); a.download = lastReceipt.run_id + ".receipt.json"; a.click(); };
+  if (!rcptWork || (lastReceipt && rcptWork.run_id !== lastReceipt.run_id)) {
+    rcptWork = null;
+    if (lastReceipt) rcptWork = JSON.parse(JSON.stringify(lastReceipt));
+    else { try { replayCache["hidden-note"] ??= await fetch("/api/replay/hidden-note").then((r) => r.ok ? r.json() : null); } catch {} const d = replayCache["hidden-note"]; if (d) rcptWork = JSON.parse(JSON.stringify(d.receipt)); }
+    rcptBroken = null; rcptEdited = null;
+  }
+  receiptView();
+}
+function receiptView() {
+  if (!STEPS[current].evidence) return;
+  if (!rcptWork) { $("#side").innerHTML = `<div class="card muted">Run any case first, then come back here.</div>`; return; }
+  const ents = rcptWork.entries;
+  let h = `<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><div class="kicker">Receipt</div><code>${esc(rcptWork.run_id)}</code></div>
+    <div>${rcptBroken === null ? "" : rcptBroken === false ? `<span class="verdict v-pass">Intact</span>` : `<span class="verdict v-block">Broken at entry ${rcptBroken}</span>`}</div></div>
+    <div class="chain">${ents.map((e, i) => { const [t, sub] = STEP_LABEL(e), bad = typeof rcptBroken === "number" && i >= rcptBroken;
+      return `<div class="link ${bad ? "bad" : ""} ${rcptEdited === i ? "edited" : ""}"><div class="lk-n">${i}</div><div class="lk-b"><b>${esc(t)}</b><small>${esc(sub)}</small>
+        <div class="hashes"><span>prev ${esc(String(e.prev).slice(0, 10))}…</span><span>hash ${esc(String(e.hash).slice(0, 10))}…</span></div></div>
+        <button class="btn ghost small" data-edit="${i}" title="Change this entry">edit</button></div>`; }).join("")}</div>
+    <div class="actions"><button class="btn small" id="vf">Verify</button><button class="btn ghost small" id="dl">Download</button>${rcptEdited !== null ? `<button class="btn ghost small" id="restore">Restore the original</button>` : ""}</div>
+    <p class="muted" style="margin:0">${rcptEdited !== null ? `You changed entry ${rcptEdited}. Verify it.` : "Press edit on any entry to change it (say, make a held refund look approved), then verify."}</p></div>`;
+  $("#side").innerHTML = h;
   const check = (r) => fetch("/api/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(r) }).then((x) => x.json());
-  $("#vf").onclick = async () => { const v = await check(lastReceipt); $("#vres").innerHTML = `<span class="verdict ${v.intact ? "v-pass" : "v-block"}">${v.intact ? "Intact" : "Broken at step " + v.first_broken_entry}</span>`; };
-  $("#tamper").onclick = async () => { const r = JSON.parse(JSON.stringify(lastReceipt)); const i = Math.min(1, r.entries.length - 1); r.entries[i].data.edited = true; const v = await check(r); $("#vres").innerHTML = `<span class="verdict ${v.intact ? "v-pass" : "v-block"}">${v.intact ? "Intact" : "Edited step " + i + " → broken at step " + v.first_broken_entry}</span>`; };
+  $("#vf").onclick = async () => { const v = await check(rcptWork); rcptBroken = v.intact ? false : v.first_broken_entry; receiptView(); };
+  $("#dl").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(rcptWork, null, 1)], { type: "application/json" })); a.download = rcptWork.run_id + ".receipt.json"; a.click(); };
+  $("#restore")?.addEventListener("click", () => { rcptWork = JSON.parse(JSON.stringify(lastReceipt || replayCache["hidden-note"].receipt)); rcptBroken = null; rcptEdited = null; receiptView(); });
+  document.querySelectorAll("[data-edit]").forEach((b) => (b.onclick = () => {
+    const i = +b.dataset.edit, e = rcptWork.entries[i];
+    if (e.step === "gate") { e.data.decision = "PASS"; if (e.data.args?.amount) e.data.args.amount = "25.00"; }
+    else if (e.step === "reader" && e.data.handoff) e.data.handoff.tutar = "400.00";
+    else if (e.step === "sandbox") e.data.events = [];
+    else if (e.step === "email") e.data.subject = (e.data.subject || "") + " (edited)";
+    else e.data.edited = true;
+    rcptEdited = i; rcptBroken = null; receiptView();
+  }));
 }
 function numbersHtml(n) {
   return `<table><tr><th>model</th><th>wrong money · no gate</th><th>wrong money · Counterfoil</th></tr>${n.rows.map((r) => `<tr><td>${esc(r.model)}</td><td>${r.ungated}/${r.n}</td><td><b>${r.gated}/${r.n}</b></td></tr>`).join("")}
