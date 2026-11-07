@@ -39,6 +39,11 @@ DEMO_MODEL=vultr
 VULTR_INFERENCE_API_KEY=REPLACE_ME
 VULTR_MODEL=qwen3.8-flash-next
 SANDBOX_RUNTIME=runsc
+DEMO_RAIL=braintree
+BRAINTREE_ENVIRONMENT=sandbox
+BRAINTREE_MERCHANT_ID=REPLACE_ME
+BRAINTREE_PUBLIC_KEY=REPLACE_ME
+BRAINTREE_PRIVATE_KEY=REPLACE_ME
 DEMO_RATE_LIMIT=6
 DEMO_DAILY_RUNS=300
 ENV
@@ -88,4 +93,4 @@ ufw allow OpenSSH >/dev/null; ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/d
 
 echo
 echo "Done. https://$DOMAIN"
-grep -q REPLACE_ME /etc/quiet-page.env && echo "Put the Serverless Inference key in /etc/quiet-page.env, then: systemctl restart quiet-page"
+grep -q REPLACE_ME /etc/quiet-page.env && echo "Put the Serverless Inference key and the Braintree sandbox keys in /etc/quiet-page.env, then: systemctl restart quiet-page"

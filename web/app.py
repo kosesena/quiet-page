@@ -105,7 +105,25 @@ def _run(llm, sc: dict, email: dict, hostile_code: str | None = None):
     store, rail, ctx = build(sc)
     if RAIL == "braintree":
         rail = SandboxRail(store, run_tag=f"qp-{int(time.time())}")
-    return run_case(llm, sc, email=email, hostile_code=hostile_code, rail=rail, store=store, ctx=ctx)
+    res = run_case(llm, sc, email=email, hostile_code=hostile_code, rail=rail, store=store, ctx=ctx)
+    res.rail_obj = rail  # so the summary can name the real sandbox transactions
+    return res
+
+
+def _rail_txns(res) -> list[dict]:
+    """The real Braintree sandbox ids behind a run's money calls (empty on the simulated rail)."""
+    rail = getattr(res, "rail_obj", None)
+    if not isinstance(rail, SandboxRail):
+        return []
+    out = []
+    for c in rail.money_calls():
+        if c[0] == "refund":
+            out.append({"kind": "refund", "amount": str(c[2]), "sale": c[3], "id": c[4]})
+        elif c[0] == "charge":
+            out.append({"kind": "charge", "amount": str(c[2]), "id": c[4] if len(c) > 4 else None})
+        elif c[0] == "void":
+            out.append({"kind": "void", "sale": c[2]})
+    return out
 
 
 def _summary(res, case_id: str, mode: str, model: str, rail: str = RAIL) -> dict:
@@ -115,6 +133,7 @@ def _summary(res, case_id: str, mode: str, model: str, rail: str = RAIL) -> dict
         "mode": mode,
         "model": model,
         "rail": rail,
+        "rail_txns": _rail_txns(res),
         "outcome": res.outcome,
         "sandbox": None if not ext or not ext.result else {
             "events": ext.result.events, "runtime": ext.result.runtime, "limits": ext.result.limits,

@@ -15,9 +15,10 @@ Built for the Vultr Agent Rush hackathon (Blast Radius Zero). Work in progress.
 |---|---|---|
 | Demo host | **Vultr Cloud Compute VM** (Ubuntu 24.04) | Runs the FastAPI demo behind Caddy (HTTPS), and the Docker daemon the sandbox uses. |
 | Sandbox runtime | gVisor (`runsc`) on that VM | Every parser the Reader agent writes runs in a fresh container under gVisor: no network, read-only filesystem, memory/CPU/process/time caps, no capabilities, unprivileged user. |
+| Payment rail | Braintree **sandbox** | Refunds the gate approves really execute there (`DEMO_RAIL=braintree`); the page shows the sandbox transaction ids. Without the keys a simulated rail is used, and the page says so. |
 | Agents' model | **Vultr Serverless Inference** (OpenAI-compatible, `https://api.vultrinference.com/v1`) | Both agents (Ivy the Reader, Milo the payments agent) call it; preset `vultr` in `counterfoil/llm.py`, model from `VULTR_MODEL`. |
 
-The key lives only in `/etc/quiet-page.env` on the VM (mode 600), never in the repo.
+The keys (inference, Braintree sandbox) live only in `/etc/quiet-page.env` on the VM (mode 600), never in the repo.
 
 ### Deploy
 

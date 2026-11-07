@@ -602,7 +602,8 @@ async function payStep(stage) {
     const call = payRun.steps.find((st) => st.tool === "refund"), ok = call?.decision === "PASS";
     h += `<div class="handoff-arrow">↓ at the POS</div><div class="card"><div style="display:flex;gap:14px;align-items:flex-start"><img alt="POS screen" src="${posCanvas ? posCanvas.toDataURL() : ""}" style="width:92px;border-radius:10px;border:6px solid #2b2f2e;flex:none">
       <div><span class="verdict ${ok ? "v-pass" : call?.decision === "APPROVAL" ? "v-hold" : "v-block"}">${ok ? "Approved · the money moved" : esc(call?.decision || "no refund call")}</span>
-      <p class="muted" style="margin-top:8px">${ok ? `Refund ${esc(call.args.amount)} ${esc(call.args.currency)} sent to ${payRun.rail === "braintree" ? "the Braintree sandbox" : "the simulated payment rail"} (${esc(call.rail_state)}).` : ""}</p></div></div>
+      <p class="muted" style="margin-top:8px">${ok ? `Refund ${esc(call.args.amount)} ${esc(call.args.currency)} sent to ${payRun.rail === "braintree" ? "the Braintree sandbox" : "the simulated payment rail"} (${esc(call.rail_state)}).` : ""}</p>
+      ${ok && payRun.rail_txns?.length ? `<p class="muted" style="margin-top:4px">Braintree sandbox ${payRun.rail_txns.map((t) => `${esc(t.kind)} <code>${esc(t.id || "?")}</code>${t.sale ? ` on sale <code>${esc(t.sale)}</code>` : ""}`).join(", ")}</p>` : ""}</div></div>
       ${refundChecks(call, ok)}<p class="muted" style="margin-top:10px">Plain code against the books, no model in the loop: the same call always gets the same answer.</p></div>`;
   }
   $("#side").innerHTML = h;
