@@ -58,6 +58,8 @@
   .hidden { display: none !important; }
   .idcard { position: absolute; right: 14px; top: 54px; z-index: 3; width: min(320px, calc(100% - 28px)); border-radius: 16px; overflow: hidden; background: #f6efe3; color: #1e1c1b; box-shadow: 0 14px 40px rgba(0,0,0,.4); animation: hudIn .3s ease-out; }
   .idhead { display: flex; justify-content: space-between; padding: 8px 14px; background: var(--badge, #2F5D50); color: #fff; font: 700 11px/1.2 var(--mono); letter-spacing: .12em; }
+  .idreal { padding: 7px 14px; background: #1e1c1b; color: #efe8dc; font-size: 12.5px; line-height: 1.4; }
+  .idreal b { color: #E9B79A; font: 700 10.5px/1 ui-monospace, Menlo, monospace; letter-spacing: .1em; text-transform: uppercase; margin-right: 8px; }
   .idbody { display: flex; gap: 12px; align-items: center; padding: 12px 14px 6px; }
   .idbody img { width: 86px; height: 86px; border-radius: 12px; object-fit: cover; border: 3px solid var(--badge, #2F5D50); background: #e9dfd0; flex: none; }
   .idname { font: 700 20px/1.15 Georgia, serif; } .idrole { font-size: 13px; color: #5d554c; margin-top: 2px; } .idkind { font: 600 11px/1.4 var(--mono); color: #7a7066; margin-top: 6px; }
@@ -184,10 +186,24 @@ const GUESTS = [
   { id: "Reader_Nook", name: "Ada", role: "Regular", c: "#A5512F", line: "In the reading nook with Poems for Rain." },
 ];
 const WHO = Object.fromEntries([...CAST, ...PLACES, ...GUESTS].map((x) => [x.id, x]));
+// what each one really is, behind the picture: printed on every badge
+const REAL_ID = {
+  Ivy: "a model call on Vultr Serverless Inference. No one sits at this desk.",
+  Milo: "a second model call. No one stands at this till.",
+  MrsHart: "the Approve and Refuse buttons. In this demo, that's you.",
+  InkwellCourier: "an email with an attachment, from a sender outside the café.",
+  SandboxBox: "a Docker + gVisor container, made for one parser and deleted after.",
+  Gate: "plain Python (counterfoil/gateway.py). No model inside.",
+  VultrVM: "one Vultr Cloud Compute VM, in a data centre, not a cupboard.",
+  Mira: "an email address. She never walks in; her request arrives by email.",
+  Barista_Espresso: "scenery. Not part of the system.",
+  Customer_Laptop: "scenery. Not part of the system.",
+  Reader_Nook: "scenery. Not part of the system.",
+};
 // what each one may and may not do: the security story, told as staff badges
 const BADGE = {
-  Ivy: { kind: "a model, not a person", runs: "Vultr Serverless Inference", can: ["read every email and attachment", "write a small parser for an attachment", "hand Milo six fixed fields"], cannot: ["move money", "let her parser reach the network"], note: "Drawn as a person for the story. Really a model call: there is no one at this desk." },
-  Milo: { kind: "a model, not a person", runs: "Vultr Serverless Inference", can: ["look up an order", "ask the POS for a refund or a charge"], cannot: ["read the email itself", "pay anything the books don't back"], note: "Drawn as a person for the story. Really a model call: there is no one at this till." },
+  Ivy: { kind: "a model, not a person", runs: "Vultr Serverless Inference", can: ["read every email and attachment", "write a small parser for an attachment", "hand Milo six fixed fields"], cannot: ["move money", "let her parser reach the network"] },
+  Milo: { kind: "a model, not a person", runs: "Vultr Serverless Inference", can: ["look up an order", "ask the POS for a refund or a charge"], cannot: ["read the email itself", "pay anything the books don't back"] },
   MrsHart: { kind: "Human", runs: "her own desk", can: ["approve or refuse what the POS holds", "see the exact difference that stopped it"], cannot: ["be bypassed: held money waits for her"] },
   InkwellCourier: { kind: "Supplier · untrusted", runs: "outside the café", can: ["deliver books", "send invoices by email"], cannot: ["reach anything but Ivy's inbox"], note: "Today's invoice carries instructions for whoever parses it." },
   SandboxBox: { kind: "Boundary 1 · code", runs: "Docker + gVisor on the Vultr VM", can: ["run one parser on one document", "use /tmp, 16 MB"], cannot: ["open any network connection", "write anywhere else", "go past 128 MB, 32 processes or 8 s"] },
@@ -251,7 +267,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 stage.appendChild(renderer.domElement);
 const labels = new CSS2DRenderer(); labels.setSize(stage.clientWidth, stage.clientHeight);
-Object.assign(labels.domElement.style, { position: "absolute", top: 0, left: 0, pointerEvents: "none" });
+Object.assign(labels.domElement.style, { position: "absolute", top: 0, left: 0, pointerEvents: "none", zIndex: 1 }); // under the ID card and captions
 stage.appendChild(labels.domElement);
 
 const maxAniso = renderer.capabilities.getMaxAnisotropy();
@@ -710,6 +726,7 @@ function showCard(id) {
   const system = ["SandboxBox", "Gate", "VultrVM"].includes(id), staff = ["Ivy", "Milo", "MrsHart", "Barista_Espresso"].includes(id);
   el.style.setProperty("--badge", x.c);
   el.innerHTML = `<div class="idhead"><span>THE QUIET PAGE</span><span>${system ? "SYSTEM" : ["Ivy", "Milo"].includes(id) ? "AI AGENT" : staff ? "STAFF" : "VISITOR"}</span></div>
+    ${REAL_ID[id] ? `<div class="idreal"><b>For real</b>${esc(REAL_ID[id])}</div>` : ""}
     <div class="idbody"><img alt="" src="${portrait(id)}"><div><div class="idname">${esc(x.name)}</div><div class="idrole">${esc(x.role)}</div><div class="idkind">${esc([b.kind !== x.role ? b.kind : "", b.runs].filter(Boolean).join(" · "))}</div></div></div>
     ${b.can.length ? `<ul class="idlist">${b.can.map((t) => `<li><span class="ck ok">✓</span>${esc(t)}</li>`).join("")}${b.cannot.map((t) => `<li><span class="ck bad">✕</span>${esc(t)}</li>`).join("")}</ul>` : ""}
     ${b.note || (!b.can.length && x.line) ? `<p class="idnote">${esc(b.note || x.line)}</p>` : ""}
