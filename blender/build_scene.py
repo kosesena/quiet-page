@@ -86,6 +86,7 @@ M = {
     "green_dark": mat("M_MutedGreenDark", "#4f6a57", 0.7),
     "walnut": mat("M_Walnut", "#6e4b34", 0.55),
     "dark_wood": mat("M_DarkWood", "#4a3426", 0.5),
+    "kraft": mat("M_Kraft", "#b98a5e", 0.8),
     "slat_oak": mat("M_SlatOak", "#d9c7a8", 0.6),
     "slat_oak2": mat("M_SlatOakAccent", "#c4ab84", 0.6),
     "light_oak": mat("M_LightOak", "#d2b48c", 0.5),
@@ -753,7 +754,7 @@ sphere("Gate_Light_LED", c_gt, 0.006, (0, 0, 0), M["amber"], parent=gl, segs=10,
 
 # --- Ledger: open accounting book on a small walnut stand next to the POS (decorative)
 c_lg = make_coll("Ledger")
-lg = empty("Ledger", c_lg, (0.98, COUNTER_Y - 0.12, CT_H), rot_z=-10)
+lg = empty("Ledger", c_lg, (4.25, COUNTER_Y + 0.24, 0.76), rot_z=170)  # on Mrs. Hart's owner desk, facing her
 box("Ledger_StandBase", c_lg, (0.3, 0.2, 0.02), (0, 0, 0.01), M["walnut"], bevel=0.005,
     parent=lg)
 box("Ledger_StandRest", c_lg, (0.03, 0.12, 0.07), (0, 0.05, 0.045), M["walnut"], bevel=0.005,
@@ -869,50 +870,77 @@ for i, x in enumerate((-2.9, 2.9)):
 box("PendantLamps_Rail", c_pl, (5.83, 0.03, 0.03), (0.0, RAIL_Y, RAIL_Z), M["graphite"],
     bevel=0.008, parent=pl)
 BULBS = []
-for i, x in enumerate((-2.3, -0.9, 0.9, 2.3)):
-    cyl(f"PendantLamps_Cord{i}", c_pl, 0.004, RAIL_Z - 1.95, (x, RAIL_Y, (RAIL_Z + 1.95) / 2), M["graphite"],
-        segs=6, parent=pl)
-    sphere(f"PendantLamps_Shade{i}", c_pl, 0.13, (x, RAIL_Y, 1.78), M["rattan"], parent=pl,
+PL_DZ = 0.25  # raised so the eggs sit above every face-to-camera line (counter view + Cam_Overview)
+for i, x in enumerate((-2.3, -0.9, 0.45, 2.0)):  # between figures: Milo x 0, Mrs Hart 0.85, Barista 2.68
+    cyl(f"PendantLamps_Cord{i}", c_pl, 0.004, RAIL_Z - 1.95 - PL_DZ, (x, RAIL_Y, (RAIL_Z + 1.95 + PL_DZ) / 2),
+        M["graphite"], segs=6, parent=pl)
+    sphere(f"PendantLamps_Shade{i}", c_pl, 0.13, (x, RAIL_Y, 1.78 + PL_DZ), M["rattan"], parent=pl,
            scale=(1, 1, 1.32), cut_below=-0.72, segs=18, rings=12)  # woven egg, open at the bottom
     for k, (zr, rr) in enumerate(((1.66, 0.112), (1.78, 0.131), (1.9, 0.112), (2.0, 0.07))):
-        torus(f"PendantLamps_Weave{i}_{k}", c_pl, rr, 0.006, (x, RAIL_Y, zr), M["rattan_dark"],
+        torus(f"PendantLamps_Weave{i}_{k}", c_pl, rr, 0.006, (x, RAIL_Y, zr + PL_DZ), M["rattan_dark"],
               parent=pl, rot=(0, 0, 0))
-    sphere(f"PendantLamps_Bulb{i}", c_pl, 0.04, (x, RAIL_Y, 1.74), M["bulb"], parent=pl,
+    sphere(f"PendantLamps_Bulb{i}", c_pl, 0.04, (x, RAIL_Y, 1.74 + PL_DZ), M["bulb"], parent=pl,
            segs=12, rings=8)
-    BULBS.append((x, RAIL_Y, 1.62))
+    BULBS.append((x, RAIL_Y, 1.62 + PL_DZ))
 
-# --- PastryCase: large 2-shelf display left of the register, filled with desserts
+# --- PastryCase: glass display from the left end of the counter up to the register, three tiers
 c_pc = make_coll("PastryCase")
-PC_W, PC_D, PC_H = 1.3, 0.5, 0.52
-pc = empty("PastryCase", c_pc, (-1.35, COUNTER_Y - 0.02, 1.0))
-box("PastryCase_Base", c_pc, (PC_W, PC_D, 0.06), (0, 0, 0.03), M["walnut"], bevel=0.01,
+PC_X0, PC_X1 = -CT_W / 2 + 0.08, -0.72          # keeps clear of the register / POS (x ~ -0.21 .. 0.6)
+PC_W, PC_D, PC_H = PC_X1 - PC_X0, 0.5, 0.6
+pc = empty("PastryCase", c_pc, ((PC_X0 + PC_X1) / 2, COUNTER_Y - 0.02, 1.0))
+box("PastryCase_Base", c_pc, (PC_W, PC_D, 0.06), (0, 0, 0.03), M["walnut"], bevel=0.01, parent=pc)
+box("PastryCase_Back", c_pc, (PC_W, 0.02, PC_H), (0, PC_D / 2 - 0.01, PC_H / 2 + 0.03), M["walnut"], bevel=0.006,
     parent=pc)
-box("PastryCase_Back", c_pc, (PC_W, 0.02, PC_H), (0, PC_D / 2 - 0.01, PC_H / 2 + 0.03),
-    M["walnut"], bevel=0.006, parent=pc)
 for sx in (-1, 1):
-    box(f"PastryCase_Side{sx}", c_pc, (0.012, PC_D, PC_H), (sx * (PC_W / 2 - 0.006), 0,
-        PC_H / 2 + 0.03), M["glass"], bevel=0.0, parent=pc)
-box("PastryCase_Glass", c_pc, (PC_W - 0.02, PC_D - 0.04, 0.012), (0, 0.0, PC_H + 0.03),
-    M["glass"], bevel=0.0, parent=pc)  # top glass
-box("PastryCase_GlassFront", c_pc, (PC_W - 0.02, 0.012, PC_H + 0.05),
-    (0, -PC_D / 2 + 0.1, PC_H / 2 + 0.03), M["glass"], bevel=0.0, parent=pc, rot=(-14, 0, 0))
-box("PastryCase_Shelf", c_pc, (PC_W - 0.04, PC_D - 0.12, 0.012), (0, 0.04, 0.3), M["glass"],
-    bevel=0.0, parent=pc)
-box("PastryCase_InnerLED", c_pc, (PC_W - 0.08, 0.02, 0.008), (0, -0.06, PC_H + 0.028),
-    M["led_2700"], bevel=0.0, parent=pc)
-EXTRA_LIGHTS.append(("PastryCase_Light", (-1.35, COUNTER_Y - 0.08, 1.45), 6))
-box("PastryCase_TopTrim", c_pc, (PC_W, PC_D, 0.02), (0, 0, PC_H + 0.045), M["walnut"],
-    bevel=0.006, parent=pc)
+    box(f"PastryCase_Side{sx}", c_pc, (0.012, PC_D, PC_H), (sx * (PC_W / 2 - 0.006), 0, PC_H / 2 + 0.03),
+        M["glass"], bevel=0.0, parent=pc)
+box("PastryCase_Glass", c_pc, (PC_W - 0.02, PC_D - 0.04, 0.012), (0, 0.0, PC_H + 0.03), M["glass"], bevel=0.0,
+    parent=pc)  # top glass
+box("PastryCase_GlassFront", c_pc, (PC_W - 0.02, 0.012, PC_H + 0.06), (0, -PC_D / 2 + 0.1, PC_H / 2 + 0.03),
+    M["glass"], bevel=0.0, parent=pc, rot=(-14, 0, 0))
+L1, L2, L3 = 0.06, 0.27, 0.46  # tier heights (base + two glass shelves)
+for i, z in enumerate((L2, L3)):
+    box(f"PastryCase_Shelf{i}", c_pc, (PC_W - 0.04, PC_D - 0.12, 0.012), (0, 0.04, z - 0.006), M["glass"], bevel=0.0,
+        parent=pc)
+    box(f"PastryCase_ShelfLED{i}", c_pc, (PC_W - 0.08, 0.012, 0.005), (0, -0.14, z - 0.016), M["led_2700_soft"],
+        bevel=0.0, parent=pc)
+box("PastryCase_InnerLED", c_pc, (PC_W - 0.08, 0.02, 0.008), (0, -0.06, PC_H + 0.028), M["led_2700"], bevel=0.0,
+    parent=pc)
+EXTRA_LIGHTS.append(("PastryCase_Light", ((PC_X0 + PC_X1) / 2, COUNTER_Y - 0.08, 1.5), 8))
+box("PastryCase_TopTrim", c_pc, (PC_W, PC_D, 0.02), (0, 0, PC_H + 0.045), M["walnut"], bevel=0.006, parent=pc)
 M["cake"] = mat("M_CakeSponge", "#e8c898", 0.7)
 M["cake_cream"] = mat("M_CakeCream", "#f6ecdc", 0.6)
 M["choc"] = mat("M_Chocolate", "#5a3826", 0.45)
 M["cookie"] = mat("M_Cookie", "#c98f55", 0.75)
-L1, L2 = 0.06, 0.306  # shelf heights
+M["bread"] = mat("M_Bread", "#e9d2a6", 0.8)
+M["toast"] = mat("M_Toastie", "#c8955a", 0.7)
+M["grill"] = mat("M_GrillMark", "#5e3b22", 0.7)
+M["lettuce"] = mat("M_Lettuce", "#7fae4e", 0.7)
+M["tomato"] = mat("M_Tomato", "#c8432f", 0.6)
+M["tortilla"] = mat("M_Tortilla", "#ead6ac", 0.8)
 
 
 def tray(name, x, z, w=0.26):
-    box(name, c_pc, (w, 0.2, 0.008), (x, 0.03, z + 0.004), M["white"], bevel=0.002, segs=1,
-        parent=pc)
+    box(name, c_pc, (w, 0.2, 0.008), (x, 0.03, z + 0.004), M["white"], bevel=0.002, segs=1, parent=pc)
+
+
+def ptag(name, x, z):
+    box(name, c_pc, (0.05, 0.004, 0.022), (x, -PC_D / 2 + 0.15, z + 0.016), M["cream"], bevel=0.0, parent=pc,
+        rot=(-20, 0, 0))
+
+
+def prism(name, pts_xz, depth, loc, mat_, rot=(0, 0, 0)):
+    bm = bmesh.new()
+    fr = [bm.verts.new((x, -depth / 2, z)) for x, z in pts_xz]
+    bk = [bm.verts.new((x, depth / 2, z)) for x, z in pts_xz]
+    bm.faces.new(fr)
+    bm.faces.new(bk[::-1])
+    n = len(pts_xz)
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((fr[i], fr[j], bk[j], bk[i]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return finish_mesh(bm, name, c_pc, mat_, loc, pc, 20, rot)
 
 
 def cake_slice(name, x, y, z, rot):
@@ -924,46 +952,114 @@ def cake_slice(name, x, y, z, rot):
     for i in range(3):
         j = (i + 1) % 3
         bm.faces.new((vb[i], vb[j], vt[j], vt[i]))
-    ob = finish_mesh(bm, name, c_pc, M["cake"], (x, y, z), pc, 30, (0, 0, rot))
-    box(f"{name}_Frost", c_pc, (0.1, 0.07, 0.012), (x + 0.05 * math.cos(math.radians(rot)),
-        y + 0.05 * math.sin(math.radians(rot)), z + 0.076), M["cake_cream"], bevel=0.004,
-        parent=pc, rot=(0, 0, rot))
-    box(f"{name}_Layer", c_pc, (0.098, 0.071, 0.01), (x + 0.05 * math.cos(math.radians(rot)),
-        y + 0.05 * math.sin(math.radians(rot)), z + 0.035), M["choc"], bevel=0.0,
-        parent=pc, rot=(0, 0, rot))
+    finish_mesh(bm, name, c_pc, M["cake"], (x, y, z), pc, 30, (0, 0, rot))
+    cx, cy = x + 0.05 * math.cos(math.radians(rot)), y + 0.05 * math.sin(math.radians(rot))
+    box(f"{name}_Frost", c_pc, (0.1, 0.07, 0.012), (cx, cy, z + 0.076), M["cake_cream"], bevel=0.004, parent=pc,
+        rot=(0, 0, rot))
+    box(f"{name}_Layer", c_pc, (0.098, 0.071, 0.01), (cx, cy, z + 0.035), M["choc"], bevel=0.0, parent=pc,
+        rot=(0, 0, rot))
 
 
-# lower shelf: croissants | muffins | cookies
-tray("PastryCase_Tray0", -0.42, L1)
+H = PC_W / 2
+# ---- tier 1 (bottom): savoury - kraft-wrapped triangle sandwiches, panini, croissant sandwich, wraps, salad pots
+xs = -H + 0.12
+tray("PastryCase_TraySand", xs + 0.13, L1, 0.34)
 for k in range(3):
-    capsule(f"PastryCase_Croissant{k}", c_pc, 0.028, 0.13, (-0.48 + k * 0.06, 0.03 + (k % 2) * 0.04,
-            L1 + 0.035), M["pastry"], parent=pc, rot=(0, 90, 30 - k * 20), sy=0.8)
-tray("PastryCase_Tray1", -0.05, L1)
+    x = xs + k * 0.11
+    prism(f"PastryCase_Sandwich{k}", ((0, 0), (0.1, 0), (0, 0.1)), 0.05, (x, 0.02, L1 + 0.008), M["kraft"])
+    prism(f"PastryCase_SandwichFill{k}", ((0.005, 0.005), (0.08, 0.005), (0.005, 0.08)), 0.002,
+          (x, 0.02 - 0.026, L1 + 0.012), M["bread"])
+    box(f"PastryCase_SandwichLettuce{k}", c_pc, (0.06, 0.003, 0.008), (x + 0.03, 0.02 - 0.028, L1 + 0.045),
+        M["lettuce"], bevel=0.0, parent=pc, rot=(0, 45, 0))
+ptag("PastryCase_TagSand", xs + 0.13, L1)
+xp = xs + 0.45
+tray("PastryCase_TrayPanini", xp + 0.08, L1, 0.3)
+for k in range(2):
+    x = xp + k * 0.15
+    box(f"PastryCase_Panini{k}", c_pc, (0.13, 0.09, 0.035), (x, 0.03, L1 + 0.026), M["toast"], bevel=0.01, parent=pc)
+    for g in range(3):
+        box(f"PastryCase_PaniniGrill{k}_{g}", c_pc, (0.11, 0.006, 0.002), (x, 0.0 + g * 0.03, L1 + 0.044), M["grill"],
+            bevel=0.0, parent=pc, rot=(0, 0, 20))
+ptag("PastryCase_TagPanini", xp + 0.08, L1)
+xc = xp + 0.36
+tray("PastryCase_TrayCroiss", xc, L1, 0.2)
+capsule("PastryCase_CroissantSandwich", c_pc, 0.032, 0.15, (xc, 0.03, L1 + 0.045), M["pastry"], parent=pc,
+        rot=(0, 90, 15), sy=0.8)
+box("PastryCase_CroissantFill", c_pc, (0.12, 0.05, 0.008), (xc, 0.025, L1 + 0.04), M["lettuce"], bevel=0.003,
+    parent=pc, rot=(0, 0, 15))
+ptag("PastryCase_TagCroiss", xc, L1)
+xw = xc + 0.26
+tray("PastryCase_TrayWraps", xw + 0.06, L1, 0.26)
+for k in range(2):
+    for h in range(2):
+        x = xw + k * 0.12 + h * 0.045
+        cyl(f"PastryCase_Wrap{k}{h}", c_pc, 0.032, 0.07, (x, 0.03, L1 + 0.04), M["tortilla"], segs=14, parent=pc,
+            rot=(0, 90 * 0 + 70 if h else 70, 0))
+        cyl(f"PastryCase_WrapCut{k}{h}", c_pc, 0.026, 0.002, (x - 0.036 if h == 0 else x + 0.036, 0.03, L1 + 0.04),
+            M["lettuce"] if k == 0 else M["tomato"], segs=12, parent=pc, rot=(0, 90, 0))
+ptag("PastryCase_TagWraps", xw + 0.06, L1)
+xsal = xw + 0.36
+for k in range(3):
+    x = xsal + k * 0.1
+    if x > H - 0.06:
+        break
+    cyl(f"PastryCase_SaladPot{k}", c_pc, 0.042, 0.09, (x, 0.03, L1 + 0.045), M["glass"], segs=16, parent=pc,
+        r2=0.046)
+    for g in range(3):
+        sphere(f"PastryCase_Salad{k}_{g}", c_pc, 0.022, (x + (g - 1) * 0.015, 0.03, L1 + 0.035 + g * 0.012),
+               (M["lettuce"], M["tomato"], M["lettuce"])[g], parent=pc, segs=8, rings=6)
+    cyl(f"PastryCase_SaladLid{k}", c_pc, 0.047, 0.008, (x, 0.03, L1 + 0.094), M["glass"], segs=16, parent=pc)
+ptag("PastryCase_TagSalad", xsal + 0.1, L1)
+# ---- tier 2 (middle): croissants, muffins, cinnamon buns, cookies
+x2 = -H + 0.14
+tray("PastryCase_TrayCroissants", x2 + 0.06, L2, 0.28)
+for k in range(3):
+    capsule(f"PastryCase_Croissant{k}", c_pc, 0.028, 0.13, (x2 + k * 0.06, 0.03 + (k % 2) * 0.04, L2 + 0.035),
+            M["pastry"], parent=pc, rot=(0, 90, 30 - k * 20), sy=0.8)
+ptag("PastryCase_TagCroissants", x2 + 0.06, L2)
+x2 += 0.38
+tray("PastryCase_TrayMuffins", x2 + 0.05, L2, 0.26)
 for k in range(4):
-    mx, my = -0.1 + (k % 2) * 0.1, -0.02 + (k // 2) * 0.1
-    cyl(f"PastryCase_MuffinCup{k}", c_pc, 0.028, 0.04, (mx, my, L1 + 0.028), M["glaze"],
-        segs=14, parent=pc, r2=0.034)
-    sphere(f"PastryCase_MuffinTop{k}", c_pc, 0.038, (mx, my, L1 + 0.048),
-           M["pastry_dark"] if k % 2 else M["choc"], parent=pc, cut_below=0.0, segs=14, rings=8)
-tray("PastryCase_Tray2", 0.32, L1, 0.3)
-for k in range(5):
-    cyl(f"PastryCase_Cookie{k}", c_pc, 0.038, 0.012, (0.24 + (k % 3) * 0.08,
-        -0.01 + (k // 3) * 0.09, L1 + 0.014 + (k // 3) * 0.0), M["cookie"], segs=16, parent=pc)
-# upper shelf: cinnamon buns | cake slices | glazed donuts
-tray("PastryCase_Tray3", -0.4, L2)
+    mx, my = x2 + (k % 2) * 0.1, -0.02 + (k // 2) * 0.1
+    cyl(f"PastryCase_MuffinCup{k}", c_pc, 0.028, 0.04, (mx, my, L2 + 0.028), M["glaze"], segs=14, parent=pc,
+        r2=0.034)
+    sphere(f"PastryCase_MuffinTop{k}", c_pc, 0.038, (mx, my, L2 + 0.048), M["pastry_dark"] if k % 2 else M["choc"],
+           parent=pc, cut_below=0.0, segs=14, rings=8)
+ptag("PastryCase_TagMuffins", x2 + 0.05, L2)
+x2 += 0.36
+tray("PastryCase_TrayBuns", x2 + 0.08, L2, 0.3)
 for k in range(3):
-    bx = -0.48 + k * 0.08
-    torus(f"PastryCase_CinnamonBun{k}", c_pc, 0.026, 0.016, (bx, 0.04, L2 + 0.024),
-          M["pastry"], parent=pc, rot=(0, 0, 0))
-    sphere(f"PastryCase_CinnamonTop{k}", c_pc, 0.025, (bx, 0.04, L2 + 0.03), M["glaze"],
-           parent=pc, scale=(1, 1, 0.45), segs=12, rings=6)
-tray("PastryCase_Tray4", 0.0, L2)
+    bx = x2 + k * 0.08
+    torus(f"PastryCase_CinnamonBun{k}", c_pc, 0.026, 0.016, (bx, 0.04, L2 + 0.024), M["pastry"], parent=pc,
+          rot=(0, 0, 0))
+    sphere(f"PastryCase_CinnamonTop{k}", c_pc, 0.025, (bx, 0.04, L2 + 0.03), M["glaze"], parent=pc,
+           scale=(1, 1, 0.45), segs=12, rings=6)
+ptag("PastryCase_TagBuns", x2 + 0.08, L2)
+x2 += 0.4
+tray("PastryCase_TrayCookies", x2 + 0.1, L2, 0.3)
+for k in range(6):
+    cyl(f"PastryCase_Cookie{k}", c_pc, 0.036, 0.012, (x2 + (k % 3) * 0.08, -0.01 + (k // 3) * 0.09, L2 + 0.014),
+        M["cookie"] if k % 2 else M["choc"], segs=16, parent=pc)
+ptag("PastryCase_TagCookies", x2 + 0.1, L2)
+# ---- tier 3 (top): cake slices, glazed donuts, cookie stacks
+x3 = -H + 0.2
+tray("PastryCase_TrayCake", x3 + 0.08, L3, 0.32)
 for k in range(3):
-    cake_slice(f"PastryCase_Cake{k}", -0.09 + k * 0.08, 0.02, L2 + 0.008, 90 + (k - 1) * 12)
-tray("PastryCase_Tray5", 0.38, L2)
+    cake_slice(f"PastryCase_Cake{k}", x3 + k * 0.08, 0.02, L3 + 0.008, 90 + (k - 1) * 12)
+ptag("PastryCase_TagCake", x3 + 0.08, L3)
+x3 += 0.5
+tray("PastryCase_TrayDonuts", x3 + 0.08, L3, 0.3)
 for k in range(3):
-    torus(f"PastryCase_Donut{k}", c_pc, 0.028, 0.014, (0.3 + k * 0.08, 0.03, L2 + 0.022),
+    torus(f"PastryCase_Donut{k}", c_pc, 0.028, 0.014, (x3 + k * 0.08, 0.03, L3 + 0.022),
           M["glaze"] if k != 1 else M["choc"], parent=pc, rot=(0, 0, 0))
+ptag("PastryCase_TagDonuts", x3 + 0.08, L3)
+x3 += 0.5
+tray("PastryCase_TrayStacks", x3 + 0.1, L3, 0.3)
+for k in range(3):
+    for j in range(3):
+        cyl(f"PastryCase_CookieStack{k}_{j}", c_pc, 0.032, 0.011, (x3 + k * 0.09, 0.03, L3 + 0.014 + j * 0.012),
+            M["cookie"] if (k + j) % 2 else M["choc"], segs=14, parent=pc)
+ptag("PastryCase_TagStacks", x3 + 0.1, L3)
 
 # --- Plants: one by the shelves, one by the VultrVM
 c_pt2 = make_coll("Plants")
@@ -2718,10 +2814,41 @@ figure("Ivy", (-4.6, -0.85, 0), 0, M["green"], M["pants"], hair_ivy,
        arms=("down", "tuck"), extras=ivy_extras)
 figure("Milo", (0.0, COUNTER_Y + 0.62, 0), 0, M["white"], M["pants_dark"], hair_milo,
        arms=("forward", "forward"), extras=milo_extras)
-figure("MrsHart", (0.85, COUNTER_Y + 0.66, 0), -8, M["white"], M["pants_dark"], hair_hart,
+HART_DZ = -0.25  # standing figure lowered onto a chair; its legs are replaced by seated ones below
+HART_POS = (3.95, COUNTER_Y + 0.76)
+figure("MrsHart", (HART_POS[0], HART_POS[1], HART_DZ), 0, M["white"], M["pants_dark"], hair_hart,
        arms=("forward", "forward"), extras=hart_extras)
 figure("InkwellCourier", (-0.3, -4.2, 0), -128, M["hood"], M["pants_dark"], hair_courier,
        arms=("down", "forward"), eyes=False, extras=courier_extras)
+
+
+# --- owner's desk (walnut) by the back wall between the pickup corner and the lounge; Mrs. Hart seated
+c_od2 = make_coll("OwnerDesk")
+odk = empty("OwnerDesk", c_od2, (HART_POS[0], COUNTER_Y + 0.25, 0))
+box("OwnerDesk_Top", c_od2, (1.0, 0.56, 0.04), (0, 0, 0.74), M["walnut"], bevel=0.008, parent=odk)
+for sx in (-1, 1):
+    for sy in (-1, 1):
+        box(f"OwnerDesk_Leg{sx}{sy}", c_od2, (0.04, 0.04, 0.72), (sx * 0.46, sy * 0.24, 0.36), M["walnut"], bevel=0.006,
+            parent=odk)
+box("OwnerDesk_Drawer", c_od2, (0.36, 0.5, 0.12), (-0.28, 0, 0.66), M["walnut"], bevel=0.006, parent=odk)
+box("OwnerDesk_Modesty", c_od2, (0.92, 0.02, 0.3), (0, -0.27, 0.57), M["walnut"], bevel=0.004, parent=odk)
+cyl("OwnerDesk_PenCup", c_od2, 0.03, 0.09, (0.38, 0.12, 0.805), M["brass_m"], segs=12, parent=odk)
+wood_chair("OwnerDesk_Chair", c_od2, (0, HART_POS[1] + 0.05 - (COUNTER_Y + 0.25), 0), 0, odk, M["dark_wood"], M["dark_wood"])
+for nm in ("MrsHart_LegL", "MrsHart_LegR", "MrsHart_ShoeL", "MrsHart_ShoeR"):
+    ob = bpy.data.objects.get(nm)
+    if ob:
+        bpy.data.objects.remove(ob)
+_hr = bpy.data.objects["MrsHart"]
+_c_h = bpy.data.collections["MrsHart"]
+_lz = -HART_DZ  # local z = world z + 0.25
+for sx in (-1, 1):
+    t = "L" if sx < 0 else "R"
+    capsule_between(f"MrsHart_Thigh{t}", _c_h, 0.075, (sx * 0.085, 0.02, 0.53 + _lz), (sx * 0.09, -0.38, 0.55 + _lz),
+                    M["pants_dark"], parent=_hr)
+    capsule_between(f"MrsHart_Shin{t}", _c_h, 0.068, (sx * 0.09, -0.4, 0.53 + _lz), (sx * 0.09, -0.42, 0.1 + _lz),
+                    M["pants_dark"], parent=_hr)
+    box(f"MrsHart_SeatShoe{t}", _c_h, (0.11, 0.19, 0.06), (sx * 0.09, -0.46, 0.03 + _lz), M["graphite"], bevel=0.025,
+        parent=_hr)
 
 # --- Barista_Espresso: second barista at the espresso machine (milk pitcher under the steam wand)
 def barista_extras(name, coll, root):
@@ -2986,6 +3113,7 @@ join_under(O["VultrVM"], "VultrVM_Mesh", exclude_roots=(O["VultrVM_Status"],))
 join_under(O["Gate_Light"], "Gate_Light_Mesh")
 join_under(O["Gate"], "Gate_Mesh", exclude_roots=(O["Gate_Light"], O["Gate_Screen"]))
 join_under(O["Ledger"], "Ledger_Mesh")
+join_under(O["OwnerDesk"], "OwnerDesk_Mesh")
 # ---- figures: moving parts become pivot empties (parented to the figure), each pivot's meshes joined
 FPS = 30
 scene.render.fps = FPS
@@ -3180,11 +3308,12 @@ loc_keys(root, [(1, (0, 0, 0)), (75, (0.012, 0, 0)), (F + 1, (0, 0, 0))])
 rot_keys(RIG["Milo"]["Head"], [(1, (0, 0, 0)), (35, (14, 0, 0)), (90, (14, 0, 3)), (120, (0, 0, 0)), (F + 1, (0, 0, 0))])
 push("Milo_Idle", [root, RIG["Milo"]["Head"]], F)
 
-# MrsHart_Idle (6 s): slow sway, head turns
+# MrsHart_Idle (6 s, seated): slow head turn, glances down at the tablet, small breathing
 F = 180
 root = O["MrsHart"]
-rot_keys(root, [(1, (0, 0, 0)), (90, (0, 0, 2.5)), (F + 1, (0, 0, 0))])
-rot_keys(RIG["MrsHart"]["Head"], [(1, (0, 0, 0)), (60, (0, 0, 10)), (120, (4, 0, -6)), (F + 1, (0, 0, 0))])
+loc_keys(root, [(1, (0, 0, 0)), (45, (0, 0, 0.004)), (90, (0, 0, 0)), (135, (0, 0, 0.004)), (F + 1, (0, 0, 0))])
+rot_keys(RIG["MrsHart"]["Head"], [(1, (0, 0, 0)), (40, (0, 0, 9)), (80, (16, 0, 2)), (125, (16, 0, -3)),
+                                  (155, (2, 0, -6)), (F + 1, (0, 0, 0))])
 push("MrsHart_Idle", [root, RIG["MrsHart"]["Head"]], F)
 
 # InkwellCourier_Idle (4 s): weight shift, the envelope arm bobs
@@ -3321,6 +3450,8 @@ if DO_RENDER:
     render_to(os.path.join(OUT, "preview-customer.png"), (0.15, -1.75, 1.45), (1.95, -0.85, 0.8), 36)
     render_to(os.path.join(OUT, "preview-cups.png"), (2.85, 2.95, 1.32), (3.17, 3.5, 1.17), 55)
     render_to(os.path.join(OUT, "preview-reader.png"), (7.6, -5.4, 1.5), (6.55, -2.75, 0.85), 40)
+    render_to(os.path.join(OUT, "preview-owner.png"), (3.05, 1.9, 1.6), (3.95, 4.15, 0.9), 34)
+    render_to(os.path.join(OUT, "preview-pastry.png"), (-1.3, 1.45, 1.75), (-1.85, 3.5, 1.2), 26)
     render_to(os.path.join(OUT, "preview-nook.png"), (3.9, -8.0, 2.7), (6.3, -2.9, 0.8), 30)
     render_to(os.path.join(OUT, "preview-gate.png"), (0.75, 2.3, 1.5), (0.5, 3.4, 1.12), 40)
     aim(cam, *OVERVIEW)
