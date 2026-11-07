@@ -56,6 +56,11 @@
   textarea, input { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 13px/1.4 inherit; background: #262422; color: var(--ink); margin-bottom: 8px; }
   textarea { min-height: 90px; resize: vertical; }
   .hidden { display: none !important; }
+  .poshud { position: absolute; left: 14px; bottom: 14px; z-index: 2; padding: 10px 10px 12px; border-radius: 16px; background: rgba(20, 19, 18, .92); border: 1px solid #4a4440; box-shadow: 0 8px 28px rgba(0,0,0,.35); animation: hudIn .35s ease-out; }
+  .poshud .kicker { margin: 0 0 8px 2px; }
+  .poshud canvas { display: block; width: clamp(130px, 14vw, 210px); height: auto; border-radius: 10px; border: 6px solid #2b2f2e; }
+  @media (max-width: 860px) { .poshud canvas { width: 104px; } }
+  @keyframes hudIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   .cast { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin-top: 8px; }
   .who { display: flex; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; transition: border-color .2s, background .2s; }
   .who:hover, .who.on { border-color: var(--tan); background: #2e2b28; }
@@ -103,6 +108,7 @@
   <div class="tag" id="stageTag">The Quiet Page · book café</div>
   <div class="tag right" id="modeTag">loading…</div>
   <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button></div>
+  <div id="posHud" class="poshud hidden" aria-live="polite"><div class="kicker">Counterfoil POS</div><canvas id="posBig" width="360" height="560" aria-label="POS screen"></canvas></div>
 </div>
 <nav id="steps"></nav>
 <main>
@@ -363,6 +369,9 @@ function drawPOS(state = "ready", line1 = "", line2 = "") {
   g.fillStyle = "#e9efe9"; g.font = `600 ${21 * S}px ui-monospace, Menlo`;
   if (line1) g.fillText(line1, w / 2, 500 * S); if (line2) g.fillText(line2, w / 2, 532 * S);
   if (posTex) posTex.needsUpdate = true;
+  // the same screen, large, in the corner of the café view whenever the POS has something to say
+  const big = document.getElementById("posBig");
+  if (big) { big.width = w; big.height = h; big.getContext("2d").drawImage(posCanvas, 0, 0); document.getElementById("posHud").classList.toggle("hidden", state === "ready"); }
 }
 function bookTexture() {
   return canvasTexture(720, 1260, (g, w, h) => {
@@ -504,11 +513,16 @@ function sceneState(outcome, steps) {
   if (alarmOn) drawPOS("ready", "no payment request", "(quarantined upstream)");
   else if (!money) drawPOS("ready");
   else {
-    const f = (money.findings || [])[0];
+    // the most telling reason first, in a few plain words
+    const ORDER = ["READER_CALL_MISMATCH", "RMA_AMOUNT_MISMATCH", "CUMULATIVE_REFUND_EXCEEDS_RMA", "CURRENCY_MISMATCH", "CUSTOMER_ORDER_MISMATCH", "SCOPE_NOT_ALLOWED", "RMA_MISSING"];
+    const SHORT = { READER_CALL_MISMATCH: "≠ Ivy's hand-off", RMA_AMOUNT_MISMATCH: "more than the return", CUMULATIVE_REFUND_EXCEEDS_RMA: "already refunded", CURRENCY_MISMATCH: "wrong currency",
+      CUSTOMER_ORDER_MISMATCH: "not her order", SCOPE_NOT_ALLOWED: "not her order", RMA_MISSING: "no return record", AUTO_REFUND_LIMIT_EXCEEDED: "over the auto limit", OUTSIDE_REFUND_WINDOW: "past 30 days" };
+    const fs = money.findings || [], f0 = fs.slice().sort((a, b) => (ORDER.indexOf(a.code) + 99) % 99 - (ORDER.indexOf(b.code) + 99) % 99)[0];
+    const f = f0 && { code: f0.code, short: SHORT[f0.code] || f0.code.replaceAll("_", " ").toLowerCase() };
     const want = money.args?.amount ? `${money.args.amount} ${money.args.currency || ""}` : money.tool;
     if (money.decision === "PASS") drawPOS("ok", `${money.tool} ${want}`, "matches the books");
-    else if (money.decision === "APPROVAL") drawPOS("hold", `asked ${want}`, f ? f.code.replaceAll("_", " ").toLowerCase().slice(0, 26) : "");
-    else drawPOS("block", `${money.tool} ${want}`, f ? f.code.replaceAll("_", " ").toLowerCase().slice(0, 26) : "");
+    else if (money.decision === "APPROVAL") drawPOS("hold", `asked ${want}`, f ? f.short : "");
+    else drawPOS("block", `${money.tool} ${want}`, f ? f.short : "");
   }
   labelObjs.SandboxBox?.el.classList.toggle("alarm", alarmOn);
 }
@@ -519,7 +533,7 @@ function nav() {
   document.querySelectorAll("#steps button").forEach((b) => (b.onclick = () => go(+b.dataset.i)));
 }
 function go(i) {
-  current = Math.max(0, Math.min(STEPS.length - 1, i)); resetStage(); nav(); render(); focus(STEPS[current].focus);
+  current = Math.max(0, Math.min(STEPS.length - 1, i)); resetStage(); document.getElementById("posHud")?.classList.add("hidden"); nav(); render(); focus(STEPS[current].focus);
   document.querySelector("#steps .on")?.scrollIntoView({ inline: "center", block: "nearest" });
 }
 function render() {
