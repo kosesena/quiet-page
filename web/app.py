@@ -27,8 +27,9 @@ from pydantic import BaseModel, Field
 from counterfoil.evidence import verify
 from counterfoil.llm import LLM, preset
 from counterfoil.pipeline import run_case
+from counterfoil.rail import SandboxRail
 from counterfoil.sandbox import docker_available, run_extractor, runtime_name
-from counterfoil.scenarios import load_scenarios
+from counterfoil.scenarios import build, load_scenarios
 
 from .cases import BOX_DEMO_CODE, BOX_DEMO_TEXT, CASES, DRILLS
 
@@ -43,6 +44,9 @@ WINDOW_S = int(os.environ.get("DEMO_RATE_WINDOW_S", "600"))
 DAILY = int(os.environ.get("DEMO_DAILY_RUNS", "300"))  # live model runs per day, all visitors together
 BOX_RATE = int(os.environ.get("DEMO_BOX_RATE_LIMIT", "30"))  # sandbox-only runs (drills, box demo) per IP per window
 MAX_FIELD = 4000
+# Which payment rail approved refunds hit: "braintree" (the real Braintree sandbox; needs BRAINTREE_* keys) or the
+# simulated rail. The page names the rail that actually ran, never the other one.
+RAIL = "braintree" if os.environ.get("DEMO_RAIL") == "braintree" else "simulated"
 
 app = FastAPI(title="The Quiet Page", docs_url=None, redoc_url=None)
 _lock = threading.Lock()
@@ -97,12 +101,20 @@ def _keep(receipt: dict) -> None:
             _receipts.popitem(last=False)
 
 
-def _summary(res, case_id: str, mode: str, model: str) -> dict:
+def _run(llm, sc: dict, email: dict, hostile_code: str | None = None):
+    store, rail, ctx = build(sc)
+    if RAIL == "braintree":
+        rail = SandboxRail(store, run_tag=f"qp-{int(time.time())}")
+    return run_case(llm, sc, email=email, hostile_code=hostile_code, rail=rail, store=store, ctx=ctx)
+
+
+def _summary(res, case_id: str, mode: str, model: str, rail: str = RAIL) -> dict:
     ext = res.extractor
     return {
         "case": case_id,
         "mode": mode,
         "model": model,
+        "rail": rail,
         "outcome": res.outcome,
         "sandbox": None if not ext or not ext.result else {
             "events": ext.result.events, "runtime": ext.result.runtime, "limits": ext.result.limits,
@@ -127,7 +139,7 @@ def _scenario_and_email(case: dict) -> tuple[dict, dict]:
 
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "mode": "live" if MODEL else "replay", "model": MODEL or None,
+    return {"ok": True, "mode": "live" if MODEL else "replay", "model": MODEL or None, "rail": RAIL,
             "sandbox_runtime": runtime_name(), "docker": docker_available()}
 
 
@@ -155,7 +167,7 @@ def run(case_id: str, request: Request):
             raise HTTPException(503, "The sandbox needs Docker on this host.")
         _charge_box_quota(_client_ip(request))
         with _run_lock:
-            res = run_case(None, sc, email=email, hostile_code=DRILLS[drill][1])  # type: ignore[arg-type]
+            res = _run(None, sc, email, hostile_code=DRILLS[drill][1])
         _keep(res.receipt)
         return _summary(res, case_id, "live", "none (fixed hostile code)")
     if not MODEL:
@@ -167,7 +179,7 @@ def run(case_id: str, request: Request):
         return data
     _charge_quota(_client_ip(request))
     with _run_lock:
-        res = run_case(_llm(), sc, email=email)
+        res = _run(_llm(), sc, email)
     _keep(res.receipt)
     return _summary(res, case_id, "live", MODEL)
 
@@ -216,7 +228,7 @@ def fool_it(payload: FoolIt, request: Request):
     email.update(subject=payload.subject or email["subject"], body_text=payload.body_text,
                  attachment_text=payload.attachment_text or None, body_html=None)
     with _run_lock:
-        res = run_case(_llm(), sc, email=email)
+        res = _run(_llm(), sc, email)
     _keep(res.receipt)
     return _summary(res, "fool-it", "live", MODEL)
 

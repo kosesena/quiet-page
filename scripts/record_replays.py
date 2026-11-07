@@ -17,8 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from counterfoil.llm import LLM, preset  # noqa: E402
-from counterfoil.pipeline import run_case  # noqa: E402
-from web.app import _scenario_and_email, _summary  # noqa: E402
+from web.app import RAIL, _run, _scenario_and_email, _summary  # noqa: E402
 from web.cases import CASES  # noqa: E402
 
 OUT = Path(__file__).resolve().parent.parent / "web" / "replays"
@@ -33,8 +32,8 @@ def main() -> None:
     llm = LLM(preset(a.model))
     for cid in a.cases:
         sc, email = _scenario_and_email(CASES[cid])
-        res = run_case(llm, sc, email=email)
-        data = _summary(res, cid, "replay", f"{a.model} ({llm.config.model}), recorded {time.strftime('%Y-%m-%d %H:%M')}")
+        res = _run(llm, sc, email)
+        data = _summary(res, cid, "replay", f"{a.model} ({llm.config.model}), recorded {time.strftime('%Y-%m-%d %H:%M')}", RAIL)
         (OUT / f"{cid}.json").write_text(json.dumps(data, ensure_ascii=False, indent=1, default=str))
         print(f"{cid}: {res.outcome}", (res.extractor.result.events if res.extractor and res.extractor.result else ""))
 

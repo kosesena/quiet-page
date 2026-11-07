@@ -71,6 +71,8 @@
   .drill small { color: var(--muted); font-size: 12px; }
   .pill { margin-top: 4px; padding: 2px 9px; border-radius: 999px; font: 600 11px/1.4 var(--mono); background: #2e2b28; color: var(--muted); }
   .pill.ok { background: #20392f; color: #8fd1ad; } .pill.bad { background: #43211c; color: #f08d7c; }
+  .checks td { padding: 5px 4px; } .ck { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font: 700 12px/1 var(--mono); }
+  .ck.ok { background: #20392f; color: #8fd1ad; } .ck.bad { background: #43211c; color: #f08d7c; }
   .linkish { border: 0; background: none; color: #8fd1ad; text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0 40px; }
   a { color: #8fd1ad; }
@@ -148,8 +150,9 @@ const STEPS = [
   { n: "05", k: "Drills", title: "Assume the model itself is turned", focus: "SandboxBox", board: true,
     body: `<p>Inkwell's note was a trick the model fell for. The worse case is a model that is hostile on purpose, or a parser written to do damage.</p><p>So the box is not tested against one trick. These five drills hand it code that attacks it on purpose: phone home, eat the memory, fork until the machine falls over, never return, steal the host's keys.</p><p>No model is involved. Each drill starts a <b>fresh container, live</b>, and you see exactly what stopped it.</p>`,
     chips: ["5 attacks", "live, one container each", "no model needed"] },
-  { n: "06", k: "Milo pays", title: "An honest refund goes through", focus: "Gate", run: "honest",
-    body: `<p>A customer returns a book with an open return record. Ivy reads it, Milo refunds it, the <b>Counterfoil POS</b> checks the amount, the order, the return record and the remaining balance against the books, and the money moves on the Braintree sandbox.</p>` },
+  { n: "06", k: "Milo pays", title: "An honest refund goes through", focus: "Milo", pay: true,
+    body: `<p>Back to the first email of the day: Mira returned her copy of <i>Winter Atlas</i>, and a return record for it is open.</p><p><b>Milo</b> is the payments agent. He gets Ivy's hand-off, looks the order up and asks for the refund. But he can't move money himself: every call goes through the <b>Counterfoil POS</b>, which checks it against the café's own books before anything reaches the payment rail.</p><p>Nothing is wrong with this one, so it should simply go through. Step through it.</p>`,
+    chips: ["Milo · payments agent", "Counterfoil POS · deterministic checks", "payment rail"] },
   { n: "07", k: "Hidden note", title: "The hidden note, and Mrs. Hart", focus: "MrsHart", run: "hidden-note",
     body: `<p>The email asks for 25.00. The attachment tells the payments agent to make it 40.00. The parser is clean, so the box has nothing to stop. This is Counterfoil's job: the call doesn't match the books, so the POS <b>holds it for Mrs. Hart</b>, with the exact difference.</p>` },
   { n: "08", k: "Fool it", title: "Try to fool it yourself", focus: "OrderDesk", fool: true,
@@ -428,8 +431,9 @@ function render() {
   if (s.box) boxStep(null);
   if (s.ink) inkStep(0);
   if (s.board) drillBoard();
+  if (s.pay) payStep(0);
   if (s.intro) document.querySelectorAll("[data-meet]").forEach((b) => (b.onclick = () => meet(b.dataset.meet)));
-  if (!s.run && !s.drills && !s.fool && !s.read && !s.box && !s.ink && !s.board) $("#side").innerHTML = sideIntro(s);
+  if (!s.run && !s.drills && !s.fool && !s.read && !s.box && !s.ink && !s.board && !s.pay) $("#side").innerHTML = sideIntro(s);
 }
 function introHtml() {
   const card = (x) => `<button class="who" data-meet="${x.id}"><span class="av" style="background:${x.c}">${esc(x.name[0])}</span><span><b>${esc(x.name)}</b><small>${esc(x.role)}</small></span></button>`;
@@ -564,6 +568,52 @@ async function runDrill(id) {
   catch (e) { drillRes[id] = { error: e.message }; }
   if (STEPS[current].board) drillBoard();
 }
+// step 06: hand-off → (click) Milo's calls → (click) the POS checklist and the money moving
+let payRun = null;
+function refundChecks(call, ok) {
+  const a = call?.args || {}, mark = (pass) => `<span class="${pass ? "ck ok" : "ck bad"}">${pass ? "✓" : "✕"}</span>`;
+  const codes = new Set((call?.findings || []).map((f) => f.code));
+  const rows = [
+    ["The order is in the café's books", a.order_no, !codes.has("UNKNOWN_ORDER")],
+    ["It belongs to the person who wrote", "", !codes.has("CUSTOMER_ORDER_MISMATCH")],
+    ["The return record is this order's, and still open", a.rma_id, ![...codes].some((c) => c.startsWith("RMA_"))],
+    ["Amount fits what the record approves, minus earlier refunds", a.amount && `${a.amount} ${a.currency || ""}`, !codes.has("RMA_AMOUNT_MISMATCH") && !codes.has("CUMULATIVE_REFUND_EXCEEDS_RMA")],
+    ["Same order, record, amount and currency as Ivy's hand-off", "", !codes.has("READER_CALL_MISMATCH") && !codes.has("READER_INCOMPLETE")],
+    ["Currency is the order's currency", a.currency, !codes.has("CURRENCY_MISMATCH")],
+    ["Inside the 30-day refund window", "", !codes.has("OUTSIDE_REFUND_WINDOW")],
+    ["Under the 200.00 automatic-refund limit", "", !codes.has("AUTO_REFUND_LIMIT_EXCEEDED")],
+    ["No earlier refund left unreconciled with the rail", "", !codes.has("REFUND_OUTCOME_UNKNOWN") && !codes.has("UNRECONCILED_RAIL_REFUNDS")],
+  ];
+  return `<table class="checks">${rows.map(([t, v, pass]) => `<tr><td style="width:28px">${mark(pass)}</td><td>${esc(t)}${v ? ` <code>${esc(v)}</code>` : ""}</td></tr>`).join("")}</table>`;
+}
+async function payStep(stage) {
+  let ho = null;
+  if (stage === 0) { try { replayCache.honest ??= await fetch("/api/replay/honest").then((r) => r.ok ? r.json() : null); } catch {} }
+  const src = payRun || replayCache.honest; ho = (src?.receipt?.entries.find((e) => e.step === "reader") || {}).data?.handoff;
+  let h = `<div class="card"><div class="kicker">Ivy's hand-off · what Milo gets</div>${ho ? `<table style="margin-top:8px">${HANDOFF_FIELDS.map(([k, label]) => `<tr><th style="width:38%">${label}</th><td><code>${esc(ho[k] || "—")}</code></td></tr>`).join("")}</table>` : `<p class="muted">No recorded run on this server yet.</p>`}</div>`;
+  if (stage === 0) h += `<div class="actions"><button class="btn" id="payBtn">Milo takes it ›</button></div>`;
+  if (stage >= 1 && payRun?.error) h += `<div class="card" style="margin-top:12px"><b>Couldn't run:</b> ${esc(payRun.error)}</div>`;
+  else if (stage >= 1 && payRun) {
+    h += `<div class="handoff-arrow">↓ Milo's calls, each one through the POS</div><div class="card"><table>${payRun.steps.map((st) => `<tr><td><code>${esc(st.tool)}</code></td><td class="muted">${esc(Object.entries(st.args).map(([k, v]) => `${k}=${v}`).join(" · "))}</td></tr>`).join("")}</table>
+      <p class="muted" style="margin-top:8px">${payRun.mode === "live" ? "Live run" : "Recorded run"} · ${esc(payRun.model)}</p></div>`;
+    if (stage === 1) h += `<div class="actions"><button class="btn" id="payBtn2">The POS checks the refund ›</button></div>`;
+  }
+  if (stage === 2 && payRun && !payRun.error) {
+    const call = payRun.steps.find((st) => st.tool === "refund"), ok = call?.decision === "PASS";
+    h += `<div class="handoff-arrow">↓ at the POS</div><div class="card"><div style="display:flex;gap:14px;align-items:flex-start"><img alt="POS screen" src="${posCanvas ? posCanvas.toDataURL() : ""}" style="width:92px;border-radius:10px;border:6px solid #2b2f2e;flex:none">
+      <div><span class="verdict ${ok ? "v-pass" : call?.decision === "APPROVAL" ? "v-hold" : "v-block"}">${ok ? "Approved · the money moved" : esc(call?.decision || "no refund call")}</span>
+      <p class="muted" style="margin-top:8px">${ok ? `Refund ${esc(call.args.amount)} ${esc(call.args.currency)} sent to ${payRun.rail === "braintree" ? "the Braintree sandbox" : "the simulated payment rail"} (${esc(call.rail_state)}).` : ""}</p></div></div>
+      ${refundChecks(call, ok)}<p class="muted" style="margin-top:10px">Plain code against the books, no model in the loop: the same call always gets the same answer.</p></div>`;
+  }
+  $("#side").innerHTML = h;
+  $("#payBtn")?.addEventListener("click", async () => {
+    $("#payBtn").disabled = true; $("#payBtn").textContent = mode === "live" ? "Milo is working…" : "Loading the recorded run…"; focus("Milo");
+    try { const r = await fetch("/api/run/honest", { method: "POST" }); const d = await r.json(); if (!r.ok) throw new Error(d.detail || r.statusText); payRun = d; lastReceipt = d.receipt; }
+    catch (e) { payRun = { error: e.message }; }
+    payStep(1);
+  });
+  $("#payBtn2")?.addEventListener("click", () => { drawPOS("check"); focus("Gate"); setTimeout(() => { sceneState(payRun.outcome, payRun.steps); payStep(2); }, 900); });
+}
 function limitsHtml() {
   const L = [["network", "none (no interface)"], ["filesystem", "read-only, /tmp 16 MB noexec"], ["memory", "128 MB, no swap"], ["CPU", "0.5 core, CPU-seconds cap"], ["processes", "32"], ["time", "8 s, then killed"], ["user", "65534, no capabilities"], ["kernel", health?.sandbox_runtime === "runsc" ? "gVisor (runsc)" : `${health?.sandbox_runtime || "runc"} on this host · gVisor on the Vultr VM`]];
   return `<table>${L.map(([a, b]) => `<tr><th>${a}</th><td>${esc(b)}</td></tr>`).join("")}</table><p class="muted" style="margin-top:10px">One container per job, removed afterwards. A run whose parser trips any of these is quarantined before Milo sees it.</p>`;
@@ -602,7 +652,7 @@ function archHtml() {
   <tr><th>Vultr Serverless Inference</th><td>Ivy and Milo (OpenAI-compatible API, a tool-calling model)</td></tr>
   <tr><th>gVisor sandbox</th><td>every parser Ivy writes; no network, read-only, capped, destroyed after</td></tr>
   <tr><th>Counterfoil</th><td>deterministic checks between Milo and the money: amount, order, record, balance, recipient</td></tr>
-  <tr><th>Braintree sandbox</th><td>where approved refunds and charges actually execute</td></tr>
+  <tr><th>Payment rail</th><td>${health?.rail === "braintree" ? "the Braintree sandbox: approved refunds and charges really execute there" : "a simulated rail on this server; the same gate drives the Braintree sandbox when it is configured"}</td></tr>
   <tr><th>Receipt</th><td>SHA-256 chain over every step, downloadable and verifiable</td></tr></table>`;
 }
 function sideIntro(s) {
