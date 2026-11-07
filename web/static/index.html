@@ -30,7 +30,7 @@
   nav button.on { color: var(--ink); font-weight: 600; } nav button.on .n { background: #E9B79A; color: #1c1b1a; border-color: #E9B79A; }
   main { margin: 0; padding: 28px clamp(16px, 3vw, 48px) 80px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(24px, 3vw, 56px); }
   @media (min-width: 1500px) { #side { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; align-content: start; } #side > .card { margin-top: 0 !important; } }
-  @media (max-width: 860px) { main { grid-template-columns: 1fr; } #stage { height: 46vh; } }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } #stage { height: 46vh; } .tag.right { top: 50px; left: 14px; right: auto; } }
   .kicker { font: 600 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
   h1 { font: 700 26px/1.2 Georgia, "Times New Roman", serif; margin: 6px 0 10px; }
   h1 small { font: 600 14px/1 var(--mono); color: var(--muted); margin-right: 8px; }
@@ -132,6 +132,7 @@
 <script type="module">
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
@@ -426,7 +427,7 @@ function wrap(g, text, x, y, maxW, lh) {
   g.fillText(line, x, y);
 }
 
-new GLTFLoader().load("/static/quiet-page.glb?v=" + Date.now(), (gltf) => {
+new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load("/static/quiet-page.glb?v=" + Date.now(), (gltf) => {
   const root = gltf.scene;
   root.traverse((o) => {
     if (o.isMesh) {
