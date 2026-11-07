@@ -280,7 +280,7 @@ def torus(name, coll, R, r, loc, material, parent=None, rot=(90, 0, 0)):
 # ================================================================ 1. Platform
 PLAT_T = 0.32
 c_plat = make_coll("Platform")
-platform = rounded_slab("Platform", c_plat, 16.0, 10.0, PLAT_T, 0.8, (0, 0, -PLAT_T / 2),
+platform = rounded_slab("Platform", c_plat, 16.0, 10.0, PLAT_T, 0.3, (0, 0, -PLAT_T / 2),
                         M["platform"], edge_bevel=0.06)
 
 # --- oak plank floor (generated texture, planar UVs, 4 m tile)
@@ -320,7 +320,7 @@ _tex = _nt.nodes.new("ShaderNodeTexImage")
 _tex.image = plank_image()
 _nt.links.new(_tex.outputs["Color"], _bsdf.inputs["Base Color"])
 _bsdf.inputs["Roughness"].default_value = 0.55
-floor = rounded_slab("Floor", c_plat, 15.7, 9.7, 0.006, 0.65, (0, 0, -0.0025), m_floor,
+floor = rounded_slab("Floor", c_plat, 15.7, 9.7, 0.006, 0.18, (0, 0, -0.0025), m_floor,
                      edge_bevel=0.002)
 floor.data.materials[0] = m_floor
 _uv = floor.data.uv_layers.new(name="UVMap")
@@ -374,9 +374,18 @@ def bookshelf(tag, x, y, rot=0.0):
 # tall shelves line the right edge beside the reading nook, books facing in (-X)
 # RightWall: short wall on the right edge (front two-thirds), tall shelves flat against it
 c_rw = make_coll("RightWall")
-box("RightWall", c_rw, (0.06, 5.8, 2.2), (7.92, -1.3, 1.1), M["wall_espresso"], bevel=0.012)
-bookshelf("A", 7.72, -3.4, -90)  # books face into the room (-X)
-bookshelf("B", 7.72, -2.48, -90)
+# Room shell: dollhouse with the front wall removed. Walls 12 cm thick, 2.7 m high.
+ROOM_H, WALL_T = 2.7, 0.12
+SIDE_IN = 7.8                     # inner face of the side walls (|x|)
+SIDE_C = SIDE_IN + WALL_T / 2     # wall centre line
+ROOM_Y0, ROOM_Y1 = -4.85, 4.82    # front edge .. back wall outer face
+box("RightWall", c_rw, (WALL_T, ROOM_Y1 - ROOM_Y0, ROOM_H), (SIDE_C, (ROOM_Y0 + ROOM_Y1) / 2,
+    ROOM_H / 2), M["wall_espresso"], bevel=0.006)
+c_lw = make_coll("LeftWall")
+box("Banquette_SideWall", c_lw, (WALL_T, ROOM_Y1 - ROOM_Y0, ROOM_H), (-SIDE_C,
+    (ROOM_Y0 + ROOM_Y1) / 2, ROOM_H / 2), M["wall_espresso"], bevel=0.006)  # full left wall
+bookshelf("A", SIDE_IN - 0.17, -3.4, -90)  # flat against the RightWall, books face in (-X)
+bookshelf("B", SIDE_IN - 0.17, -2.48, -90)
 
 # ================================================================ 3. Counter
 c_ct = make_coll("Counter")
@@ -635,8 +644,11 @@ def logo_disc(name, coll, r, depth, loc, parent=None, rot=(90, 0, 0)):
 
 # --- back wall behind the counter (carries menu board + logo sign)
 c_bw = make_coll("BackWall")
-box("BackWall", c_bw, (9.0, 0.06, 2.7), (0.0, 4.73, 1.35), M["wall_green"], bevel=0.015)
 WALL_FRONT = 4.7
+box("BackWall", c_bw, (2 * (SIDE_IN + WALL_T), WALL_T, ROOM_H), (0.0, WALL_FRONT + WALL_T / 2,
+    ROOM_H / 2), M["wall_espresso"], bevel=0.006)  # full width, cream plaster
+box("BackWall_Sage", c_bw, (9.0, 0.004, ROOM_H - 0.02), (0.0, WALL_FRONT - 0.002, ROOM_H / 2),
+    M["wall_green"], bevel=0.0)  # sage section behind the counter
 
 # --- Logo_Sign: ~45 cm disc on the counter's centre walnut panel (front, facing -Y)
 c_ls = make_coll("Logo_Sign")
@@ -1188,10 +1200,8 @@ for i, lx in enumerate((-0.8, 0.0, 0.8)):
 
 # --- 2. Banquette along a short left side wall, 2 walnut tables + chairs, WallArt above
 c_bq = make_coll("Banquette")
-BQ_X, BQ_Y = -7.5, 1.8
+BQ_X, BQ_Y = -SIDE_IN + 0.39, 1.8  # banquette back flat against the left wall
 bq = empty("Banquette", c_bq, (BQ_X, BQ_Y, 0))
-box("Banquette_SideWall", c_bq, (0.06, 4.5, 2.2), (-0.42, 0, 1.1), M["wall_espresso"], bevel=0.012,
-    parent=bq)
 box("Banquette_Plinth", c_bq, (0.5, 3.0, 0.1), (-0.13, 0, 0.05), M["walnut"], bevel=0.01,
     parent=bq)
 box("Banquette_Seat", c_bq, (0.5, 3.0, 0.34), (-0.13, 0, 0.27), M["fabric_green"], bevel=0.05,
@@ -1387,7 +1397,7 @@ for k, (w, d, h, dx, rib) in enumerate(((0.26, 0.2, 0.14, -0.22, "brand_green"),
 # ================================================================ 14. Holiday season
 # --- HolidayTree: stylized layered fir, baubles, spiral fairy lights, star
 c_ht = make_coll("HolidayTree")
-TREE_X, TREE_Y = 7.52, -4.22  # inner corner by the RightWall
+TREE_X, TREE_Y = 7.38, -4.2  # inner corner by the RightWall
 ht = empty("HolidayTree", c_ht, (TREE_X, TREE_Y, 0))
 box("HolidayTree_Crate", c_ht, (0.36, 0.36, 0.26), (0, 0, 0.13), M["walnut"], bevel=0.012,
     parent=ht)
@@ -1462,7 +1472,7 @@ def drape(tag, a, b, sag, n_swags, spacing=0.12):
 
 
 drape("Wall", (-4.35, WALL_FRONT - 0.06, 2.58), (4.35, WALL_FRONT - 0.06, 2.58), 0.14, 8)
-drape("Shelves", (7.54, -3.85, 1.84), (7.54, -2.03, 1.84), 0.08, 3, 0.1)
+drape("Shelves", (SIDE_IN - 0.36, -3.85, 1.84), (SIDE_IN - 0.36, -2.03, 1.84), 0.08, 3, 0.1)
 
 # --- Wreath on the back wall at the entrance end (left)
 c_wr = make_coll("Wreath")
@@ -1517,16 +1527,34 @@ for sx in (-1, 1):  # warm uplight strip tucked under the top of the side slat r
     box(f"BackWall_LEDCap{sx}", c_wd, ((BW_X1 - SCREEN_X - 0.1), 0.06, 0.025),
         (sx * (SCREEN_X + BW_X1) / 2, WALL_FRONT - 0.03, 2.615), M["walnut"], bevel=0.005, parent=wd)
 # crown trims
-box("Crown_Back", c_wd, (9.04, 0.1, 0.05), (0, WALL_FRONT - 0.02, BW_H + 0.025), M["walnut"],
-    bevel=0.01, parent=wd)
-LW_X = BQ_X - 0.42 + 0.03  # left wall inner face
-LW_Y0, LW_Y1 = BQ_Y - 2.25, BQ_Y + 2.25
-RW_X = 7.92 - 0.03         # right wall inner face
-RW_Y0, RW_Y1 = -1.3 - 2.9, -1.3 + 2.9
-box("Crown_Left", c_wd, (0.1, LW_Y1 - LW_Y0 + 0.04, 0.05), (LW_X + 0.02, BQ_Y, 2.225),
-    M["walnut"], bevel=0.01, parent=wd)
-box("Crown_Right", c_wd, (0.1, RW_Y1 - RW_Y0 + 0.04, 0.05), (RW_X - 0.02, -1.3, 2.225),
-    M["walnut"], bevel=0.01, parent=wd)
+# walnut caps on the cut top edge of all three walls (read cleanly from above)
+CAP_W, CAP_H = WALL_T + 0.04, 0.04
+box("Crown_Back", c_wd, (2 * (SIDE_IN + WALL_T) + 0.04, CAP_W, CAP_H),
+    (0, WALL_FRONT + WALL_T / 2, ROOM_H + CAP_H / 2), M["walnut"], bevel=0.008, parent=wd)
+for tag, sx in (("Left", -1), ("Right", 1)):
+    box(f"Crown_{tag}", c_wd, (CAP_W, ROOM_Y1 - ROOM_Y0 + 0.02, CAP_H),
+        (sx * SIDE_C, (ROOM_Y0 + ROOM_Y1) / 2, ROOM_H + CAP_H / 2), M["walnut"], bevel=0.008,
+        parent=wd)
+    box(f"WallEnd_{tag}", c_wd, (CAP_W, 0.02, ROOM_H), (sx * SIDE_C, ROOM_Y0 - 0.01, ROOM_H / 2),
+        M["walnut"], bevel=0.004, parent=wd)  # walnut edge on the open front cut
+LW_X = -SIDE_IN            # left wall inner face
+LW_Y0, LW_Y1 = ROOM_Y0, WALL_FRONT
+RW_X = SIDE_IN             # right wall inner face
+RW_Y0, RW_Y1 = ROOM_Y0, WALL_FRONT
+# oak wainscot on the cream back-wall sections outside the sage panel
+for tag, x0, x1 in (("BackL", -SIDE_IN, -4.5), ("BackR", 4.5, SIDE_IN)):
+    L = x1 - x0
+    xc = (x0 + x1) / 2
+    box(f"Wainscot_{tag}", c_wd, (L, 0.02, 1.1), (xc, WALL_FRONT - 0.01, 0.55), M["oak"],
+        bevel=0.0, parent=wd)
+    box(f"Wainscot_{tag}Rail", c_wd, (L + 0.02, 0.045, 0.04), (xc, WALL_FRONT - 0.022, 1.12),
+        M["oak"], bevel=0.008, parent=wd)
+    box(f"Wainscot_{tag}Skirt", c_wd, (L, 0.035, 0.1), (xc, WALL_FRONT - 0.017, 0.05),
+        M["oak_edge"], bevel=0.004, parent=wd)
+    n = max(1, int(L / 0.6))
+    for k in range(n + 1):
+        box(f"Wainscot_{tag}Stile{k}", c_wd, (0.035, 0.03, 0.95), (x0 + k * (L / n),
+            WALL_FRONT - 0.033, 0.6), M["oak_edge"], bevel=0.004, parent=wd)
 # walnut wainscot (~1.1 m) with a thin oak top rail and vertical stiles, both side walls
 for tag, xf, y0, y1, sgn in (("Left", LW_X, LW_Y0, LW_Y1, 1), ("Right", RW_X, RW_Y0, RW_Y1, -1)):
     L = y1 - y0
@@ -1844,7 +1872,7 @@ def aim(cam_obj, loc, target, lens=50):
     cam_obj.data.lens = lens
 
 
-OVERVIEW = ((9.3, -12.4, 7.0), (0.6, -0.1, 0.3), 29)
+OVERVIEW = ((1.2, -16.5, 8.6), (0.3, 0.2, 0.3), 29.5)  # looks in through the open front
 aim(cam, *OVERVIEW)
 
 # ---------------------------------------------------------------- render settings
