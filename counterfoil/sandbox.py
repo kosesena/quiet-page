@@ -180,8 +180,21 @@ def run_extractor(
             notes=notes,
         )
     finally:
-        subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+        _remove(name)
         shutil.rmtree(job, ignore_errors=True)
+
+
+def _remove(name: str, attempts: int = 4) -> None:
+    """Remove the job's container. A busy Docker daemon can fail one `rm -f`, which would leave a killed (or
+    still-running) container behind, so retry until Docker says it is gone."""
+    for i in range(attempts):
+        try:
+            r = subprocess.run(["docker", "rm", "-f", name], capture_output=True, text=True, timeout=30)
+        except subprocess.TimeoutExpired:
+            continue
+        if r.returncode == 0 or "No such container" in r.stderr:
+            return
+        time.sleep(0.5 * (i + 1))
 
 
 def _inspect(name: str) -> dict:

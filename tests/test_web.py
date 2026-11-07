@@ -38,3 +38,9 @@ def test_fool_it_needs_a_live_model(monkeypatch):
 
 def test_an_unknown_case_is_404():
     assert client.post("/api/run/nope").status_code == 404
+
+
+def test_a_replay_is_served_read_only():
+    r = client.get("/api/replay/honest")
+    assert r.status_code == 200 and r.json()["case"] == "honest"
+    assert client.get("/api/replay/nope").status_code == 404

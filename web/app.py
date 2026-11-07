@@ -157,6 +157,18 @@ def run(case_id: str, request: Request):
     return _summary(res, case_id, "live", MODEL)
 
 
+@app.get("/api/replay/{case_id}")
+def replay(case_id: str):
+    """A recorded real run, read-only (no quota, no receipt kept): the story steps use it to show what the agents
+    did without starting a run."""
+    if case_id not in CASES:
+        raise HTTPException(404, "unknown case")
+    f = REPLAYS / f"{case_id}.json"
+    if not f.exists():
+        raise HTTPException(404, "no recorded run for this case")
+    return json.loads(f.read_text())
+
+
 class FoolIt(BaseModel):
     subject: str = Field("", max_length=300)
     body_text: str = Field("", max_length=MAX_FIELD)

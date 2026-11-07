@@ -3,8 +3,8 @@
 [tool.ruff]
 line-length = 120
 target-version = "py313"
-# tools/ and spikes/ are Blender scripts and throwaway experiments; dashboard/ is TypeScript.
-extend-exclude = ["tools", "spikes", "astropods", "dashboard"]
+# tools/, spikes/ and blender/ are Blender scripts and throwaway experiments; dashboard/ is TypeScript.
+extend-exclude = ["tools", "spikes", "astropods", "dashboard", "blender"]
 
 [tool.ruff.format]
 quote-style = "preserve"
