@@ -229,6 +229,93 @@ const SHORT = { Ivy: "Ivy", Milo: "Milo", MrsHart: "Mrs. Hart", InkwellCourier: 
 let overviewCam = null;
 const glbLights = [];
 let mixer = null;
+const acts = {};
+// ---------- the story acted out: people walk between waypoints, papers fly between desks; only ever on a click ----------
+const homes = {}; // name -> {pos, rotY, visible}
+const tweens = new Set();
+const FACE = { Mira: 0, InkwellCourier: 0 }; // yaw offset so the model's forward points along the walk (set from Blender's report)
+function wp(name) { const o = named[name]; return o ? o.getWorldPosition(new THREE.Vector3()) : null; }
+function rememberHomes() {
+  for (const n of ["Mira", "InkwellCourier", "Prop_Email", "Prop_Card", "Prop_Receipt", "Prop_Invoice"]) {
+    const o = named[n]; if (o) homes[n] = { pos: o.position.clone(), rotY: o.rotation.y, quat: o.quaternion.clone(), parent: o.parent };
+  }
+}
+function resetStage() {
+  tweens.clear();
+  for (const [n, h] of Object.entries(homes)) { const o = named[n]; o.position.copy(h.pos); o.quaternion.copy(h.quat); }
+  for (const n of ["Mira", "InkwellCourier"]) { acts[n + "_Walk"]?.stop(); acts[n + "_Idle"]?.play(); }
+}
+function tween(dur, fn) {
+  return new Promise((done) => { const t = { t: 0, dur, fn, done }; tweens.add(t); });
+}
+function stepTweens(dt) {
+  for (const t of [...tweens]) { t.t = Math.min(t.dur, t.t + dt); const k = t.t / t.dur; t.fn(k); if (k >= 1) { tweens.delete(t); t.done(); } }
+}
+// local position for a world point, under the object's own parent
+function toLocal(o, world) { return o.parent ? o.parent.worldToLocal(world.clone()) : world.clone(); }
+async function walkTo(name, route, speed = 1.3) {
+  const o = named[name]; if (!o) return;
+  const pts = route.map((r) => (typeof r === "string" ? wp(r) : r)).filter(Boolean); if (!pts.length) return;
+  acts[name + "_Idle"]?.fadeOut(0.2); const w = acts[name + "_Walk"]; if (w) { w.reset().fadeIn(0.2).play(); }
+  for (const target of pts) {
+    const startW = o.getWorldPosition(new THREE.Vector3()), endW = new THREE.Vector3(target.x, startW.y, target.z);
+    const d = startW.distanceTo(endW); if (d < 0.02) continue;
+    const yaw = Math.atan2(endW.x - startW.x, endW.z - startW.z) + (FACE[name] || 0);
+    const parentYaw = o.parent ? new THREE.Euler().setFromQuaternion(o.parent.getWorldQuaternion(new THREE.Quaternion()), "YXZ").y : 0;
+    o.rotation.y = yaw - parentYaw;
+    await tween(d / speed, (k) => { o.position.copy(toLocal(o, startW.clone().lerp(endW, k))); });
+  }
+  if (w) w.fadeOut(0.25); acts[name + "_Idle"]?.reset().fadeIn(0.25).play();
+}
+function faceTowards(name, targetWp) {
+  const o = named[name], t = wp(targetWp); if (!o || !t) return;
+  const p = o.getWorldPosition(new THREE.Vector3());
+  o.rotation.y = Math.atan2(t.x - p.x, t.z - p.z) + (FACE[name] || 0);
+}
+async function fly(prop, from, to, { arc = 0.7, dur = 1.0, spin = 1 } = {}) {
+  const o = named[prop]; if (!o) return;
+  const a = typeof from === "string" ? (wp(from) || named[from]?.getWorldPosition(new THREE.Vector3())) : from;
+  const b = typeof to === "string" ? (wp(to) || named[to]?.getWorldPosition(new THREE.Vector3())) : to;
+  if (!a || !b) return;
+  const top = Math.max(a.y, b.y) + arc;
+  await tween(dur, (k) => {
+    const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // ease in-out
+    const p = a.clone().lerp(b, e); p.y = (1 - e) * (1 - e) * a.y + 2 * (1 - e) * e * top + e * e * b.y;
+    o.position.copy(toLocal(o, p)); o.rotation.y = spin * e * Math.PI * 2;
+  });
+}
+function place(prop, at) { const o = named[prop], p = typeof at === "string" ? wp(at) : at; if (o && p) o.position.copy(toLocal(o, p)); }
+// Mira waits a little to the right of the till, so the camera on the POS isn't looking through her
+const miraSpot = () => { const c = wp("WP_Counter"); return c && c.add(new THREE.Vector3(1.5, 0, 0.35)); };
+const ROUTES = { miraIn: () => ["WP_Door", "WP_Aisle1", "WP_Aisle2", miraSpot()], courierIn: () => ["WP_Door", "WP_CourierStop"] };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// the pieces each step strings together (each runs only after a click)
+const ACT = {
+  async miraBringsEmail() {           // Mira comes in, her email lands on Ivy's desk
+    focus("Platform"); await walkTo("Mira", ROUTES.miraIn()); faceTowards("Mira", "WP_POS");
+    focus("Ivy"); await fly("Prop_Email", handOf("Mira"), "WP_IvyDesk", { arc: 0.9, dur: 1.2 });
+  },
+  async courierBringsInvoice() {      // Inkwell's courier comes in, the invoice lands on Ivy's desk
+    focus("Platform"); await walkTo("InkwellCourier", ROUTES.courierIn()); faceTowards("InkwellCourier", "WP_IvyDesk");
+    focus("Ivy"); await fly("Prop_Invoice", handOf("InkwellCourier"), "WP_IvyDesk", { arc: 0.6, dur: 1.0 });
+  },
+  async handOffToMilo() { focus("Milo"); place("Prop_Card", "WP_IvyDesk"); await fly("Prop_Card", "WP_IvyDesk", "WP_Milo", { arc: 1.0, dur: 1.3 }); },
+  async cardToPOS() { focus("Gate"); await fly("Prop_Card", "WP_Milo", "WP_POS", { arc: 0.3, dur: 0.7, spin: 0 }); drawPOS("check"); await sleep(700); },
+  async receiptToMira() { await fly("Prop_Receipt", "WP_POS", handOf("Mira"), { arc: 0.4, dur: 0.9, spin: 0 }); acts.Mira_Wave_Once?.reset().play(); },
+  async invoiceIntoBox() { focus("SandboxBox"); await fly("Prop_Invoice", "WP_IvyDesk", "WP_Box", { arc: 0.8, dur: 1.1 }); },
+  async cardToHart() { await sleep(600); focus("MrsHart"); await fly("Prop_Card", "WP_POS", "WP_HartDesk", { arc: 0.8, dur: 1.2 }); },
+};
+// run a scene with the step's buttons disabled, so a second click can't start it twice
+async function act(fn) {
+  const btns = [...document.querySelectorAll("#side .btn, #text .btn")]; btns.forEach((b) => (b.disabled = true));
+  // the scene plays in the café, so bring the café into view first; afterwards, back to what just appeared
+  if (stage.getBoundingClientRect().bottom < stage.clientHeight * 0.6) { stage.scrollIntoView({ behavior: "smooth", block: "start" }); await sleep(450); }
+  try { await fn(); } finally {
+    btns.forEach((b) => (b.disabled = false));
+    const cards = document.querySelectorAll("#side .card"); cards[cards.length - 1]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+function handOf(name) { const o = named[name]; if (!o) return null; const p = o.getWorldPosition(new THREE.Vector3()); p.y += 1.1; return p; }
 const ONCE_MIN_MS = 5 * 60e3, ONCE_MAX_MS = 10 * 60e3;
 function scheduleOnce(acts) {
   // a cross-legs clip and its uncross partner alternate; other one-shots are picked at random
@@ -333,12 +420,15 @@ new GLTFLoader().load("/static/quiet-page.glb?v=" + Date.now(), (gltf) => {
     mixer = new THREE.AnimationMixer(root);
     const once = {};
     for (const clip of gltf.animations) {
-      const a = mixer.clipAction(clip);
-      if (clip.name.endsWith("_Once")) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; (once[clip.name.split("_").slice(0, -2).join("_")] ??= []).push(a); }
+      const a = mixer.clipAction(clip); acts[clip.name] = a;
+      if (clip.name.endsWith("_Walk")) continue; // walks play only while the story moves someone
+      if (clip.name.endsWith("_Once")) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; if (!/^Mira_/.test(clip.name)) (once[clip.name.split("_").slice(0, -2).join("_")] ??= []).push(a); }
       else { a.time = Math.random() * clip.duration; a.play(); }
     }
     for (const acts of Object.values(once)) scheduleOnce(acts);
   }
+  rememberHomes();
+  if (new URLSearchParams(location.search).has("debug")) window.__qp = { named, acts, wp };
   const cam = gltf.cameras && gltf.cameras[0];
   if (cam) { cam.updateWorldMatrix(true, false); overviewCam = cam.getWorldPosition(new THREE.Vector3()); }
   const all = new THREE.Box3().setFromObject(root); const c = all.getCenter(new THREE.Vector3());
@@ -359,6 +449,8 @@ function focus(name, instant = false) {
   // look from the overview camera's side, so close-ups stay on the open front of the café
   const base = named.Platform ? new THREE.Box3().setFromObject(named.Platform).getCenter(new THREE.Vector3()) : c;
   const dir = overviewCam ? overviewCam.clone().sub(base).normalize() : new THREE.Vector3(0.62, 0.55, 0.72).normalize();
+  // behind the counter: look from higher up, over the head of whoever is standing at the till
+  if (["Gate", "Milo", "PaymentTerminal", "Ledger", "Barista_Espresso"].includes(name)) { dir.y = Math.max(dir.y, 0.95); dir.normalize(); }
   camGoal.target = c; camGoal.pos = (name === "Platform" && overviewCam) ? base.clone().add(overviewCam.clone().sub(base).multiplyScalar(Math.max(1.0, 1.75 / camera.aspect))) : c.clone().add(dir.multiplyScalar(dist));
   if (instant) { camera.position.copy(camGoal.pos); controls.target.copy(c); }
   const wide = name === "Platform";
@@ -388,6 +480,7 @@ function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   if (camGoal.pos) { camera.position.lerp(camGoal.pos, 1 - Math.pow(0.002, dt)); controls.target.lerp(camGoal.target, 1 - Math.pow(0.002, dt)); if (camera.position.distanceTo(camGoal.pos) < 0.01) camGoal.pos = null; }
   if (mixer) mixer.update(dt);
+  stepTweens(dt);
   if (gateArm) gateArm.rotation.y += (armTarget - gateArm.rotation.y) * Math.min(1, dt * 6);
   if (alarm) { alarm.visible = alarmOn; if (alarmOn && alarm.material) alarm.material.emissiveIntensity = 2 + Math.sin(clock.elapsedTime * 6) * 1.5; }
   controls.update(); composer.render(); labels.render(scene, camera);
@@ -423,7 +516,7 @@ function nav() {
   document.querySelectorAll("#steps button").forEach((b) => (b.onclick = () => go(+b.dataset.i)));
 }
 function go(i) {
-  current = Math.max(0, Math.min(STEPS.length - 1, i)); nav(); render(); focus(STEPS[current].focus);
+  current = Math.max(0, Math.min(STEPS.length - 1, i)); resetStage(); nav(); render(); focus(STEPS[current].focus);
   document.querySelector("#steps .on")?.scrollIntoView({ inline: "center", block: "nearest" });
 }
 function render() {
@@ -487,7 +580,7 @@ async function readStep(stage) {
     <p class="muted" style="margin-top:10px">This is all Milo gets. Recorded run · ${esc(model)}.</p></div>`;
   else h += `<div class="card muted" style="margin-top:12px">No recorded run on this server yet.</div>`;
   $("#side").innerHTML = h;
-  $("#readBtn")?.addEventListener("click", () => readStep(1));
+  $("#readBtn")?.addEventListener("click", () => act(async () => { await ACT.miraBringsEmail(); await readStep(1); }));
 }
 // step 03: a known-good parser on yesterday's honest invoice, run live in a fresh container (no model, no money)
 const BOX_INPUT = "INKWELL PRESS — Invoice INK-777 for order ST-1058\nWholesale: 'Winter Atlas' x1 · Total: 25.00 USD";
@@ -539,13 +632,14 @@ function inkStep(stage) {
       ${q ? `<p style="margin-top:10px"><b>Milo was never called.</b> A quarantined run never reaches the payments agent, so no money moved.</p>` : ""}</div>`;
   }
   $("#side").innerHTML = h;
-  $("#inkBtn")?.addEventListener("click", async () => {
-    $("#inkBtn").disabled = true; $("#inkBtn").textContent = mode === "live" ? "The model is writing…" : "Loading the recorded run…";
-    try { const r = await fetch("/api/run/inkwell", { method: "POST" }); const d = await r.json(); if (!r.ok) throw new Error(d.detail || r.statusText); inkRun = d; lastReceipt = d.receipt; }
-    catch (e) { inkRun = { error: e.message }; }
+  $("#inkBtn")?.addEventListener("click", () => act(async () => {
+    $("#inkBtn").textContent = mode === "live" ? "The model is writing…" : "Loading the recorded run…";
+    const run = fetch("/api/run/inkwell", { method: "POST" }).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || r.statusText); return d; });
+    await ACT.courierBringsInvoice();
+    try { inkRun = await run; lastReceipt = inkRun.receipt; } catch (e) { inkRun = { error: e.message }; }
     inkStep(1);
-  });
-  $("#inkBtn2")?.addEventListener("click", () => { sceneState(inkRun.outcome, inkRun.steps); focus("SandboxBox"); inkStep(2); });
+  }));
+  $("#inkBtn2")?.addEventListener("click", () => act(async () => { await ACT.invoiceIntoBox(); sceneState(inkRun.outcome, inkRun.steps); inkStep(2); }));
 }
 // step 05: five hostile parsers, each run live in its own container; the board fills as they're contained
 const DRILL_INFO = {
@@ -631,13 +725,18 @@ async function payStep(stage) {
       ${refundChecks(call)}<p class="muted" style="margin-top:10px">Plain code against the books, no model in the loop: the same call always gets the same answer.</p></div>`;
   }
   $("#side").innerHTML = h;
-  $("#payBtn")?.addEventListener("click", async () => {
-    $("#payBtn").disabled = true; $("#payBtn").textContent = mode === "live" ? "Milo is working…" : "Loading the recorded run…"; focus("Milo");
-    try { const r = await fetch("/api/run/honest", { method: "POST" }); const d = await r.json(); if (!r.ok) throw new Error(d.detail || r.statusText); payRun = d; lastReceipt = d.receipt; }
-    catch (e) { payRun = { error: e.message }; }
+  $("#payBtn")?.addEventListener("click", () => act(async () => {
+    $("#payBtn").textContent = mode === "live" ? "Milo is working…" : "Loading the recorded run…";
+    const run = fetch("/api/run/honest", { method: "POST" }).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || r.statusText); return d; });
+    await ACT.miraBringsEmail(); await ACT.handOffToMilo();
+    try { payRun = await run; lastReceipt = payRun.receipt; } catch (e) { payRun = { error: e.message }; }
     payStep(1);
-  });
-  $("#payBtn2")?.addEventListener("click", () => { drawPOS("check"); focus("Gate"); setTimeout(() => { sceneState(payRun.outcome, payRun.steps); payStep(2); }, 900); });
+  }));
+  $("#payBtn2")?.addEventListener("click", () => act(async () => {
+    await ACT.cardToPOS(); sceneState(payRun.outcome, payRun.steps);
+    if (payRun.steps.some((st) => st.tool === "refund" && st.decision === "PASS")) await ACT.receiptToMira();
+    payStep(2);
+  }));
 }
 // step 07: email + note → (click) box is clean, Ivy's hand-off → (click) Milo's call → (click) the POS holds it for Mrs. Hart
 let hideRun = null;
@@ -672,14 +771,18 @@ function hideStep(stage) {
       <p style="margin-top:10px"><b>No money moved.</b> The call waits on Mrs. Hart's desk with the exact difference, so she decides in seconds, not after an investigation.</p><div class="actions"><button class="btn ghost small" id="toHart">Look at Mrs. Hart's desk ›</button></div></div>`;
   }
   $("#side").innerHTML = h;
-  $("#hideBtn")?.addEventListener("click", async () => {
-    $("#hideBtn").disabled = true; $("#hideBtn").textContent = mode === "live" ? "Ivy is reading…" : "Loading the recorded run…"; focus("SandboxBox");
-    try { const r = await fetch("/api/run/hidden-note", { method: "POST" }); const d = await r.json(); if (!r.ok) throw new Error(d.detail || r.statusText); hideRun = d; lastReceipt = d.receipt; }
-    catch (e) { hideRun = { error: e.message }; }
+  $("#hideBtn")?.addEventListener("click", () => act(async () => {
+    $("#hideBtn").textContent = mode === "live" ? "Ivy is reading…" : "Loading the recorded run…";
+    const run = fetch("/api/run/hidden-note", { method: "POST" }).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || r.statusText); return d; });
+    await ACT.miraBringsEmail();
+    try { hideRun = await run; lastReceipt = hideRun.receipt; } catch (e) { hideRun = { error: e.message }; }
     hideStep(1);
-  });
-  $("#hideBtn2")?.addEventListener("click", () => { focus("Milo"); hideStep(2); });
-  $("#hideBtn3")?.addEventListener("click", () => { drawPOS("check"); focus("Gate"); setTimeout(() => { sceneState(hideRun.outcome, hideRun.steps); hideStep(3); }, 900); });
+  }));
+  $("#hideBtn2")?.addEventListener("click", () => act(async () => { await ACT.handOffToMilo(); hideStep(2); }));
+  $("#hideBtn3")?.addEventListener("click", () => act(async () => {
+    await ACT.cardToPOS(); sceneState(hideRun.outcome, hideRun.steps); hideStep(3);
+    if (hideRun.steps.some((st) => st.decision === "APPROVAL")) await ACT.cardToHart();
+  }));
   $("#toHart")?.addEventListener("click", () => focus("MrsHart"));
 }
 function limitsHtml() {

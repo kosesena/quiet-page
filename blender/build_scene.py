@@ -2821,7 +2821,7 @@ HART_DZ = -0.25  # standing figure lowered onto a chair; its legs are replaced b
 HART_POS = (3.95, COUNTER_Y + 0.76)
 figure("MrsHart", (HART_POS[0], HART_POS[1], HART_DZ), 0, M["white"], M["pants_dark"], hair_hart,
        arms=("forward", "forward"), extras=hart_extras)
-figure("InkwellCourier", (-0.3, -4.2, 0), -128, M["hood"], M["pants_dark"], hair_courier,
+figure("InkwellCourier", (-6.9, -3.95, 0), 90, M["hood"], M["pants_dark"], hair_courier,
        arms=("down", "forward"), eyes=False, extras=courier_extras)
 
 
@@ -2927,6 +2927,93 @@ for sx in (-1, 1):
 leaf = empty("Reader_Nook_PageLeaf", c_rd, (0, 0, 0.021), parent=bk)   # pivot on the spine, turns about local Y
 box("Reader_Nook_PageLeafSheet", c_rd, (0.148, 0.2, 0.002), (0.075, 0, 0), M["paper"], bevel=0.0, parent=leaf)
 leaf.scale = (0, 0, 0)  # only visible while a page is being turned
+
+
+# --- Mira: customer returning a book (warm coat, dark-green scarf, rust "Winter Atlas" paperback)
+M["coat"] = mat("M_CoatCamel", "#b07a4a", 0.85)
+M["hair_mira"] = mat("M_HairMira", "#3b2a22", 0.7)
+M["atlas"] = mat("M_WinterAtlasCover", "#b4532e", 0.6)
+
+
+def hair_mira(name, coll, root):
+    sphere(f"{name}_Hair", coll, 0.148, (0, 0.012, 1.55), M["hair_mira"], parent=root, scale=(1.02, 1.0, 0.95),
+           cut_below=-0.2)
+    capsule(f"{name}_HairBack", coll, 0.11, 0.34, (0, 0.07, 1.42), M["hair_mira"], parent=root, sy=0.6)
+
+
+def mira_extras(name, coll, root):
+    cyl(f"{name}_CoatSkirt", coll, 0.205, 0.38, (0, 0, 0.73), M["coat"], segs=20, parent=root, r2=0.19)
+    torus(f"{name}_Scarf", coll, 0.085, 0.032, (0, 0, 1.38), M["xmas_green"], parent=root, rot=(0, 0, 0))
+    box(f"{name}_ScarfTail", coll, (0.06, 0.02, 0.22), (0.05, -0.13, 1.25), M["xmas_green"], bevel=0.008,
+        parent=root, rot=(-6, 0, -5))
+    box(f"{name}_Book", coll, (0.035, 0.13, 0.19), (0.27, -0.03, 0.83), M["atlas"], bevel=0.004, parent=root)
+    box(f"{name}_BookPages", coll, (0.03, 0.12, 0.18), (0.27, -0.03, 0.83), M["paper"], bevel=0.002, parent=root)
+
+
+figure("Mira", (-7.6, -4.4, 0), 90, M["coat"], M["pants_dark"], hair_mira, arms=("down", "down"),
+       extras=mira_extras)  # stands at the shopfront door, faces +X (into the room)
+
+# --- props for the scenarios (separate, unmerged, parked 2 m below the platform centre)
+c_pr = make_coll("Props")
+M["stamp_red"] = mat("M_StampRed", "#c0392b", 0.5)
+M["ink_red"] = mat("M_InvoiceRed", "#7d1f24", 0.5)
+M["print"] = mat("M_PrintGrey", "#5b5f66", 0.6)
+
+
+def prop_root(name, z):
+    e = bpy.data.objects.new(name, None)
+    e.empty_display_type = "PLAIN_AXES"
+    e.empty_display_size = 0.05
+    e.location = (0.0, 0.0, z)
+    c_pr.objects.link(e)
+    return e
+
+
+pe = prop_root("Prop_Email", -2.0)
+box("Prop_Email_Paper", c_pr, (0.25, 0.15, 0.006), (0, 0, 0.003), M["paper"], bevel=0.002, parent=pe)
+for sx in (-1, 1):
+    box(f"Prop_Email_Flap{sx}", c_pr, (0.15, 0.004, 0.0015), (sx * 0.06, 0.035, 0.0065), M["print"], bevel=0.0,
+        parent=pe, rot=(0, 0, sx * 28))
+box("Prop_Email_Stamp", c_pr, (0.04, 0.045, 0.002), (0.095, -0.045, 0.007), M["stamp_red"], bevel=0.0, parent=pe)
+pc_ = prop_root("Prop_Card", -2.05)
+box("Prop_Card_Paper", c_pr, (0.2, 0.13, 0.004), (0, 0, 0.002), M["cream"], bevel=0.002, parent=pc_)
+for k in range(3):
+    box(f"Prop_Card_Line{k}", c_pr, (0.12 - k * 0.02, 0.006, 0.001), (0.01, 0.02 - k * 0.025, 0.0045), M["print"],
+        bevel=0.0, parent=pc_)
+cyl("Prop_Card_LogoDot", c_pr, 0.014, 0.002, (-0.075, 0.04, 0.005), M["brand_green"], segs=16, parent=pc_)
+prc = prop_root("Prop_Receipt", -2.1)
+box("Prop_Receipt_Paper", c_pr, (0.08, 0.2, 0.002), (0, 0, 0.001), M["paper"], bevel=0.0, parent=prc)
+for k in range(7):
+    box(f"Prop_Receipt_Line{k}", c_pr, (0.05 if k % 3 else 0.06, 0.004, 0.001), (0, 0.075 - k * 0.022, 0.0025),
+        M["print"], bevel=0.0, parent=prc)
+pin = prop_root("Prop_Invoice", -2.15)
+box("Prop_Invoice_Paper", c_pr, (0.15, 0.21, 0.003), (0, 0, 0.0015), M["paper"], bevel=0.0, parent=pin)
+box("Prop_Invoice_Header", c_pr, (0.15, 0.035, 0.001), (0, 0.0875, 0.0035), M["ink_red"], bevel=0.0, parent=pin)
+for k in range(6):
+    box(f"Prop_Invoice_Line{k}", c_pr, (0.11 if k % 2 else 0.08, 0.005, 0.001), (-0.005, 0.045 - k * 0.025, 0.0035),
+        M["print"], bevel=0.0, parent=pin)
+
+# --- waypoints for the page's scripted scenes (plain-axes empties; floor = z 0, landing points on surfaces)
+c_wp = make_coll("Waypoints")
+WAYPOINTS = {
+    "WP_Door": (-7.45, -4.36, 0.0),            # just inside the shopfront door
+    "WP_Aisle1": (-6.0, -3.0, 0.0),            # via: front aisle (Door -> Counter)
+    "WP_Aisle2": (-1.2, -2.6, 0.0),            # via: central corridor start (Door -> Counter)
+    "WP_Counter": (0.2, 2.8, 0.0),             # customer side, in front of the register / POS
+    "WP_IvyDesk": (-4.15, -1.5, 0.76),         # Ivy's desk surface (free spot right of the letter)
+    "WP_Milo": (-0.4, 3.35, 1.0),              # counter top in front of Milo
+    "WP_POS": (0.85, 3.3, 1.0),                # counter top right next to the Gate / POS screen
+    "WP_Box": (-2.9, -1.45, 0.66),             # inside the glass SandboxBox, mid-height
+    "WP_HartDesk": (3.7, 3.7, 0.76),           # top of Mrs. Hart's desk
+    "WP_CourierStop": (-4.3, -2.35, 0.0),      # floor spot in front of Ivy's desk
+    "WP_MiraHand": (0.2, 2.8, 1.2),            # 1.2 m above WP_Counter (receipt lands near Mira)
+}
+for nm, loc in WAYPOINTS.items():
+    e = bpy.data.objects.new(nm, None)
+    e.empty_display_type = "PLAIN_AXES"
+    e.empty_display_size = 0.15
+    e.location = loc
+    c_wp.objects.link(e)
 
 
 
@@ -3184,7 +3271,9 @@ RIG["Ivy"] = rig(O["Ivy"], std_parts(O["Ivy"], arms=("ArmL",)))
 RIG["Milo"] = rig(O["Milo"], {"Head": (STAND["Head"], _names(O["Milo"], HEAD_KEYS))}, (O["Logo_Badge"],))
 RIG["MrsHart"] = rig(O["MrsHart"], {"Head": (STAND["Head"], _names(O["MrsHart"], HEAD_KEYS))})
 _env = O["InkwellCourier_Envelope"]
-_cparts = std_parts(O["InkwellCourier"], arms=("ArmR",))
+_cparts = std_parts(O["InkwellCourier"], arms=("ArmL", "ArmR"))
+for _side, _sx in (("L", -1), ("R", 1)):
+    _cparts[f"Leg{_side}"] = ((_sx * 0.085, 0, 0.78), _names(O["InkwellCourier"], (f"_Leg{_side}", f"_Shoe{_side}")))
 RIG["InkwellCourier"] = rig(O["InkwellCourier"], _cparts, (_env,))
 bpy.context.view_layer.update()
 _mw = _env.matrix_world.copy()
@@ -3198,6 +3287,13 @@ for w in STEAM:  # wisps follow the figure in the hierarchy (animated individual
     _mw = w.matrix_world.copy()
     w.parent = O["Barista_Espresso"]
     w.matrix_world = _mw
+_mi = O["Mira"]
+_mparts = std_parts(_mi, arms=("ArmL", "ArmR"), extra={"ArmR": [O["Mira_Book"], O["Mira_BookPages"]]})
+for _side, _sx in (("L", -1), ("R", 1)):
+    _mparts[f"Leg{_side}"] = ((_sx * 0.085, 0, 0.78), _names(_mi, (f"_Leg{_side}", f"_Shoe{_side}")))
+RIG["Mira"] = rig(_mi, _mparts)
+for _pr in ("Prop_Email", "Prop_Card", "Prop_Receipt", "Prop_Invoice"):
+    join_under(O[_pr], f"{_pr}_Mesh")
 _cu = O["Customer_Laptop"]
 RIG["Customer_Laptop"] = rig(_cu, {
     "Head": ((0, -0.07, 1.2), _names(_cu, ("Customer_Head", "Customer_Hair", "Customer_Eye"))),
@@ -3319,13 +3415,45 @@ rot_keys(RIG["MrsHart"]["Head"], [(1, (0, 0, 0)), (40, (0, 0, 9)), (80, (16, 0, 
                                   (155, (2, 0, -6)), (F + 1, (0, 0, 0))])
 push("MrsHart_Idle", [root, RIG["MrsHart"]["Head"]], F)
 
-# InkwellCourier_Idle (4 s): weight shift, the envelope arm bobs
+# InkwellCourier_Idle (4 s): weight shift through the legs (no root channel, so the page can move the root),
+# the envelope arm bobs, small head turn
 F = 120
-root = O["InkwellCourier"]
-loc_keys(root, [(1, (0, 0, 0)), (60, (0.015, 0.0, 0.0)), (F + 1, (0, 0, 0))])
-rot_keys(RIG["InkwellCourier"]["ArmR"], [(1, (0, 0, 0)), (30, (-3, 0, 0)), (60, (1, 0, 0)), (90, (-3, 0, 0)), (F + 1, (0, 0, 0))])
-rot_keys(RIG["InkwellCourier"]["Head"], [(1, (0, 0, 0)), (60, (0, 0, 5)), (F + 1, (0, 0, 0))])
-push("InkwellCourier_Idle", [root, RIG["InkwellCourier"]["ArmR"], RIG["InkwellCourier"]["Head"]], F)
+pv = RIG["InkwellCourier"]
+rot_keys(pv["LegL"], [(1, (0, 0, 0)), (60, (0, 2, 0)), (F + 1, (0, 0, 0))])
+rot_keys(pv["LegR"], [(1, (0, 0, 0)), (60, (0, 2, 0)), (F + 1, (0, 0, 0))])
+rot_keys(pv["ArmR"], [(1, (0, 0, 0)), (30, (-3, 0, 0)), (60, (1, 0, 0)), (90, (-3, 0, 0)), (F + 1, (0, 0, 0))])
+rot_keys(pv["Head"], [(1, (0, 0, 0)), (60, (0, 0, 5)), (F + 1, (0, 0, 0))])
+push("InkwellCourier_Idle", [pv["LegL"], pv["LegR"], pv["ArmR"], pv["Head"]], F)
+
+
+def walk_clip(clip, pv, arm_r_amp=18):
+    """1 s in-place walk cycle: legs swing opposite, arms counter-swing, no root translation."""
+    F = 30
+    for side, ph in (("L", 1), ("R", -1)):
+        rot_keys(pv[f"Leg{side}"], [(1, (24 * ph, 0, 0)), (8, (0, 0, 0)), (16, (-24 * ph, 0, 0)), (23, (0, 0, 0)),
+                                    (F + 1, (24 * ph, 0, 0))])
+    for side, ph, amp in (("L", -1, 18), ("R", 1, arm_r_amp)):
+        rot_keys(pv[f"Arm{side}"], [(1, (amp * ph, 0, 0)), (16, (-amp * ph, 0, 0)), (F + 1, (amp * ph, 0, 0))])
+    rot_keys(pv["Head"], [(1, (0, 0, 0)), (8, (2, 0, 0)), (16, (0, 0, 0)), (23, (2, 0, 0)), (F + 1, (0, 0, 0))])
+    push(clip, [pv["LegL"], pv["LegR"], pv["ArmL"], pv["ArmR"], pv["Head"]], F)
+
+
+walk_clip("InkwellCourier_Walk", RIG["InkwellCourier"], arm_r_amp=6)  # envelope hand swings less
+
+# Mira clips: walk (in place), idle (breathing / weight shift), wave once
+walk_clip("Mira_Walk", RIG["Mira"], arm_r_amp=12)
+F = 120
+pv = RIG["Mira"]
+rot_keys(pv["LegL"], [(1, (0, 0, 0)), (60, (0, -1.5, 0)), (F + 1, (0, 0, 0))])
+rot_keys(pv["LegR"], [(1, (0, 0, 0)), (60, (0, -1.5, 0)), (F + 1, (0, 0, 0))])
+rot_keys(pv["ArmL"], [(1, (0, 0, 0)), (30, (0, -1.5, 0)), (60, (0, 0, 0)), (90, (0, -1.5, 0)), (F + 1, (0, 0, 0))])
+rot_keys(pv["Head"], [(1, (0, 0, 0)), (45, (2, 0, 4)), (90, (0, 0, -3)), (F + 1, (0, 0, 0))])
+push("Mira_Idle", [pv["LegL"], pv["LegR"], pv["ArmL"], pv["Head"]], F)
+F = 36
+rot_keys(pv["ArmL"], [(1, (0, 0, 0)), (10, (-10, 150, 0)), (16, (-10, 138, 0)), (22, (-10, 158, 0)),
+                      (28, (-10, 142, 0)), (F + 1, (0, 0, 0))])  # left arm swings up/out about its Y axis
+rot_keys(pv["Head"], [(1, (0, 0, 0)), (14, (0, 0, -6)), (F + 1, (0, 0, 0))])
+push("Mira_Wave_Once", [pv["ArmL"], pv["Head"]], F)
 
 # Reader_Nook_Idle (7 s, loop): breathing + eyes/head moving down the page and back up. No legs, no page leaf.
 F = 210
@@ -3425,6 +3553,8 @@ for _ob in scene.objects:
     if _ob.animation_data:
         for _tr in _ob.animation_data.nla_tracks:
             _tr.mute = True
+restore()  # the exporter leaves the last sampled pose on the properties; put every figure back at rest
+scene.frame_set(1)
 alarm.hide_viewport = True
 alarm.hide_render = True
 
@@ -3455,6 +3585,7 @@ if DO_RENDER:
     render_to(os.path.join(OUT, "preview-reader.png"), (7.6, -5.4, 1.5), (6.55, -2.75, 0.85), 40)
     render_to(os.path.join(OUT, "preview-owner.png"), (3.05, 1.9, 1.6), (3.95, 4.15, 0.9), 34)
     render_to(os.path.join(OUT, "preview-pastry.png"), (-1.3, 1.45, 1.75), (-1.85, 3.5, 1.2), 26)
+    render_to(os.path.join(OUT, "preview-mira.png"), (-6.5, -6.4, 1.55), (-7.55, -4.4, 0.95), 34)
     render_to(os.path.join(OUT, "preview-nook.png"), (3.9, -8.0, 2.7), (6.3, -2.9, 0.8), 30)
     render_to(os.path.join(OUT, "preview-gate.png"), (0.75, 2.3, 1.5), (0.5, 3.4, 1.12), 40)
     aim(cam, *OVERVIEW)
