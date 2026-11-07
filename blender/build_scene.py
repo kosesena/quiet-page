@@ -2410,6 +2410,151 @@ cyl("Customer_CupLidTop", c_cu, 0.029, 0.008, (0, 0, 0.136), M["cup"], segs=16, 
 logo_disc("Customer_CupLogo", c_cu, 0.016, 0.002, (0, -0.0375, 0.098), parent=None, rot=(90, 0, 0))
 bpy.data.objects["Customer_CupLogo"].location = (CT_X + 0.22, CT_Yc - 0.2 - 0.0375, 0.762 + 0.098)
 
+
+# ================================================================ 19. Holiday takeaway cups (our own design)
+c_hc = make_coll("HolidayCups")
+hcr = empty("HolidayCups", c_hc)
+
+
+def _holiday_cup_texture(W=1024, H=512):
+    rng_c = _np.random.default_rng(12)
+    top, bot = _np.array(hex_srgb("#c73a62")), _np.array(hex_srgb("#b8284f"))
+    t = _np.linspace(0, 1, H)[:, None, None]
+    can = (top * (1 - t) + bot * t).repeat(W, axis=1).astype(_np.float32)  # row 0 = top of cup
+
+    def disc(cv, cx, cy, r, col):
+        y0, y1 = max(0, int(cy - r)), min(cv.shape[0], int(cy + r) + 1)
+        x0, x1 = max(0, int(cx - r)), min(cv.shape[1], int(cx + r) + 1)
+        if y0 >= y1 or x0 >= x1:
+            return
+        yy, xx = _np.mgrid[y0:y1, x0:x1]
+        m = (yy - cy) ** 2 + (xx - cx) ** 2 <= r * r
+        cv[y0:y1, x0:x1][m] = col
+
+    def line(cv, x0, y0, x1, y1, r, col):
+        n = int(max(abs(x1 - x0), abs(y1 - y0)) / max(1, r * 0.6)) + 1
+        for k in range(n + 1):
+            u = k / n
+            disc(cv, x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, r, col)
+
+    def tree(cv, cx, apex_y, base_y, half_w, sc, seed):
+        rg = _np.random.default_rng(seed)
+        mint = _np.array(hex_srgb("#a9d8c5"))
+        hgt = base_y - apex_y
+        for _ in range(int(230 * sc)):
+            ty = rg.uniform(0.04, 1.0)
+            hw = half_w * ty
+            x = cx + rg.uniform(-hw, hw)
+            y = apex_y + ty * hgt
+            ang = rg.uniform(-0.6, 0.6) + (0.5 if x > cx else -0.5)
+            ln = rg.uniform(9, 17) * sc
+            line(cv, x, y, x + math.cos(ang) * ln * (1 if x > cx else -1), y + math.sin(abs(ang)) * ln * 0.6,
+                 max(1.5, 2.4 * sc), mint)
+        # candy-stripe garlands (red / white segments)
+        for g in range(3):
+            gy0 = apex_y + hgt * (0.3 + g * 0.22)
+            gy1 = gy0 + hgt * 0.12
+            hw0, hw1 = half_w * (gy0 - apex_y) / hgt, half_w * (gy1 - apex_y) / hgt
+            n = 18
+            for k in range(n):
+                u0, u1 = k / n, (k + 1) / n
+                xa, xb = cx - hw0 + (2 * hw1) * u0 * 0.98, cx - hw0 + (2 * hw1) * u1 * 0.98
+                ya, yb = gy0 + (gy1 - gy0) * u0, gy0 + (gy1 - gy0) * u1
+                col = _np.array(hex_srgb("#d23a3a")) if k % 2 == 0 else _np.array(hex_srgb("#fbf4ea"))
+                line(cv, xa, ya, xb, yb, max(1.2, 2.0 * sc), col)
+        # ornament dots
+        cols = [_np.array(hex_srgb(c)) for c in ("#f4ead8", "#e0913a", "#1f5a3e")]
+        for k in range(int(26 * sc)):
+            ty = rg.uniform(0.12, 0.97)
+            hw = half_w * ty * 0.9
+            disc(cv, cx + rg.uniform(-hw, hw), apex_y + ty * hgt, rg.uniform(3.5, 5.5) * sc, cols[k % 3])
+        # orange ribbon bow at the top
+        org = _np.array(hex_srgb("#e0913a"))
+        for sx in (-1, 1):
+            line(cv, cx, apex_y - 4 * sc, cx + sx * 16 * sc, apex_y - 12 * sc, 4.5 * sc, org)
+            line(cv, cx, apex_y - 4 * sc, cx + sx * 9 * sc, apex_y + 10 * sc, 2.5 * sc, org)
+        disc(cv, cx, apex_y - 4 * sc, 5 * sc, org)
+
+    # front tree (bottom, centred under the logo)
+    tree(can, W * 0.5, H * 0.60, H * 0.96, W * 0.15, 1.0, 1)
+    # smaller tree on the back (drawn centred, then rolled half a turn so it straddles the seam)
+    back = can.copy()
+    tree(back, W * 0.5, H * 0.70, H * 0.96, W * 0.1, 0.7, 2)
+    back_mask = _np.any(_np.abs(back - can) > 1e-4, axis=2)
+    back_r, mask_r = _np.roll(back, W // 2, axis=1), _np.roll(back_mask, W // 2, axis=1)
+    can[mask_r] = back_r[mask_r]
+    # our round logo badge, front middle (resampled from the packed logo image, alpha-composited)
+    lw, lh = logo_img.size
+    px = _np.empty(lw * lh * 4, dtype=_np.float32)
+    logo_img.pixels.foreach_get(px)
+    px = px.reshape(lh, lw, 4)[::-1]       # row 0 = top
+    bw, bh = int(W * 0.21), int(H * 0.36)  # badge footprint on the unrolled cup (~4.5 cm round)
+    ys = (_np.arange(bh) * lh / bh).astype(int)
+    xs = (_np.arange(bw) * lw / bw).astype(int)
+    patch = px[ys][:, xs]
+    cy0, cx0 = int(H * 0.12), int(W * 0.5 - bw / 2)
+    a = patch[..., 3:4]
+    region = can[cy0:cy0 + bh, cx0:cx0 + bw]
+    can[cy0:cy0 + bh, cx0:cx0 + bw] = region * (1 - a) + patch[..., :3] * a
+    return np_image("QuietPage_HolidayCup", can[::-1].copy())
+
+
+M["holiday_cup"] = tex_material("M_HolidayCup", _holiday_cup_texture(), 0.82)
+
+
+def holiday_cup(name, loc, h=0.12, r_bot=0.028, r_top=0.036, lid=True):
+    """Tapered paper cup with the wrap texture (front = -Y at u 0.5), optional white lid."""
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new("UVMap")
+    N = 28
+    lo, hi = [], []
+    for k in range(N + 1):
+        a = -math.pi * 1.5 + 2 * math.pi * k / N   # k = N/2 -> -pi/2 (front, -Y)
+        lo.append(bm.verts.new((r_bot * math.cos(a), r_bot * math.sin(a), 0.0)))
+        hi.append(bm.verts.new((r_top * math.cos(a), r_top * math.sin(a), h)))
+    for k in range(N):
+        f = bm.faces.new((lo[k], lo[k + 1], hi[k + 1], hi[k]))
+        for lp, (u, v) in zip(f.loops, ((k / N, 0), ((k + 1) / N, 0), ((k + 1) / N, 1), (k / N, 1))):
+            lp[uv].uv = (u, v)
+    cen = bm.verts.new((0, 0, 0))
+    for k in range(N):
+        f = bm.faces.new((cen, lo[k + 1], lo[k]))
+        for lp in f.loops:
+            lp[uv].uv = (0.5, 0.02)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    ob = finish_mesh(bm, name, c_hc, M["holiday_cup"], loc, hcr, 60)
+    if lid:
+        cyl(f"{name}_Lid", c_hc, r_top + 0.002, 0.012, (loc[0], loc[1], loc[2] + h + 0.006), M["cup"], segs=20,
+            parent=hcr, r2=r_top - 0.002)
+        cyl(f"{name}_LidTop", c_hc, r_top - 0.008, 0.008, (loc[0], loc[1], loc[2] + h + 0.016), M["cup"],
+            segs=20, parent=hcr)
+    return ob
+
+
+bpy.context.view_layer.update()
+O_ = bpy.data.objects
+# PickupCorner: swap the three cup bodies (+ old band/sleeve) for holiday cups; name label moves to the back
+for i in range(3):
+    root = O_[f"PickupCorner_Cup{i}"]
+    wp = root.matrix_world.translation.copy()
+    for part in ("Body", "Band", "Sleeve", "Lid", "LidTop"):
+        ob = O_.get(f"PickupCorner_Cup{i}_{part}")
+        if ob:
+            bpy.data.objects.remove(ob)
+    O_[f"PickupCorner_Cup{i}_Label"].location = (0, 0.0345, 0.1)
+    holiday_cup(f"PickupCorner_HolidayCup{i}", (wp.x, wp.y, wp.z))
+# Customer's cup at the CommunalTable
+root = O_["Customer_Cup"]
+wp = root.matrix_world.translation.copy()
+for nm in ("Customer_CupBody", "Customer_CupSleeve", "Customer_CupLid", "Customer_CupLidTop", "Customer_CupLogo"):
+    ob = O_.get(nm)
+    if ob:
+        bpy.data.objects.remove(ob)
+holiday_cup("Customer_HolidayCup", (wp.x, wp.y, wp.z))
+# short stack of holiday cups by the espresso machine (counter end)
+for k in range(4):
+    holiday_cup(f"Counter_HolidayCupStack{k}", (2.75, COUNTER_Y + 0.16, CT_H + k * 0.022), lid=False)
+
 # ================================================================ 9. Characters
 def figure(name, loc, rot_z, top, pants, hair_fn, arms=("down", "down"), eyes=True,
            extras=None, sleeve=None):
@@ -2853,6 +2998,7 @@ if DO_RENDER:
     render_to(os.path.join(OUT, "preview-holiday.png"), (4.2, -8.2, 2.8), (6.6, -3.2, 1.1), 26)
     render_to(os.path.join(OUT, "preview-walls.png"), (1.2, -1.8, 2.1), (-5.2, 3.0, 1.45), 22)
     render_to(os.path.join(OUT, "preview-customer.png"), (0.15, -1.75, 1.45), (1.95, -0.85, 0.8), 36)
+    render_to(os.path.join(OUT, "preview-cups.png"), (2.85, 2.95, 1.32), (3.17, 3.5, 1.17), 55)
     render_to(os.path.join(OUT, "preview-nook.png"), (3.9, -8.0, 2.7), (6.3, -2.9, 0.8), 30)
     render_to(os.path.join(OUT, "preview-gate.png"), (0.75, 2.3, 1.5), (0.5, 3.4, 1.12), 40)
     aim(cam, *OVERVIEW)
