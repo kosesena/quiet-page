@@ -889,18 +889,21 @@ PC_X0, PC_X1 = -CT_W / 2 + 0.08, -0.72          # keeps clear of the register / 
 PC_W, PC_D, PC_H = PC_X1 - PC_X0, 0.5, 0.6
 pc = empty("PastryCase", c_pc, ((PC_X0 + PC_X1) / 2, COUNTER_Y - 0.02, 1.0))
 box("PastryCase_Base", c_pc, (PC_W, PC_D, 0.06), (0, 0, 0.03), M["walnut"], bevel=0.01, parent=pc)
-box("PastryCase_Back", c_pc, (PC_W, 0.02, PC_H), (0, PC_D / 2 - 0.01, PC_H / 2 + 0.03), M["walnut"], bevel=0.006,
+# service case: the back is open (staff reach in); only a thin walnut rail along the top-back edge
+M["case_glass"] = mat("M_CaseGlassClear", "#eef7fa", 0.03, alpha=0.07)
+M["case_shelf"] = mat("M_CaseShelfGlass", "#e6f2f6", 0.05, alpha=0.22)
+box("PastryCase_BackRail", c_pc, (PC_W, 0.025, 0.02), (0, PC_D / 2 - 0.0125, PC_H + 0.025), M["walnut"], bevel=0.004,
     parent=pc)
 for sx in (-1, 1):
     box(f"PastryCase_Side{sx}", c_pc, (0.012, PC_D, PC_H), (sx * (PC_W / 2 - 0.006), 0, PC_H / 2 + 0.03),
-        M["glass"], bevel=0.0, parent=pc)
-box("PastryCase_Glass", c_pc, (PC_W - 0.02, PC_D - 0.04, 0.012), (0, 0.0, PC_H + 0.03), M["glass"], bevel=0.0,
+        M["case_glass"], bevel=0.0, parent=pc)
+box("PastryCase_Glass", c_pc, (PC_W - 0.02, PC_D - 0.04, 0.012), (0, 0.0, PC_H + 0.03), M["case_glass"], bevel=0.0,
     parent=pc)  # top glass
 box("PastryCase_GlassFront", c_pc, (PC_W - 0.02, 0.012, PC_H + 0.06), (0, -PC_D / 2 + 0.1, PC_H / 2 + 0.03),
-    M["glass"], bevel=0.0, parent=pc, rot=(-14, 0, 0))
+    M["case_glass"], bevel=0.0, parent=pc, rot=(-14, 0, 0))
 L1, L2, L3 = 0.06, 0.27, 0.46  # tier heights (base + two glass shelves)
 for i, z in enumerate((L2, L3)):
-    box(f"PastryCase_Shelf{i}", c_pc, (PC_W - 0.04, PC_D - 0.12, 0.012), (0, 0.04, z - 0.006), M["glass"], bevel=0.0,
+    box(f"PastryCase_Shelf{i}", c_pc, (PC_W - 0.04, PC_D - 0.12, 0.012), (0, 0.04, z - 0.006), M["case_shelf"], bevel=0.0,
         parent=pc)
     box(f"PastryCase_ShelfLED{i}", c_pc, (PC_W - 0.08, 0.012, 0.005), (0, -0.14, z - 0.016), M["led_2700_soft"],
         bevel=0.0, parent=pc)
