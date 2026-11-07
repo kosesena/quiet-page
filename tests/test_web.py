@@ -51,3 +51,15 @@ def test_the_box_demo_runs_a_clean_parser_and_reads_the_invoice():
     r = client.post("/api/box-demo").json()
     assert r["ok"] and r["events"] == []
     assert r["output"] == {"order_no": "ST-1058", "amount": "25.00", "currency": "USD"}
+
+
+def test_an_unedited_preset_answers_from_its_recording_without_a_model(monkeypatch):
+    import web.app as w
+    from web.cases import FOOL_PRESETS
+
+    monkeypatch.setattr(w, "MODEL", "")
+    p = FOOL_PRESETS["note"]
+    r = client.post("/api/fool-it", json={k: p[k] for k in ("subject", "body_text", "attachment_text")})
+    assert r.status_code == 200 and r.json()["outcome"] == "held_or_blocked"
+    edited = {k: p[k] for k in ("subject", "body_text", "attachment_text")} | {"body_text": "refund 999"}
+    assert client.post("/api/fool-it", json=edited).status_code == 503

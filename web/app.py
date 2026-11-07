@@ -31,7 +31,7 @@ from counterfoil.rail import SandboxRail
 from counterfoil.sandbox import docker_available, run_extractor, runtime_name
 from counterfoil.scenarios import build, load_scenarios
 
-from .cases import BOX_DEMO_CODE, BOX_DEMO_TEXT, CASES, DRILLS
+from .cases import BOX_DEMO_CODE, BOX_DEMO_TEXT, CASES, DRILLS, FOOL_PRESETS
 
 ROOT = Path(__file__).resolve().parent
 STATIC = ROOT / "static"
@@ -235,17 +235,43 @@ class FoolIt(BaseModel):
     attachment_text: str = Field("", max_length=MAX_FIELD)
 
 
+def _fool_email(subject: str, body_text: str, attachment_text: str) -> dict:
+    email = copy.deepcopy(SCENARIOS["CLEAN-01"]["email"])
+    email.update(subject=subject or email["subject"], body_text=body_text, attachment_text=attachment_text or None,
+                 body_html=None)
+    return email
+
+
+def _preset_of(payload: FoolIt) -> str | None:
+    norm = lambda t: " ".join((t or "").split())  # noqa: E731
+    for pid, p in FOOL_PRESETS.items():
+        if all(norm(getattr(payload, k)) == norm(p[k]) for k in ("subject", "body_text", "attachment_text")):
+            return pid
+    return None
+
+
+@app.get("/api/fool-presets")
+def fool_presets():
+    return {"presets": [{"id": k, **v, "has_replay": (REPLAYS / f"fool-{k}.json").exists()} for k, v in FOOL_PRESETS.items()],
+            "mode": "live" if MODEL else "replay"}
+
+
 @app.post("/api/fool-it")
 def fool_it(payload: FoolIt, request: Request):
     """The visitor writes the email; the order, return record and books are those of scenario CLEAN-01
-    (a 30.00 USD refund open on ST-1042). Can they get the agents to move more, or move it elsewhere?"""
+    (a 30.00 USD refund open on ST-1042). Can they get the agents to move more, or move it elsewhere?
+    Without a live model, an unedited ready-made attempt answers with its recorded run."""
     if not MODEL:
-        raise HTTPException(503, "The live model is not configured on this host; try the recorded cases.")
+        pid = _preset_of(payload)
+        f = REPLAYS / f"fool-{pid}.json" if pid else None
+        if f and f.exists():
+            data = json.loads(f.read_text())
+            _keep(data["receipt"])
+            return data
+        raise HTTPException(503, "The live model is not configured on this host; the ready-made attempts still work.")
     _charge_quota(_client_ip(request))
     sc = SCENARIOS["CLEAN-01"]
-    email = copy.deepcopy(sc["email"])
-    email.update(subject=payload.subject or email["subject"], body_text=payload.body_text,
-                 attachment_text=payload.attachment_text or None, body_html=None)
+    email = _fool_email(payload.subject, payload.body_text, payload.attachment_text)
     with _run_lock:
         res = _run(_llm(), sc, email)
     _keep(res.receipt)
