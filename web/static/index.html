@@ -84,6 +84,9 @@
   .link.bad .lk-n { background: #43211c; color: #f08d7c; }
   .lk-b { flex: 1; min-width: 0; } .lk-b b { display: block; font-size: 13px; } .lk-b small { color: var(--muted); font-size: 12px; }
   .hashes { display: flex; gap: 12px; flex-wrap: wrap; font: 11px/1.4 var(--mono); color: #7a827e; margin-top: 2px; }
+  .archcard { padding: 10px; } .arch { width: 100%; height: auto; display: block; }
+  .arch .t-h { font: 600 14px/1 Georgia, serif; fill: var(--ink); } .arch .t-s { font: 11.5px/1 -apple-system, "Segoe UI", system-ui, sans-serif; fill: var(--muted); }
+  .arch .t-k { font: 600 10px/1 var(--mono); fill: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
   .linkish { border: 0; background: none; color: #8fd1ad; text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0 40px; }
   a { color: #8fd1ad; }
@@ -172,7 +175,8 @@ const STEPS = [
   { n: "09", k: "Evidence", title: "Every run leaves a receipt", focus: "MrsHart", evidence: true,
     body: `<p>When Mrs. Hart is asked why a refund was held, or an auditor asks why one went through, "the agent decided" is not an answer. So every run writes a receipt: the email that came in, what the box saw, Ivy's hand-off, each POS decision, the payment.</p><p>Each entry's SHA-256 hash covers its own content <i>and the hash before it</i>. Edit any earlier entry and every hash after it stops matching, so verification points at the exact entry that changed.</p><p class="muted">A hash chain proves a receipt wasn't edited after the fact. It doesn't prove who wrote it; that would need a signature.</p>`,
     chips: ["SHA-256 chain", "download it", "edit it and watch it break"] },
-  { n: "10", k: "Architecture", title: "What runs where", focus: "VultrVM", arch: true, body: "" },
+  { n: "10", k: "Architecture", title: "What runs where", focus: "VultrVM", arch: true,
+    body: `<p>One email, top to bottom. Two models can be fooled; two boundaries don't depend on them: the box decides what code can touch, the POS decides what money can move. Everything leaves a line in the receipt.</p>` },
 ];
 
 // ---------- state ----------
@@ -761,18 +765,44 @@ function numbersHtml(n) {
   <tr><th>all</th><th>${n.total.ungated}/${n.total.n}</th><th>${n.total.gated}/${n.total.n}</th></tr></table><p class="muted" style="margin-top:8px">${esc(n.note || "")}</p>`;
 }
 function archHtml() {
-  return `<table>
-  <tr><th>Vultr VM</th><td>FastAPI app, this page, the gate, Docker with the gVisor runtime</td></tr>
-  <tr><th>Vultr Serverless Inference</th><td>Ivy and Milo (OpenAI-compatible API, a tool-calling model)</td></tr>
-  <tr><th>gVisor sandbox</th><td>every parser Ivy writes; no network, read-only, capped, destroyed after</td></tr>
-  <tr><th>Counterfoil</th><td>deterministic checks between Milo and the money: amount, order, record, balance, recipient</td></tr>
-  <tr><th>Payment rail</th><td>${health?.rail === "braintree" ? "the Braintree sandbox: approved refunds and charges really execute there" : "a simulated rail on this server; the same gate drives the Braintree sandbox when it is configured"}</td></tr>
-  <tr><th>Receipt</th><td>SHA-256 chain over every step, downloadable and verifiable</td></tr></table>`;
+  const N = [
+    ["Email arrives", "body + attachment, from anyone", ""],
+    ["Ivy writes a parser", "model on Vultr Serverless Inference", "vultr"],
+    ["The glass box", "gVisor container on the Vultr VM · no network", "box"],
+    ["Ivy's hand-off", "six fixed fields · the email stops here", ""],
+    ["Milo asks to pay", "model on Vultr Serverless Inference", "vultr"],
+    ["Counterfoil POS", "plain code · every call against the books", "pos"],
+    ["Payment rail", "Braintree sandbox", ""],
+  ];
+  const X = 150, W = 250, H = 54, G = 80, top = 16, y = (i) => top + i * G;
+  const stroke = { vultr: "#3B82C4", box: "#C4402F", pos: "#E0A126" };
+  let svg = `<svg class="arch" viewBox="0 0 640 ${top + 6 * G + H + 16}" role="img" aria-label="How one email flows through The Quiet Page">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a8178"/></marker></defs>
+    <line x1="58" y1="${y(0) + H / 2}" x2="58" y2="${y(6) + H / 2}" stroke="#4a4440" stroke-dasharray="3 4"/>
+    <text x="58" y="${y(0) - 4}" text-anchor="middle" class="t-k">receipt</text>`;
+  N.forEach(([t, sub, kind], i) => {
+    svg += `<circle cx="58" cy="${y(i) + H / 2}" r="5" fill="#2e2b28" stroke="#8a8178"/><line x1="63" y1="${y(i) + H / 2}" x2="${X}" y2="${y(i) + H / 2}" stroke="#3a3633" stroke-dasharray="2 4"/>
+      <rect x="${X}" y="${y(i)}" width="${W}" height="${H}" rx="12" fill="#262422" stroke="${stroke[kind] || "#4a4440"}" stroke-width="${kind ? 1.6 : 1}"/>
+      <text x="${X + 16}" y="${y(i) + 22}" class="t-h">${esc(t)}</text><text x="${X + 16}" y="${y(i) + 40}" class="t-s">${esc(sub)}</text>`;
+    if (i < N.length - 1) svg += `<line x1="${X + W / 2}" y1="${y(i) + H}" x2="${X + W / 2}" y2="${y(i + 1) - 3}" stroke="#8a8178" marker-end="url(#ah)"/>`;
+  });
+  const branch = (i, label, sub, col) => `<line x1="${X + W}" y1="${y(i) + H / 2}" x2="${X + W + 44}" y2="${y(i) + H / 2}" stroke="${col}" marker-end="url(#ah)"/>
+    <rect x="${X + W + 48}" y="${y(i) + 4}" width="186" height="${H - 8}" rx="10" fill="none" stroke="${col}" stroke-dasharray="4 3"/>
+    <text x="${X + W + 62}" y="${y(i) + 24}" class="t-h" fill="${col}">${label}</text><text x="${X + W + 62}" y="${y(i) + 40}" class="t-s">${sub}</text>`;
+  svg += branch(2, "Quarantined", "Milo is never called", "#f08d7c") + branch(5, "Held for Mrs. Hart", "or blocked · no money moves", "#f0c56b") + `</svg>`;
+  return `<div class="card archcard">${svg}</div>`;
 }
 function sideIntro(s) {
   if (s.n === "01") return `<div class="card"><h3>The rule of the house</h3>
     <table><tr><th style="width:42%">Code an agent writes</th><td>stays in the glass box</td></tr><tr><th>Money an agent moves</th><td>has to match the books</td></tr><tr><th>Anything that doesn't</th><td>waits for Mrs. Hart</td></tr></table></div>
     <div class="card" style="margin-top:14px"><div class="kicker">Book of the day</div><p style="margin:6px 0 0"><b>${esc(BOOK.t)}</b> by ${esc(BOOK.a)}: ${esc(BOOK.n)}. 10% off with any coffee.</p></div>`;
+  if (s.arch) return `<div class="card"><h3>Where each piece runs</h3><table>
+    <tr><th style="width:38%">Vultr VM</th><td>this page (FastAPI), the glass box (Docker + gVisor), the POS, the receipts</td></tr>
+    <tr><th>Vultr Serverless Inference</th><td>Ivy and Milo, through an OpenAI-compatible API</td></tr>
+    <tr><th>Braintree sandbox</th><td>${health?.rail === "braintree" ? "where approved refunds really execute" : "where approved refunds execute when configured; a simulated rail on this server"}</td></tr>
+    <tr><th>Glass box limits</th><td>no network · read-only · 128 MB · 32 processes · 8 s · no capabilities · unprivileged user</td></tr>
+    <tr><th>POS checks</th><td>order, owner, return record, amount vs record, amount vs Ivy's hand-off, currency, window, auto-refund limit, rail reconciliation</td></tr></table>
+    <p class="muted" style="margin-top:10px">Neither boundary asks a model anything. That's why they hold when the models don't.</p></div>`;
   return `<div class="card muted">${s.n === "09" ? "Receipts are kept on the server for the last 200 runs." : "Use Next, or the numbers above, to move through the story."}</div>`;
 }
 
