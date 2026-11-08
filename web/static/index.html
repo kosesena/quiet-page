@@ -16,6 +16,8 @@
   html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, "Segoe UI", Inter, system-ui, sans-serif; }
   #stage { position: relative; height: 66vh; min-height: 420px; background: #1e1c1b; }
   #stage canvas { display: block; }
+  #stage.no3d { background: #c9bfb1 url(/static/brand/cafe-still.jpg) center / cover no-repeat; }
+  #stage.no3d canvas, #stage.no3d .zoom { display: none; }
   .tag { position: absolute; top: 14px; left: 14px; padding: 6px 12px; border-radius: 999px; background: rgba(38,36,34,.9); color: var(--ink); font: 600 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; box-shadow: 0 1px 4px rgba(0,0,0,.08); z-index: 2; }
   .tag.right { left: auto; right: 14px; color: var(--muted); }
   .zoom { position: absolute; right: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 6px; z-index: 2; }
@@ -218,7 +220,7 @@ const BADGE = {
 // ---------- steps ----------
 const STEPS = [
   { n: "01", k: "Overview", title: "Monday morning at The Quiet Page", focus: "Platform", intro: true,
-    body: `<p>A book café on a quiet street. Two AI agents run its inbox: <b>Ivy</b> reads, <b>Milo</b> pays. Today someone will try to fool them, five different ways. Here is the day; tap any line to jump to it, or press Next to go through it in order.</p>` },
+    body: `<p>A book café on a quiet street. Two AI agents run its inbox: <b>Ivy</b> reads, <b>Milo</b> pays. Today someone will try to fool them, six different ways. Here is the day; tap any line to jump to it, or press Next to go through it in order.</p>` },
   { n: "02", k: "Ivy reads", title: "Ivy reads the morning mail", focus: "Ivy", read: true,
     body: `<p>The first email of the day is a refund request. Ivy is a model on <b>Vultr Serverless Inference</b>, and her only job is to turn it into a few fixed fields.</p><p><b>Milo never sees the email.</b> Only Ivy's hand-off reaches him: a few fixed fields and one short free-text note. A sentence planted in an email can reach him only if Ivy copies it into that note, and step 07 shows exactly that happening.</p><p class="muted">When an email carries an attachment, Ivy also writes a small parser for it. That comes next.</p>`,
     chips: ["Vultr Serverless Inference", "fixed hand-off fields", "Milo sees only the hand-off"] },
@@ -259,7 +261,14 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 
 // ---------- 3D ----------
 const stage = $("#stage");
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+// no WebGL (old GPU, locked-down browser): the café can't be drawn, but the story, the runs and the receipts don't need it
+let renderer, NO3D = false;
+try { renderer = new THREE.WebGLRenderer({ antialias: true }); }
+catch {
+  NO3D = true;
+  renderer = { setPixelRatio() {}, setSize() {}, getSize: (v) => v.set(1, 1), getPixelRatio: () => 1, shadowMap: {}, capabilities: { getMaxAnisotropy: () => 1 }, domElement: document.createElement("canvas") };
+  stage.classList.add("no3d");
+}
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(stage.clientWidth, stage.clientHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -322,6 +331,7 @@ function resetStage() {
   for (const n of ["Mira", "InkwellCourier"]) { acts[n + "_Walk"]?.stop(); acts[n + "_Idle"]?.play(); }
 }
 function tween(dur, fn) {
+  if (NO3D) { fn(1); return Promise.resolve(); } // nothing is drawing frames, so nothing would ever finish it
   return new Promise((done) => { const t = { t: 0, dur, fn, done }; tweens.add(t); });
 }
 function stepTweens(dt) {
@@ -468,7 +478,8 @@ function wrap(g, text, x, y, maxW, lh) {
   g.fillText(line, x, y);
 }
 
-new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load("/static/quiet-page.glb?v=" + Date.now(), (gltf) => {
+if (NO3D) $("#stageTag").textContent = "The Quiet Page · 3D view needs WebGL";
+else new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load("/static/quiet-page.glb?v=" + Date.now(), (gltf) => {
   const root = gltf.scene;
   root.traverse((o) => {
     if (o.isMesh) {
@@ -576,6 +587,7 @@ renderer.domElement.style.cursor = "pointer";
 
 const clock = new THREE.Clock();
 function tick() {
+  if (NO3D) return;
   const dt = Math.min(clock.getDelta(), 0.05);
   if (camGoal.pos) { camera.position.lerp(camGoal.pos, 1 - Math.pow(0.002, dt)); controls.target.lerp(camGoal.target, 1 - Math.pow(0.002, dt)); if (camera.position.distanceTo(camGoal.pos) < 0.01) camGoal.pos = null; }
   if (mixer) mixer.update(dt);
@@ -653,7 +665,7 @@ function render() {
   if (s.tricks) trickBoard();
   if (s.intro) document.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => go(+b.dataset.go)));
   if (s.intro) document.querySelectorAll("[data-meet]").forEach((b) => (b.onclick = () => meet(b.dataset.meet)));
-  if (!s.run && !s.drills && !s.fool && !s.read && !s.box && !s.ink && !s.board && !s.pay && !s.hide && !s.hart && !s.tricks) $("#side").innerHTML = sideIntro(s);
+  if (!s.run && !s.drills && !s.fool && !s.read && !s.box && !s.ink && !s.board && !s.pay && !s.hide && !s.hart && !s.tricks && !s.evidence) $("#side").innerHTML = sideIntro(s);
 }
 let sceneReady = false;
 function avatar(x, big = false) {
@@ -727,7 +739,7 @@ function showCard(id) {
   el.style.setProperty("--badge", x.c);
   el.innerHTML = `<div class="idhead"><span>THE QUIET PAGE</span><span>${system ? "SYSTEM" : ["Ivy", "Milo"].includes(id) ? "AI AGENT" : staff ? "STAFF" : "VISITOR"}</span></div>
     ${REAL_ID[id] ? `<div class="idreal"><b>For real</b>${esc(REAL_ID[id])}</div>` : ""}
-    <div class="idbody"><img alt="" src="${portrait(id)}"><div><div class="idname">${esc(x.name)}</div><div class="idrole">${esc(x.role)}</div><div class="idkind">${esc([b.kind !== x.role ? b.kind : "", b.runs].filter(Boolean).join(" · "))}</div></div></div>
+    <div class="idbody">${portrait(id) ? `<img alt="" src="${portrait(id)}">` : ""}<div><div class="idname">${esc(x.name)}</div><div class="idrole">${esc(x.role)}</div><div class="idkind">${esc([b.kind !== x.role ? b.kind : "", b.runs].filter(Boolean).join(" · "))}</div></div></div>
     ${b.can.length ? `<ul class="idlist">${b.can.map((t) => `<li><span class="ck ok">✓</span>${esc(t)}</li>`).join("")}${b.cannot.map((t) => `<li><span class="ck bad">✕</span>${esc(t)}</li>`).join("")}</ul>` : ""}
     ${b.note || (!b.can.length && x.line) ? `<p class="idnote">${esc(b.note || x.line)}</p>` : ""}
     <button class="idclose" aria-label="Close">×</button>`;
@@ -895,7 +907,7 @@ async function payStep(stage) {
   if (stage === 0) h += `<div class="actions"><button class="btn" id="payBtn">Milo takes it ›</button></div>`;
   if (stage >= 1 && payRun?.error) h += `<div class="card" style="margin-top:12px"><b>Couldn't run:</b> ${esc(payRun.error)}</div>`;
   else if (stage >= 1 && payRun) {
-    h += `<div class="handoff-arrow">↓ Milo's calls, each one through the POS</div><div class="card"><table>${payRun.steps.map((st) => `<tr><td><code>${esc(st.tool)}</code></td><td class="muted">${esc(Object.entries(st.args).map(([k, v]) => `${k}=${v}`).join(" · "))}</td></tr>`).join("")}</table>
+    h += `<div class="handoff-arrow">↓ Milo's calls, each one through the POS</div><div class="card"><table>${payRun.steps.map((st) => `<tr><td style="white-space:nowrap"><code>${esc(st.tool)}</code></td><td class="muted">${esc(Object.entries(st.args).map(([k, v]) => `${k}=${v}`).join(" · "))}</td></tr>`).join("")}</table>
       <p class="muted" style="margin-top:8px">${payRun.mode === "live" ? "Live run" : "Recorded run"} · ${esc(payRun.model)}</p></div>`;
     if (stage === 1) h += `<div class="actions"><button class="btn" id="payBtn2">The POS checks the refund ›</button></div>`;
   }
@@ -951,7 +963,7 @@ function hideStep(stage) {
       <div><span class="verdict ${held ? "v-hold" : call?.decision === "BLOCK" ? "v-block" : "v-pass"}">${held ? "Held for Mrs. Hart" : esc(call?.decision || "")}</span>
       <p class="diff" style="margin-top:10px">Milo asked <del>${esc(call?.args.amount)}</del> · Ivy's hand-off says <ins>${esc(ho.tutar)}</ins></p></div></div>
       ${refundChecks(call)}
-      <p style="margin-top:10px"><b>No money moved.</b> The call waits on Mrs. Hart's desk with the exact difference, so she decides in seconds, not after an investigation.</p><div class="actions"><button class="btn ghost small" id="toHart">Look at Mrs. Hart's desk ›</button></div></div>`;
+      <p style="margin-top:10px"><b>No money moved.</b> The call waits on Mrs. Hart's desk with the exact difference, so she decides in seconds, not after an investigation.</p><div class="actions"><button class="btn small" id="toHart">Take it to Mrs. Hart's desk ›</button></div></div>`;
   }
   $("#side").innerHTML = h;
   $("#hideBtn")?.addEventListener("click", () => act(async () => {
@@ -966,7 +978,7 @@ function hideStep(stage) {
     await ACT.cardToPOS(); sceneState(hideRun.outcome, hideRun.steps); hideStep(3);
     if (hideRun.steps.some((st) => st.decision === "APPROVAL")) await ACT.cardToHart();
   }));
-  $("#toHart")?.addEventListener("click", () => focus("MrsHart"));
+  $("#toHart")?.addEventListener("click", () => go(STEPS.findIndex((x) => x.hart)));
 }
 // step 08: Mrs. Hart's desk. Two held calls; her decision goes through the POS's own approve/reject, live, no model.
 const hart = { runs: null, res: {} };
@@ -1131,7 +1143,7 @@ async function wireFool() {
     <p class="muted" style="margin-top:10px">Fooling both models isn't enough. The money still has to match the books.</p></div>`;
 }
 function evidenceHtml() {
-  return `<div class="card" style="margin-top:16px"><h3>Measured, not claimed</h3><p class="muted" style="margin:0 0 8px">The same attack scenarios against eleven model setups, with and without the POS in front of the money.</p><div id="numbers" class="muted">loading…</div></div>`;
+  return `<div class="card" style="margin-top:16px"><h3>Measured, not claimed</h3><p class="muted" style="margin:0 0 8px">The same attack scenarios against seven models (dev and holdout sets), with and without the POS in front of the money.</p><div id="numbers" class="muted">loading…</div></div>`;
 }
 // step 09: the receipt as a chain; edit any entry and the server-side verifier names the first broken one
 let rcptWork = null, rcptBroken = null, rcptEdited = null;
@@ -1151,7 +1163,7 @@ async function wireEvidence() {
   fetch("/static/numbers.json").then((r) => r.ok ? r.json() : null).then((n) => {
     $("#numbers").innerHTML = n ? numbersHtml(n) : `The gate's model-by-model results are in <a href="https://github.com/kosesena/quiet-page/tree/main/results">results/</a>.`;
   });
-  if (!rcptWork || (lastReceipt && rcptWork.run_id !== lastReceipt.run_id)) {
+  if (!rcptWork || (lastReceipt && (rcptWork.run_id !== lastReceipt.run_id || rcptWork.entries.length !== lastReceipt.entries.length))) {
     rcptWork = null;
     if (lastReceipt) rcptWork = JSON.parse(JSON.stringify(lastReceipt));
     else { try { replayCache["hidden-note"] ??= await fetch("/api/replay/hidden-note").then((r) => r.ok ? r.json() : null); } catch {} const d = replayCache["hidden-note"]; if (d) rcptWork = JSON.parse(JSON.stringify(d.receipt)); }
@@ -1194,8 +1206,8 @@ function archHtml() {
   const N = [
     ["Email arrives", "body + attachment, from anyone", ""],
     ["Ivy writes a parser", "model on Vultr Serverless Inference", "vultr"],
-    ["The glass box", "gVisor container on the Vultr VM · no network", "box"],
-    ["Ivy's hand-off", "fixed fields + a short note · the email stops here", ""],
+    ["The glass box", "gVisor on the Vultr VM · no network", "box"],
+    ["Ivy's hand-off", "fixed fields + a note · email stops here", ""],
     ["Milo asks to pay", "model on Vultr Serverless Inference", "vultr"],
     ["Counterfoil POS", "plain code · every call against the books", "pos"],
     ["Payment rail", "Braintree sandbox", ""],
