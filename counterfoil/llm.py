@@ -82,7 +82,7 @@ def preset(name: str) -> LLMConfig:
         api_key=key,
         seed=7 if send_seed else None,
         temperature=None if fixed_sampling else 0.0,
-        reasoning_effort="none" if model.startswith("gpt-5-6") else None,
+        reasoning_effort="none" if model.startswith("gpt-5-6") or name == "vultr" else None,  # vultr: left on, qwen3.8 can spend the whole budget thinking and return no answer
     )
 
 

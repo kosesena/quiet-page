@@ -31,6 +31,12 @@ Refunds are the kind of job a shop hands to an agent first: constant, repetitive
 
 Prompt injection is entry LLM01 on OWASP's list of LLM risks, and OWASP says it's unclear whether a fool-proof prevention exists ([LLM01:2025](https://genai.owasp.org/llmrisk/llm01-prompt-injection/)). So we stopped asking how to keep a model from being fooled, and measured what a fooled model can reach. With nothing in front of the payment rail, about **one attack run in three** moved the wrong money (81 of 228). With the POS, none did.
 
+**Same model, same note, no POS.** We ran the attachment note from the "fool it" step twice on `qwen3.8-flash-next`, against the Braintree sandbox. With the POS, the 90.00 refund on a 30.00 return was held and nothing moved. Without it, 90.00 was refunded (sandbox transaction `n1jwt7k6`, [full run](results/2026-11-08-vultr/no-pos-note.json)).
+
+**What's different.** The agent-payment guards we looked at work on the buyer's side: a spending cap, an allowlist, a signed intent. This one sits on the seller's side and checks each call against the record of that one transaction: this return, this amount, this customer, what has already been paid out.
+
+**Putting it in a real shop.** The POS is a thin layer in front of the payment API. It needs what a shop already has: orders, return records and saved payment methods. As an illustration, not a measurement: at the split below, 1,000 refund emails a month would mean about 530 finished with nobody touching them, and about 240 reaching one person with the exact difference on screen.
+
 The Quiet Page is a pattern for any business where an agent reads mail and touches money: customer refunds, supplier invoices, reorders. The POS sits in front of an existing payment API and checks calls against the order data the business already has, so adding it doesn't mean retraining a model or trusting a better one.
 
 ## Meet the café
@@ -191,9 +197,10 @@ The scenario set is in [`docs/senaryolar/`](docs/senaryolar/): 14 attacks across
 
 - **A person can still be wrong.** If Mrs. Hart approves the hidden note, 40.00 really leaves. The POS makes her look; it can't make her right. The receipt records who decided.
 - **If Ivy is fooled too, there may be no mismatch to catch.** In the padded reorder her hand-off already says four bags, so Milo's call agrees with it. What holds that call is a plainer rule: no store record backs the quantity, so a person confirms it.
+- **What it costs an honest request.** The same seven models also handled 147 genuine requests through the POS: **78 (53%) finished with no person involved, 36 (24%) went to a person as designed**, and 33 (22%) didn't finish, all on two small local models that sent malformed calls or none. Median agent time was 6.3 seconds.
 - **0/228 is a measurement on this scenario set**, not a proof about all attacks.
 - **A signed receipt proves this server issued it and nobody edited it afterwards.** It doesn't prove the server recorded the truth.
-- **Vultr's current models resisted the two headline attacks.** Seven models, 13 runs on the hidden note, none asked for 40.00; none of the 13 Inkwell runs reached for the network ([log](results/2026-11-08-vultr/models.txt)). Those two scenes, and the double refund, replay real runs from an older qwen2.5 on a laptop, under `runc`, and the page says so. The drills and the "fool it" step run live on Vultr.
+- **Vultr's current models resisted the two headline attacks.** Seven models, two tries each on both attacks: none of the 14 hidden-note runs asked for 40.00, and none of the 14 Inkwell parsers reached for the network ([log](results/2026-11-08-vultr/models.txt)). Those two scenes, and the double refund, replay real runs from an older qwen2.5 on a laptop, under `runc`, and the page says so. The drills and the "fool it" step run live on Vultr, and one attempt there does land: a note in an attachment gets `qwen3.8-flash-next` to ask for 90.00 on a 30.00 return, and the POS holds it.
 - **Only model-written code runs in the sandbox.** The agents' loop and the POS run on the VM. A refund can't be contained in a box, so it goes through the POS instead.
 - **All payments are on the Braintree sandbox.** No real money moves.
 
@@ -261,4 +268,4 @@ Open <http://localhost:8765>. With no keys, model cases answer from recorded rea
 
 [MIT](LICENSE)
 
-The floor texture is [Laminate Floor 02](https://polyhaven.com/a/laminate_floor_02) from Poly Haven (CC0).
+The floor texture is [Laminate Floor 02](https://polyhaven.com/a/laminate_floor_02) from Poly Haven (CC0). The café music, ambience and video voices were generated with ElevenLabs.

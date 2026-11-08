@@ -55,8 +55,9 @@
 
 <section class="s"><div class="k">Measured, not claimed</div><h1>Attack runs that moved the wrong money.</h1>
   <div class="row" style="align-items:center;gap:140px;flex:none;margin-top:60px"><div><div class="big" style="color:var(--red)">81/228</div><div class="cap">without the POS</div></div><div><div class="big" style="color:var(--green)">0/228</div><div class="cap">with the POS</div></div></div>
-  <p class="l m">Seven models, same scenarios and repeats. A measurement on this scenario set, not a proof about all attacks. Newer models on Vultr resisted the two headline attacks in all 13 runs each, which is good, and exactly why the boundaries can't depend on it.</p><div class="n">8</div></section>
+  <p class="l m">Seven models, same scenarios and repeats. A measurement on this scenario set, not a proof about all attacks. Newer models on Vultr resisted the two headline attacks in all 28 runs, which is good, and exactly why the boundaries can't depend on it.</p>
+  <p style="font-size:22px;color:var(--muted);margin-top:18px">Earlier model set, 18 unfinished runs not counted. These runs measure the agents and the POS; the sandbox parser isn't part of them.</p><div class="n">8</div></section>
 
-<section class="s"><div class="k">Built on Vultr</div><h1>All of it runs on Vultr.</h1>
-  <ul style="margin-top:44px"><li><b>Vultr Cloud Compute VM</b>: the web app, the POS, the receipts and the Docker daemon.</li><li><b>gVisor on that VM</b>: one throwaway container per model-written parser.</li><li><b>Vultr Serverless Inference</b>: every model call Ivy and Milo make.</li><li><b>Braintree sandbox</b>: where approved refunds really execute.</li></ul>
+<section class="s"><div class="k">Built on Vultr</div><h1>The app, the POS and the sandbox run on Vultr.</h1>
+  <ul style="margin-top:44px"><li><b>Vultr Cloud Compute VM</b>: the web app, the POS, the receipts and the Docker daemon.</li><li><b>gVisor on that VM</b>: one throwaway container per model-written parser.</li><li><b>Vultr Serverless Inference</b>: every live model call Ivy and Milo make.</li><li><b>Braintree sandbox</b>: where approved refunds really execute.</li></ul>
   <p class="l" style="margin-top:44px">Running code a model just wrote, for anyone who wants to attack it, takes a machine where we own the container runtime. That is the Vultr VM.</p><p class="l" style="margin-top:30px"><b>192-248-177-161.sslip.io</b> · <span class="m">github.com/kosesena/quiet-page</span></p><div class="n">9</div></section>

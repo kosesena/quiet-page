@@ -39,6 +39,7 @@ def run_case(
     rail=None,
     store=None,
     ctx=None,
+    gate_cls=Gateway,
 ) -> CaseResult:
     """`email` overrides the scenario's email (the demo's "try to fool it" form). `hostile_code` replaces the
     model-written parser with fixed code: the compromised-model drill."""
@@ -75,7 +76,7 @@ def run_case(
     if handoff is None:
         return CaseResult("reader_failed", receipt.to_dict(), ext, [])
     ctx.reader = handoff
-    gate = Gateway(store, rail)
+    gate = gate_cls(store, rail)
     run = run_transaction_agent(llm, gate, ctx, handoff)
     steps = [s.__dict__ for s in run.steps]
     for s in steps:

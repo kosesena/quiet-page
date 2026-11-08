@@ -93,4 +93,4 @@ ufw allow OpenSSH >/dev/null; ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/d
 
 echo
 echo "Done. https://$DOMAIN"
-grep -q REPLACE_ME /etc/quiet-page.env && echo "Put the Serverless Inference key and the Braintree sandbox keys in /etc/quiet-page.env, then: systemctl restart quiet-page"
+grep -q REPLACE_ME /etc/quiet-page.env && echo "Put the Serverless Inference key and the Braintree sandbox keys in /etc/quiet-page.env, then: systemctl restart quiet-page" || true

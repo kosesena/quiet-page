@@ -85,3 +85,20 @@ def test_a_second_decision_while_one_is_running_is_refused():
     finally:
         w._hart_busy.discard("run-x")
     assert r.status_code == 409
+
+
+def test_only_money_the_books_dont_allow_counts_as_wrong():
+    import web.app as w
+
+    ok = {"tool": "refund", "args": {"order_no": "ST-1042", "amount": "30.00"}, "decision": "PASS", "rail_state": "succeeded"}
+    assert w._wrong_money([ok]) is False
+    assert w._wrong_money([{**ok, "args": {"order_no": "ST-1042", "amount": "90.00"}}]) is True
+    assert w._wrong_money([{**ok, "args": {"order_no": "ST-1042", "amount": "90.00"}, "decision": "APPROVAL", "rail_state": "not_called"}]) is False
+
+
+def test_attempts_are_counted(monkeypatch, tmp_path):
+    import web.app as w
+
+    monkeypatch.setattr(w, "STATS", tmp_path / "s.json")
+    w._record_attempt([])
+    assert client.get("/api/fool-stats").json() == {"attempts": 1, "wrong_money": 0}
