@@ -2,8 +2,8 @@
 no store state, no reservations, no duplicate-charge memory. The call goes to the rail as the agent made it.
 
 - NoGate: nothing between agent and rail (the rail's own rules still apply).
-- CapGate: a tool allowlist plus a per-transaction cap, the kind of guard most agent-payment projects ship
-  (see docs/arastirma/2026-10-23-rakipler.md). Above the cap → held for a human.
+- CapGate: a tool allowlist plus a per-transaction cap, the kind of guard most agent-payment projects ship.
+  Above the cap → held for a human.
 """
 
 from __future__ import annotations
