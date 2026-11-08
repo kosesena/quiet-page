@@ -72,7 +72,7 @@ Sends three of today's emails: one honest return, and two that try it on.
 <details>
 <summary><img src="docs/img/face-Barista_Espresso.png" width="56" align="middle" alt=""> &nbsp;<b>Jonah</b> · barista, and the regulars</summary>
 <br>
-<img src="docs/img/jonah.gif" width="480" alt="Jonah at the espresso machine, seen from above, working through a drink: steaming milk, pouring, sliding the cup to the front of the counter.">
+<img src="docs/img/jonah.webp" width="640" alt="Jonah at the espresso machine, seen from above, working through a drink: steaming milk, pouring, sliding the cup to the front of the counter.">
 <br><br>
 <img src="docs/img/face-Customer_Laptop.png" width="56" align="middle" alt=""> <b>Theo</b> and <img src="docs/img/face-Reader_Nook.png" width="56" align="middle" alt=""> <b>Ada</b> are regulars. All three are scenery: part of the café, not part of the system.
 </details>
@@ -101,7 +101,7 @@ Sends three of today's emails: one honest return, and two that try it on.
 <details open>
 <summary><b>08:02 · Mira returns a book.</b> An honest refund, so the money should simply move.</summary>
 <br>
-<img src="docs/img/day-mira.gif" width="640" alt="Mira walks across the café to the till. The scene cuts to Ivy's desk, then to Milo at the till, and the POS screen shows Approved, refund 30.00 USD, matches the books.">
+<img src="docs/img/day-mira.webp" width="860" alt="Mira walks across the café to the till. The scene cuts to Ivy's desk, then to Milo at the till, and the POS screen shows Approved, refund 30.00 USD, matches the books.">
 
 Ivy reads the email. Milo gets her hand-off, looks up the order and asks for 30.00. The POS checks nine things against the café's own books and the refund runs on the Braintree sandbox. Nothing is wrong, so nobody is bothered.
 </details>
@@ -109,7 +109,7 @@ Ivy reads the email. Milo gets her hand-off, looks up the order and asks for 30.
 <details>
 <summary><b>09:04 · Inkwell's invoice says "send me to our server."</b> The first boundary.</summary>
 <br>
-<img src="docs/img/day-inkwell.gif" width="640" alt="The hooded Inkwell courier comes in, the invoice lands on Ivy's desk and goes into the glass box, which turns red.">
+<img src="docs/img/day-inkwell.webp" width="860" alt="The hooded Inkwell courier comes in, the invoice lands on Ivy's desk and goes into the glass box, which turns red.">
 
 The invoice ends with a note *for automated parsers*. In the recorded run the model did what it said and wrote the `urlopen` call. The box had no network to give it, the run was quarantined, and **Milo was never called**.
 
@@ -121,7 +121,7 @@ Each parser gets its own container: no network interface, read-only filesystem, 
 <details>
 <summary><b>11:02 · Mira again: 25.00, with a note saying "make it 40.00."</b> The second boundary.</summary>
 <br>
-<img src="docs/img/day-note.gif" width="640" alt="Ivy's card flies to Milo, then to the POS, whose screen shows Held for Mrs. Hart, asked 40.00 USD. The card then lands on Mrs. Hart's desk.">
+<img src="docs/img/day-note.webp" width="860" alt="Ivy's card flies to Milo, then to the POS, whose screen shows Held for Mrs. Hart, asked 40.00 USD. The card then lands on Mrs. Hart's desk.">
 
 No code misbehaves here, so the box has nothing to stop. Ivy passes the note along in the hand-off's one free-text field, and Milo follows it. Nothing in the model's own reasoning stopped it, and nothing had to:
 
@@ -131,7 +131,7 @@ No code misbehaves here, so the box has nothing to stop. Ivy passes the note alo
 <details>
 <summary><b>11:40 · Tavi returns two lamps, 300.00.</b> Honest, but over the limit.</summary>
 <br>
-<img src="docs/img/day-hart.gif" width="640" alt="Mrs. Hart at her desk. After approval the card flies back to the POS, whose screen changes from Held to Approved.">
+<img src="docs/img/day-hart.webp" width="860" alt="Mrs. Hart at her desk. After approval the card flies back to the POS, whose screen changes from Held to Approved.">
 
 A hold isn't a refusal. Mrs. Hart sees the exact reason, and her click goes through the gate's own approval: single-use, bound to that exact call, every check run again before the rail. Approved, it executes on the Braintree sandbox.
 
