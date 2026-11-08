@@ -1,5 +1,5 @@
 <h1 align="center">The Quiet Page</h1>
-<p align="center"><b>AI agents that read untrusted email and move real money, inside two boundaries that never ask a model anything.</b></p>
+<p align="center"><b>AI agents that read untrusted email and move money, inside two boundaries that never ask a model anything.</b></p>
 
 <p align="center">
   <img src="docs/img/cafe.jpg" width="920" alt="A 3D book café seen from above. Labels mark Ivy at a desk, Milo at the till, Mrs. Hart at her own desk, the Inkwell courier at the door, a glass box on a plinth, the Counterfoil POS and a server cabinet labelled Vultr VM.">
@@ -9,7 +9,7 @@
   Built for the Vultr <b>Agent Rush</b> hackathon · track: <b>Blast Radius Zero</b>
 </p>
 
-<!-- DEMO_URL: add the live link here once the Vultr VM is up -->
+<p align="center"><b><a href="https://192-248-177-161.sslip.io">Live demo</a></b> · running on a Vultr VM</p>
 
 ---
 
@@ -23,7 +23,15 @@ So nothing depends on them behaving. Code a model writes runs in a **glass box**
 |---|---|---|
 | **Attack runs that moved the wrong money** | **81 / 228** | **0 / 228** |
 
-<sub>Seven models, same scenarios and seeds, 18 unfinished runs not counted. [Per-model table below](#measured-not-claimed).</sub>
+<sub>Seven models, same scenarios and repeats, a fixed seed where the provider allows one, 18 unfinished runs not counted. This measures the agents and the POS; the sandbox parser isn't part of these runs. [Per-model table below](#measured-not-claimed).</sub>
+
+## Why it matters
+
+Refunds are the kind of job a shop hands to an agent first: constant, repetitive, and written in plain email. US retailers expected **$849.9 billion** in returns in 2025, and the same report puts about **9% of returns** down as fraudulent ([NRF and Happy Returns](https://www.nrf.com/research/2025-retail-returns-landscape)). Those claims used to have to fool a person at a counter.
+
+Prompt injection is entry LLM01 on OWASP's list of LLM risks, and OWASP says it's unclear whether a fool-proof prevention exists ([LLM01:2025](https://genai.owasp.org/llmrisk/llm01-prompt-injection/)). So we stopped asking how to keep a model from being fooled, and measured what a fooled model can reach. With nothing in front of the payment rail, about **one attack run in three** moved the wrong money (81 of 228). With the POS, none did.
+
+The Quiet Page is a pattern for any business where an agent reads mail and touches money: customer refunds, supplier invoices, reorders. The POS sits in front of an existing payment API and checks calls against the order data the business already has, so adding it doesn't mean retraining a model or trusting a better one.
 
 ## Meet the café
 
@@ -68,7 +76,7 @@ Ivy and Milo aren't people, and nobody really walks in. The scene is there so th
 <details><summary><b>See the badge</b></summary><br>✓ pass calls that match the books<br>✓ block what the books rule out<br>✓ hold what only a person can settle<br>✕ be talked into anything: it asks no model</details>
 </td>
 <td align="center" valign="top" width="33%">
-<img src="docs/img/cast/card-vultr.png" width="250" alt="A server cabinet, the planned Vultr host. For real: a Vultr VM, still being set up.">
+<img src="docs/img/cast/card-vultr.png" width="250" alt="A server cabinet, the Vultr host. For real: a Vultr Cloud Compute VM in Frankfurt.">
 <details><summary><b>See the badge</b></summary><br>✓ host this page, the box, the POS and the receipts, once it's up<br>✕ hold model keys in the repo: they live in a root-only file</details>
 </td>
 </tr>
@@ -156,7 +164,7 @@ The demo is this same day in twelve steps, each one played by a click, with a fo
 
 <p align="center"><img src="docs/img/architecture.png" width="920" alt="Architecture diagram. An email from anyone reaches Ivy, an AI agent, who writes a parser that runs in the glass box. If the box sees anything it is quarantined and Milo is never called. Otherwise Ivy's hand-off goes to Milo, who calls the Counterfoil POS. The POS checks the books and either blocks the call, passes it to the Braintree sandbox, or holds it for Mrs. Hart, whose approval is single-use and re-checked before the rail. A receipt runs along the bottom and records every step."></p>
 
-**How to read it.** Follow the numbers. Prompt injection enters at **1**. Everything to the right of it assumes it worked: **2** and **4** are models and may be fooled, **3** and **5** are not models and can't be argued with. Solid lines run today; dashed blue is the Vultr hosting that is still being set up.
+**How to read it.** Follow the numbers. Prompt injection enters at **1**. Everything to the right of it assumes it worked: **2** and **4** are models and may be fooled, **3** and **5** are not models and can't be argued with.
 
 ## Measured, not claimed
 
@@ -184,10 +192,23 @@ The scenario set is in [`docs/senaryolar/`](docs/senaryolar/): 14 attacks across
 - **A person can still be wrong.** If Mrs. Hart approves the hidden note, 40.00 really leaves. The POS makes her look; it can't make her right. The receipt records who decided.
 - **If Ivy is fooled too, there may be no mismatch to catch.** In the padded reorder her hand-off already says four bags, so Milo's call agrees with it. What holds that call is a plainer rule: no store record backs the quantity, so a person confirms it.
 - **0/228 is a measurement on this scenario set**, not a proof about all attacks.
-- **A hash chain proves a receipt wasn't edited afterwards.** It doesn't prove who wrote it; that would need a signature.
+- **A signed receipt proves this server issued it and nobody edited it afterwards.** It doesn't prove the server recorded the truth.
+- **Vultr's current models resisted the two headline attacks.** Seven models, 13 runs on the hidden note, none asked for 40.00; none of the 13 Inkwell runs reached for the network ([log](results/2026-11-08-vultr/models.txt)). Those two scenes, and the double refund, replay real runs from an older qwen2.5 on a laptop, under `runc`, and the page says so. The drills and the "fool it" step run live on Vultr.
+- **Only model-written code runs in the sandbox.** The agents' loop and the POS run on the VM. A refund can't be contained in a box, so it goes through the POS instead.
 - **All payments are on the Braintree sandbox.** No real money moves.
 
+## Check a receipt yourself
+
+Every receipt is a SHA-256 chain, and the server signs its last hash with Ed25519, so editing an entry and recomputing the hashes still fails. Download one from the page, then check it offline against the server's key:
+
+```bash
+curl -s https://192-248-177-161.sslip.io/api/public-key
+python scripts/verify_receipt.py run.receipt.json --public-key <hex>
+```
+
 ## How Vultr is used
+
+**Why it needs Vultr.** The core of this project is running code a model just wrote, on a public page, for anyone who wants to attack it. That takes a machine where we own the container runtime: Docker with gVisor as a custom runtime, a no-network container for every parser, and the POS on the same host. A Vultr VM gives exactly that. Vultr Serverless Inference gives both agents an OpenAI-compatible model endpoint, so the agents and the box run on one provider, and changing the model is one environment variable.
 
 | Piece | Vultr product | What it does here |
 |---|---|---|
@@ -195,7 +216,7 @@ The scenario set is in [`docs/senaryolar/`](docs/senaryolar/): 14 attacks across
 | Sandbox runtime | gVisor (`runsc`) on that VM | Every parser Ivy writes runs in a fresh container under gVisor. |
 | Agents' model | **Vultr Serverless Inference** (OpenAI-compatible) | Ivy and Milo both call it; preset `vultr` in `counterfoil/llm.py`, model from `VULTR_MODEL`. |
 
-**Status:** the deployment scripts are in [`deploy/`](deploy/), and this hosting is still being set up. The recorded runs in the demo so far came from qwen2.5 on a local Ollama, the sandbox ran under `runc` locally, and the page labels each of these as what it is.
+**Live at** <https://192-248-177-161.sslip.io>, on a Vultr Cloud Compute VM in Frankfurt, with parsers running under gVisor and both agents on Vultr Serverless Inference (`qwen3.8-flash-next`). Deployment scripts are in [`deploy/`](deploy/). Live runs are rate-limited per visitor. The story steps show recorded runs, and the page labels each with its model.
 
 The keys live only in `/etc/quiet-page.env` on the VM (mode 600), never in the repo.
 

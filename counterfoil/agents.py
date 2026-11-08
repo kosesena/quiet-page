@@ -117,11 +117,17 @@ def email_text(email: dict) -> str:
     return "\n".join(parts)
 
 
-def read_email(llm: LLM, email: dict) -> tuple[dict | None, str]:
-    """→ (hand-off or None if the model's output is not a usable object, raw model output)."""
-    msg = llm.chat(
-        [{"role": "system", "content": READER_SYSTEM}, {"role": "user", "content": email_text(email)}], json_mode=True
-    )
+def read_email(llm: LLM, email: dict, parser_output: dict | None = None) -> tuple[dict | None, str]:
+    """→ (hand-off or None if the model's output is not a usable object, raw model output).
+    `parser_output` is what the parser written for the attachment returned when it really ran in the sandbox."""
+    text = email_text(email)
+    if parser_output is not None:
+        text += (
+            "\n\n[Parser output: the code written for this attachment was run in the sandbox and returned the JSON below. "
+            "Use it to check order numbers and amounts; null means the parser found nothing.]\n"
+            + json.dumps(parser_output, ensure_ascii=False)
+        )
+    msg = llm.chat([{"role": "system", "content": READER_SYSTEM}, {"role": "user", "content": text}], json_mode=True)
     raw = msg.content or ""
     body = raw.strip()
     if body.startswith("```"):  # gateways that ignore json_mode wrap the object in a ```json fence

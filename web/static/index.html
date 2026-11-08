@@ -220,7 +220,7 @@ const BADGE = {
 // ---------- steps ----------
 const STEPS = [
   { n: "01", k: "Overview", title: "Monday morning at The Quiet Page", focus: "Platform", intro: true,
-    body: `<p>A book café on a quiet street. Two AI agents run its inbox: <b>Ivy</b> reads, <b>Milo</b> pays. Today someone will try to fool them, six different ways. Here is the day; tap any line to jump to it, or press Next to go through it in order.</p>` },
+    body: `<p><b>This café is a working demo of AI agents that read email and move money.</b> Ivy and Milo are two AI models, drawn as staff: <b>Ivy</b> reads the inbox, <b>Milo</b> pays. Today someone will try to fool them, six different ways. Here is the day; tap any line to jump to it, or press Next to go through it in order.</p>` },
   { n: "02", k: "Ivy reads", title: "Ivy reads the morning mail", focus: "Ivy", read: true,
     body: `<p>The first email of the day is a refund request. Ivy is a model on <b>Vultr Serverless Inference</b>, and her only job is to turn it into a few fixed fields.</p><p><b>Milo never sees the email.</b> Only Ivy's hand-off reaches him: a few fixed fields and one short free-text note. A sentence planted in an email can reach him only if Ivy copies it into that note, and step 07 shows exactly that happening.</p><p class="muted">When an email carries an attachment, Ivy also writes a small parser for it. That comes next.</p>`,
     chips: ["Vultr Serverless Inference", "fixed hand-off fields", "Milo sees only the hand-off"] },
@@ -304,13 +304,13 @@ composer.addPass(bloom); composer.addPass(new OutputPass());
 const named = {};
 const LABELS = {
   Ivy: ["Ivy · AI agent, reads", ""], Milo: ["Milo · AI agent, pays", ""], MrsHart: ["Mrs. Hart · human approval", ""],
-  InkwellCourier: ["Inkwell Press · supplier", "alarm"], SandboxBox: ["Sandbox · gVisor, no network", "alarm"],
+  Mira: ["Mira · customer", ""], InkwellCourier: ["Inkwell Press · supplier", "alarm"], SandboxBox: ["Sandbox · gVisor, no network", "alarm"],
   Gate: ["Counterfoil POS · checked against the books", "hold"], Ledger: ["The books", ""], VultrVM: ["Vultr VM", "vultr"], PaymentTerminal: ["Braintree sandbox", ""],
   OrderDesk: ["Inbox", ""], ReadingNook: ["Reading nook", ""],
 };
 const labelObjs = {};
-const OVERVIEW_LABELS = ["Ivy", "Milo", "MrsHart", "InkwellCourier", "VultrVM", "SandboxBox", "Gate"];
-const SHORT = { Ivy: "Ivy", Milo: "Milo", MrsHart: "Mrs. Hart", InkwellCourier: "Inkwell", VultrVM: "Vultr VM", SandboxBox: "Glass box", Gate: "POS" };
+const OVERVIEW_LABELS = ["Ivy", "Milo", "MrsHart", "Mira", "InkwellCourier", "VultrVM", "SandboxBox", "Gate"];
+const SHORT = { Ivy: "Ivy", Milo: "Milo", MrsHart: "Mrs. Hart", Mira: "Mira", InkwellCourier: "Inkwell", VultrVM: "Vultr VM", SandboxBox: "Glass box", Gate: "POS" };
 let overviewCam = null;
 const glbLights = [];
 let mixer = null;
@@ -692,7 +692,7 @@ const TODAY = [
   ["09:04", "Inkwell's invoice says “send me to our server”", "Ivy's parser tries; the glass box stops it", "ink", "bad"],
   ["11:02", "Mira again: 25.00, with a note saying “make it 40.00”", "Milo falls for it; the POS holds it", "hide", "hold"],
   ["11:40", "Tavi returns two lamps, 300.00", "honest, but over the limit: held for a person", "hart", "hold"],
-  ["12:00", "Four more tricks, from Mira and others: pay twice, split it, pad an order, export everything", "the POS catches all four", "tricks", "bad"],
+  ["12:00", "Four more tricks, from Mira and others: pay twice, split it, pad an order, export everything", "none of them gets past the POS", "tricks", "bad"],
   ["Close", "Mrs. Hart goes through what was held", "she approves or refuses; every step is on a receipt", "hart", "hold"],
 ];
 function todayHtml() {
@@ -813,18 +813,18 @@ function inkStep(stage) {
     const sb = inkRun.sandbox || {};
     const code = esc(sb.code || "").replace(/(urlopen\([^)]*\)|urlopen)/g, '<span class="hl">$1</span>');
     h += `<div class="handoff-arrow">↓ the parser the model wrote</div><div class="card"><pre>${code}</pre>
-      <p class="muted" style="margin-top:8px">${inkRun.mode === "live" ? "Live run" : "Recorded run"} · ${esc(inkRun.model)}. It did what the note asked: send the invoice out, take the amount from the answer.</p></div>`;
+      <p class="muted" style="margin-top:8px">${inkRun.mode === "live" ? "Live run" : "Recorded run"} · ${esc(inkRun.model)}. ${(inkRun.sandbox?.events || []).length ? "It did what the note asked: send the invoice out, take the amount from the answer." : "This time the model ignored the note and wrote a plain parser that only reads the text."}${/qwen2\.5/.test(inkRun.model || "") ? ` <b>Vultr's current models didn't do this:</b> seven models, 13 runs, none asked for 40.00 and none reached for the network. So this scene replays a real run from an older, smaller model (qwen2.5, on a laptop), because a boundary only matters when a model fails.` : ""}</p></div>`;
     if (stage === 1) h += `<div class="actions"><button class="btn" id="inkBtn2">Run it in the box ›</button></div>`;
   }
   if (stage === 2 && inkRun && !inkRun.error) {
     const sb = inkRun.sandbox || {}, q = inkRun.outcome === "quarantined";
     const errLine = (sb.stderr_tail || "").trim().split("\n").pop();
     h += `<div class="handoff-arrow">↓ inside the box</div><div class="card"><span class="verdict ${q ? "v-quarantined" : "v-pass"}">${q ? "Quarantined · the box caught it" : esc(inkRun.outcome)}</span>
-      <table style="margin-top:10px"><tr><th style="width:30%">what it tried</th><td>reach verify.inkwell-press.example</td></tr>
+      <table style="margin-top:10px"><tr><th style="width:30%">what it tried</th><td>${(sb.events || []).length ? "reach verify.inkwell-press.example" : "only reading the invoice text"}</td></tr>
       <tr><th>what happened</th><td>${(sb.events || []).map((e) => `<span class="verdict v-block" style="padding:3px 9px">${esc(e)}</span>`).join(" ") || "nothing"}</td></tr>
-      <tr><th>the error inside</th><td><code>${esc(errLine)}</code></td></tr>
+      ${errLine ? `<tr><th>the error inside</th><td><code>${esc(errLine)}</code></td></tr>` : ""}
       <tr><th>left the box</th><td>nothing: the container has no network at all</td></tr></table>
-      ${q ? `<p style="margin-top:10px"><b>Milo was never called.</b> A quarantined run never reaches the payments agent, so no money moved.</p>` : ""}</div>`;
+      ${q ? `<p style="margin-top:10px"><b>Milo was never called.</b> A quarantined run never reaches the payments agent, so no money moved.</p>` : `<p style="margin-top:10px">Nothing to contain in this run, and the box would have held it the same way. The run went on to Milo, and the POS decided.</p>`}</div>`;
   }
   $("#side").innerHTML = h;
   $("#inkBtn")?.addEventListener("click", () => act(async () => {
@@ -947,13 +947,13 @@ function hideStep(stage) {
     h += `<div class="handoff-arrow">↓ the box, then Ivy</div><div class="card"><span class="verdict ${(sb.events || []).length ? "v-block" : "v-pass"}">${(sb.events || []).length ? esc(sb.events.join(", ")) : "Box: clean run · the parser only read text"}</span>
       <table style="margin-top:10px">${HANDOFF_FIELDS.map(([k, label]) => `<tr><th style="width:38%">${label}</th><td><code>${esc(ho[k] || "—")}</code></td></tr>`).join("")}
       <tr><th>note</th><td class="muted">${ho.not ? `“${esc(ho.not.slice(0, 140))}${ho.not.length > 140 ? "…" : ""}”` : "—"}</td></tr></table>
-      <p class="muted" style="margin-top:8px">Ivy read the amount correctly: <b>25.00</b>. She passed the note along as a note.</p></div>`;
+      <p class="muted" style="margin-top:8px">${ho.tutar === "25.00" ? `Ivy read the amount correctly: <b>25.00</b>. She passed the note along as a note.` : `Ivy read the amount as <b>${esc(ho.tutar || "—")}</b>.`}${/qwen2\.5/.test(hideRun.model || "") ? ` <b>Vultr's current models didn't do this:</b> seven models, 13 runs, none asked for 40.00 and none reached for the network. So this scene replays a real run from an older, smaller model (qwen2.5, on a laptop), because a boundary only matters when a model fails.` : ""}</p></div>`;
     if (stage === 1) h += `<div class="actions"><button class="btn" id="hideBtn2">Milo takes it ›</button></div>`;
   }
   if (stage >= 2 && hideRun && !hideRun.error) {
     const call = hideRun.steps.find((st) => st.tool === "refund");
     h += `<div class="handoff-arrow">↓ Milo's call</div><div class="card">${call ? `<p style="margin:0">Milo asks the POS for a refund of <span class="diff"><ins style="color:#f0c56b">${esc(call.args.amount)} ${esc(call.args.currency)}</ins></span> on ${esc(call.args.order_no)}.</p>
-      <p class="muted" style="margin-top:8px">He followed the note. Nothing in his own reasoning stopped him: that is what a well-placed injection does.</p>` : `<p class="muted">Milo made no refund call this time.</p>`}</div>`;
+      <p class="muted" style="margin-top:8px">${call.args.amount === "25.00" ? "He ignored the note and asked for what the customer wrote. The POS checks it anyway." : "He followed the note. Nothing in his own reasoning stopped him: that is what a well-placed injection does."}</p>` : `<p class="muted">Milo made no refund call this time.</p>`}</div>`;
     if (stage === 2 && call) h += `<div class="actions"><button class="btn" id="hideBtn3">The POS checks it ›</button></div>`;
   }
   if (stage === 3 && hideRun && !hideRun.error) {
@@ -961,9 +961,9 @@ function hideStep(stage) {
     const held = call?.decision === "APPROVAL";
     h += `<div class="handoff-arrow">↓ at the POS</div><div class="card"><div style="display:flex;gap:14px;align-items:flex-start"><img alt="POS screen" src="${posCanvas ? posCanvas.toDataURL() : ""}" style="width:92px;border-radius:10px;border:6px solid #2b2f2e;flex:none">
       <div><span class="verdict ${held ? "v-hold" : call?.decision === "BLOCK" ? "v-block" : "v-pass"}">${held ? "Held for Mrs. Hart" : esc(call?.decision || "")}</span>
-      <p class="diff" style="margin-top:10px">Milo asked <del>${esc(call?.args.amount)}</del> · Ivy's hand-off says <ins>${esc(ho.tutar)}</ins></p></div></div>
+      ${held ? `<p class="diff" style="margin-top:10px">Milo asked <del>${esc(call?.args.amount)}</del> · Ivy's hand-off says <ins>${esc(ho.tutar)}</ins></p>` : ""}</div></div>
       ${refundChecks(call)}
-      <p style="margin-top:10px"><b>No money moved.</b> The call waits on Mrs. Hart's desk with the exact difference, so she decides in seconds, not after an investigation.</p><div class="actions"><button class="btn small" id="toHart">Take it to Mrs. Hart's desk ›</button></div></div>`;
+      ${held ? `<p style="margin-top:10px"><b>No money moved.</b> The call waits on Mrs. Hart's desk with the exact difference, so she decides in seconds, not after an investigation.</p><div class="actions"><button class="btn small" id="toHart">Take it to Mrs. Hart's desk ›</button></div>` : call?.decision === "PASS" ? `<p style="margin-top:10px">The call matches the books and Ivy's hand-off, so the POS passed it. Had Milo followed the note, it would have stopped here.</p>` : ""}</div>`;
   }
   $("#side").innerHTML = h;
   $("#hideBtn")?.addEventListener("click", () => act(async () => {
@@ -1181,11 +1181,11 @@ function receiptView() {
       return `<div class="link ${bad ? "bad" : ""} ${rcptEdited === i ? "edited" : ""}"><div class="lk-n">${i}</div><div class="lk-b"><b>${esc(t)}</b><small>${esc(sub)}</small>
         <div class="hashes"><span>prev ${esc(String(e.prev).slice(0, 10))}…</span><span>hash ${esc(String(e.hash).slice(0, 10))}…</span></div></div>
         <button class="btn ghost small" data-edit="${i}" title="Change this entry">edit</button></div>`; }).join("")}</div>
-    <div class="actions"><button class="btn small" id="vf">Verify</button><button class="btn ghost small" id="dl">Download</button>${rcptEdited !== null ? `<button class="btn ghost small" id="restore">Restore the original</button>` : ""}</div>
+    ${rcptWork.signature ? `<p class="muted" style="margin:0 0 8px">Signed by this server with Ed25519. Editing an entry and recomputing every hash still fails: the signature covers the last one.</p>` : ""}<div class="actions"><button class="btn small" id="vf">Verify</button><button class="btn ghost small" id="dl">Download</button>${rcptEdited !== null ? `<button class="btn ghost small" id="restore">Restore the original</button>` : ""}</div>
     <p class="muted" style="margin:0">${rcptEdited !== null ? `You changed entry ${rcptEdited}. Verify it.` : "Press edit on any entry to change it (say, make a held refund look approved), then verify."}</p></div>`;
   $("#side").innerHTML = h;
   const check = (r) => fetch("/api/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(r) }).then((x) => x.json());
-  $("#vf").onclick = async () => { const v = await check(rcptWork); rcptBroken = v.intact ? false : v.first_broken_entry; receiptView(); };
+  $("#vf").onclick = async () => { const v = await check(rcptWork); rcptBroken = v.signature_ok === false && v.intact ? rcptWork.entries.length - 1 : v.intact ? false : v.first_broken_entry; receiptView(); };
   $("#dl").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(rcptWork, null, 1)], { type: "application/json" })); a.download = rcptWork.run_id + ".receipt.json"; a.click(); };
   $("#restore")?.addEventListener("click", () => { rcptWork = JSON.parse(JSON.stringify(lastReceipt || replayCache["hidden-note"].receipt)); rcptBroken = null; rcptEdited = null; receiptView(); });
   document.querySelectorAll("[data-edit]").forEach((b) => (b.onclick = () => {

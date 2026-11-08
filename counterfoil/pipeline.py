@@ -68,7 +68,9 @@ def run_case(
             })
             return CaseResult(QUARANTINED, receipt.to_dict(), ext, [])
 
-    handoff, raw = read_email(llm, email)
+    # what the sandboxed parser really returned goes back to the model, so executed work feeds the hand-off
+    parser_output = ext.result.output if ext and ext.result and isinstance(ext.result.output, dict) else None
+    handoff, raw = read_email(llm, email, parser_output)
     receipt.add("reader", {"handoff": handoff, "parsed": handoff is not None})
     if handoff is None:
         return CaseResult("reader_failed", receipt.to_dict(), ext, [])

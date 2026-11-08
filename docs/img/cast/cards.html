@@ -27,7 +27,7 @@ const C = [
   ["jonah", "Jonah", "Makes the coffee", "SCENERY", "#2F5D50", "Part of the café, not part of the system."],
   ["box", "The glass box", "Code an agent writes stays here", "BOUNDARY 1", "#C4402F", "A throwaway Docker + gVisor container."],
   ["pos", "Counterfoil POS", "Money has to match the books", "BOUNDARY 2", "#B98210", "Plain Python. No model inside."],
-  ["vultr", "Vultr", "Where it all runs", "PLANNED HOST", "#3B82C4", "A Vultr VM, still being set up."],
+  ["vultr", "Vultr", "Where it all runs", "THE HOST", "#3B82C4", "A Vultr Cloud Compute VM in Frankfurt."],
 ];
 document.addEventListener("DOMContentLoaded", () => {
   document.body.innerHTML = C.map(([id, name, role, tag, c, real]) => `<div class="card" id="${id}" style="--c:${c}">

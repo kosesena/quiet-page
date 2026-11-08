@@ -402,7 +402,7 @@ class Gateway:
                     diffs.append(f"Reader amount unreadable: {r[key]!r}")
                     continue
             if str(theirs).strip().upper() != str(value).strip().upper():
-                diffs.append(f"{key} {value} vs Reader {r[key]}")
+                diffs.append(f"{ {'tutar': 'amount', 'para_birimi': 'currency', 'siparis_no': 'order', 'istek': 'request'}.get(key, key)} {value} vs Reader {r[key]}")
         return [Finding(APPROVAL, "READER_CALL_MISMATCH", "; ".join(diffs))] if diffs else []
 
     # -- execution -------------------------------------------------------------------------------

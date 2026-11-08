@@ -2,7 +2,9 @@
 is appended as an entry whose hash covers its own content and the previous entry's hash. Changing any earlier
 entry breaks every hash after it, so `verify()` on a downloaded receipt shows whether it was edited.
 
-This is a hash chain, not a signature: it proves the receipt is internally consistent, not who wrote it.
+The chain alone proves the receipt is internally consistent, not who wrote it: someone could edit an entry and
+recompute every hash. So the server also signs the last hash with Ed25519 (`sign`); `verify_signature` checks it
+against the public key, offline, and an edited chain no longer matches what was signed.
 """
 
 from __future__ import annotations
@@ -11,6 +13,10 @@ import hashlib
 import json
 import time
 from dataclasses import dataclass, field
+
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 GENESIS = "0" * 64
 
@@ -61,3 +67,33 @@ def verify(receipt: dict) -> tuple[bool, int | None]:
             return False, i
         prev = e["hash"]
     return receipt.get("head", GENESIS) == prev, None if receipt.get("head", GENESIS) == prev else len(receipt["entries"])
+
+
+def _signed_message(receipt: dict) -> bytes:
+    return f"{receipt.get('run_id')}:{receipt.get('head')}".encode()
+
+
+def public_key_hex(key: Ed25519PrivateKey) -> str:
+    return key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex()
+
+
+def sign(receipt: dict, key: Ed25519PrivateKey) -> dict:
+    """Sign the run id and the last hash, which together cover every entry. Stored on the receipt, replacing any
+    earlier signature (a receipt grows when Mrs. Hart decides)."""
+    receipt["signature"] = {"algorithm": "ed25519", "public_key": public_key_hex(key), "value": key.sign(_signed_message(receipt)).hex()}
+    return receipt
+
+
+def verify_signature(receipt: dict, public_key: str | None = None) -> bool | None:
+    """True or False for a signed receipt, None for an unsigned one. Pass the server's published key: without it
+    this only proves the receipt matches the key it carries."""
+    sig = receipt.get("signature")
+    if not sig:
+        return None
+    if public_key and public_key != sig.get("public_key"):
+        return False
+    try:
+        Ed25519PublicKey.from_public_bytes(bytes.fromhex(sig["public_key"])).verify(bytes.fromhex(sig["value"]), _signed_message(receipt))
+    except (InvalidSignature, ValueError, KeyError, TypeError):
+        return False
+    return True

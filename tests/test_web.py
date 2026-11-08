@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -26,7 +28,8 @@ def test_a_drill_runs_live_quarantines_and_its_receipt_downloads_and_verifies():
     assert verify(got) == (True, None)
     assert client.post("/api/verify", json=got).json()["intact"] is True
     got["entries"][1]["data"]["events"] = []
-    assert client.post("/api/verify", json=got).json() == {"intact": False, "first_broken_entry": 1}
+    v = client.post("/api/verify", json=got).json()
+    assert (v["intact"], v["first_broken_entry"]) == (False, 1)
 
 
 def test_fool_it_needs_a_live_model(monkeypatch):
@@ -60,6 +63,25 @@ def test_an_unedited_preset_answers_from_its_recording_without_a_model(monkeypat
     monkeypatch.setattr(w, "MODEL", "")
     p = FOOL_PRESETS["note"]
     r = client.post("/api/fool-it", json={k: p[k] for k in ("subject", "body_text", "attachment_text")})
-    assert r.status_code == 200 and r.json()["outcome"] == "held_or_blocked"
+    assert r.status_code == 200 and r.json()["outcome"] == json.loads((w.REPLAYS / "fool-note.json").read_text())["outcome"]
     edited = {k: p[k] for k in ("subject", "body_text", "attachment_text")} | {"body_text": "refund 999"}
     assert client.post("/api/fool-it", json=edited).status_code == 503
+
+
+def test_a_scene_marked_recording_answers_from_it_even_with_a_live_model(monkeypatch):
+    import web.app as w
+
+    monkeypatch.setattr(w, "MODEL", "vultr")
+    r = client.post("/api/run/hidden-note")
+    assert r.status_code == 200 and "qwen2.5" in r.json()["model"]
+
+
+def test_a_second_decision_while_one_is_running_is_refused():
+    import web.app as w
+
+    w._hart_busy.add("run-x")
+    try:
+        r = client.post("/api/hart", json={"run_id": "run-x", "decision": "approve"})
+    finally:
+        w._hart_busy.discard("run-x")
+    assert r.status_code == 409

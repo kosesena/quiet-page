@@ -24,7 +24,9 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from counterfoil.evidence import Receipt, verify
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+from counterfoil.evidence import Receipt, public_key_hex, sign, verify, verify_signature
 from counterfoil.llm import LLM, preset
 from counterfoil.pipeline import run_case
 from counterfoil.rail import SandboxRail
@@ -51,9 +53,12 @@ RAIL = "braintree" if os.environ.get("DEMO_RAIL") == "braintree" else "simulated
 
 app = FastAPI(title="The Quiet Page", docs_url=None, redoc_url=None)
 _lock = threading.Lock()
+_hart_busy: set[str] = set()  # runs with a decision in progress
 _hits: dict[str, deque] = defaultdict(deque)
 _box_hits: dict[str, deque] = defaultdict(deque)
 _day = {"date": time.strftime("%Y-%m-%d"), "runs": 0}
+_key_hex = os.environ.get("RECEIPT_SIGNING_KEY", "")
+SIGNING_KEY = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(_key_hex)) if _key_hex else Ed25519PrivateKey.generate()  # no key set: a fresh one per start
 _receipts: OrderedDict[str, dict] = OrderedDict()  # last 200 receipts, for download
 _run_lock = threading.Semaphore(2)  # at most two sandboxes at once on a small VM
 
@@ -96,6 +101,7 @@ def _charge_box_quota(ip: str) -> None:
 
 
 def _keep(receipt: dict) -> None:
+    sign(receipt, SIGNING_KEY)
     with _lock:
         _receipts[receipt["run_id"]] = receipt
         while len(_receipts) > 200:
@@ -197,7 +203,7 @@ def run(case_id: str, request: Request):
             res = _run(None, sc, email, hostile_code=DRILLS[drill][1])
         _keep(res.receipt)
         return _summary(res, case_id, "live", "none (fixed hostile code)")
-    if not MODEL:
+    if not MODEL or case.get("recording"):
         f = REPLAYS / f"{case_id}.json"
         if not f.exists():
             raise HTTPException(404, "no recorded run for this case and no live model configured")
@@ -234,7 +240,9 @@ def replay(case_id: str):
     f = REPLAYS / f"{case_id}.json"
     if not f.exists():
         raise HTTPException(404, "no recorded run for this case")
-    return json.loads(f.read_text())
+    data = json.loads(f.read_text())
+    sign(data["receipt"], SIGNING_KEY)
+    return data
 
 
 class FoolIt(BaseModel):
@@ -308,6 +316,19 @@ class HartDecision(BaseModel):
 
 @app.post("/api/hart")
 def hart(payload: HartDecision, request: Request):
+    """One decision per run: two clicks arriving together must not both reach the rail."""
+    with _lock:
+        if payload.run_id in _hart_busy:
+            raise HTTPException(409, "Mrs. Hart is already deciding this one.")
+        _hart_busy.add(payload.run_id)
+    try:
+        return _hart_decide(payload, request)
+    finally:
+        with _lock:
+            _hart_busy.discard(payload.run_id)
+
+
+def _hart_decide(payload: HartDecision, request: Request):
     """Mrs. Hart decides on a held call. No model is involved: the held call is read from the run's receipt, handed
     to a fresh POS over the same books (which holds it again, for the same reasons), and her decision goes through
     the gate's own approve/reject. An approval is single-use and re-checked; only then does the rail run. Both the
@@ -383,7 +404,13 @@ async def verify_receipt(request: Request):
     except ValueError as e:
         raise HTTPException(400, "not JSON") from e
     ok, broken = verify(data)
-    return {"intact": ok, "first_broken_entry": broken}
+    return {"intact": ok, "first_broken_entry": broken, "signature_ok": verify_signature(data, public_key_hex(SIGNING_KEY))}
+
+
+@app.get("/api/public-key")
+def public_key():
+    """The key receipts from this server are signed with, for checking a downloaded receipt offline."""
+    return {"algorithm": "ed25519", "public_key": public_key_hex(SIGNING_KEY)}
 
 
 if STATIC.exists():

@@ -26,7 +26,7 @@ OUT = Path(__file__).resolve().parent.parent / "web" / "replays"
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="qwen2.5")
-    ap.add_argument("--cases", nargs="*", default=[c for c, v in CASES.items() if not v.get("drill")])
+    ap.add_argument("--cases", nargs="*", default=[c for c, v in CASES.items() if not v.get("drill") and not v.get("recording")])
     ap.add_argument("--fool", nargs="*", default=list(FOOL_PRESETS), help="ready-made step-08 attempts to record")
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)

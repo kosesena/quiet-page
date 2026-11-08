@@ -1,0 +1,62 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>The Quiet Page</title>
+<style>
+  @page { size: 1920px 1080px; margin: 0; }
+  * { box-sizing: border-box; margin: 0; }
+  :root { --bg:#1c1b1a; --ink:#efe8dc; --muted:#a39b8f; --tan:#E9B79A; --line:#3a3633; --amber:#f0c56b; --red:#f08d7c; --green:#8fd1ad; }
+  body { background: var(--bg); color: var(--ink); font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif; }
+  .s { width: 1920px; height: 1080px; padding: 84px 104px; position: relative; overflow: hidden; page-break-after: always; display: flex; flex-direction: column; }
+  .k { font: 700 20px/1 ui-monospace, Menlo, monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--tan); }
+  h1 { font: 700 76px/1.08 Georgia, serif; margin-top: 18px; max-width: 1560px; }
+  p.l { font-size: 34px; line-height: 1.38; color: var(--ink); margin-top: 26px; max-width: 1500px; }
+  .m { color: var(--muted); }
+  .n { position: absolute; right: 56px; bottom: 40px; font: 600 20px/1 ui-monospace, Menlo, monospace; color: var(--muted); }
+  .row { display: flex; gap: 48px; flex: 1; margin-top: 40px; min-height: 0; }
+  .col { flex: 1; min-width: 0; }
+  img.fit { width: 100%; border-radius: 18px; display: block; }
+  ul { list-style: none; padding: 0; margin-top: 8px; } li { font-size: 32px; line-height: 1.32; padding: 15px 0; border-bottom: 1px solid var(--line); } li b { color: var(--tan); }
+  .cards { display: flex; gap: 22px; margin-top: 44px; justify-content: center; } .cards img { width: 325px; height: auto; display: block; }
+  .big { font: 700 170px/1 Georgia, serif; } .cap { font-size: 30px; color: var(--muted); margin-top: 12px; }
+  .hero { padding: 0; } .hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .hero .t { position: absolute; left: 0; right: 0; bottom: 0; padding: 150px 104px 76px; background: linear-gradient(transparent, rgba(20,19,18,.94) 48%); }
+  .hero h1 { font-size: 92px; margin-top: 12px; } .hero p { font-size: 36px; margin-top: 18px; color: #e6dfd3; }
+</style>
+
+<section class="s hero"><img src="../img/cafe.jpg" alt="">
+  <div class="t"><div class="k">Vultr Agent Rush · Blast Radius Zero</div><h1>The Quiet Page</h1><p>What if we gave every AI agent a role in a café, and then let someone try to fool them?</p></div></section>
+
+<section class="s"><div class="k">The problem</div><h1>Agents read untrusted text and act on it.</h1>
+  <p class="l">A line hidden in an email. A note in an attachment. An invoice telling its parser to phone home. Models fall for these, and the same models write code and move money.</p>
+  <div class="row" style="align-items:flex-end"><ul class="col" style="max-width:1500px">
+    <li><b>$849.9 billion</b> in US retail returns in 2025, about 9% fraudulent (NRF). Now a false claim only has to fool a model.</li>
+    <li><b>OWASP LLM01</b>: prompt injection, and no known fool-proof prevention.</li>
+    <li><b>Code a model writes</b> is code nobody reviewed.</li>
+    <li><b>Money a model asks for</b> can be for the wrong amount, to the wrong person.</li>
+    <li>So nothing here depends on the models behaving.</li></ul></div><div class="n">2</div></section>
+
+<section class="s"><div class="k">The café</div><h1>Two AI agents, one human, two boundaries.</h1>
+  <div class="cards"><img src="../img/cast/card-ivy.png" alt=""><img src="../img/cast/card-milo.png" alt=""><img src="../img/cast/card-box.png" alt=""><img src="../img/cast/card-pos.png" alt=""><img src="../img/cast/card-hart.png" alt=""></div><div class="n">3</div></section>
+
+<section class="s" style="padding:44px 104px"><div class="k">How it works</div>
+  <img src="../img/architecture.png" alt="" style="height:930px;margin:22px auto 0;display:block;border-radius:18px"><div class="n">4</div></section>
+
+<section class="s"><div class="k">Boundary 1 · code</div><h1>Code an agent writes stays in the glass box.</h1>
+  <div class="row"><div class="col" style="flex:1.45"><img class="fit" src="../img/slide-box.jpg" alt=""></div>
+  <ul class="col"><li>Inkwell's invoice tells the parser to send it out. In this recorded run, an older model writes the call.</li><li>The container has <b>no network</b>. The run is quarantined; Milo is never called.</li><li>Read-only, 128 MB, 32 processes, 8 s, gVisor, deleted after.</li></ul></div><div class="n">5</div></section>
+
+<section class="s"><div class="k">Boundary 2 · money</div><h1>Money an agent moves has to match the books.</h1>
+  <div class="row"><div class="col" style="flex:1.45"><img class="fit" src="../img/slide-pos.jpg" alt=""></div>
+  <ul class="col"><li>A 25.00 refund with a note: <b>make it 40.00</b>.</li><li>The POS is plain code. It passes, blocks, or holds for a person.</li><li>Only calls that match the books, or that Mrs. Hart approves, reach the Braintree sandbox.</li></ul></div><div class="n">6</div></section>
+
+<section class="s"><div class="k">The one human, and the receipt</div><h1>A person decides. Every step is on the record.</h1>
+  <div class="row"><div class="col"><img class="fit" src="../img/hart-desk.png" alt="" style="height:690px;width:auto;margin:auto"></div>
+  <div class="col"><img class="fit" src="../img/receipt.png" alt="" style="height:690px;width:auto;margin:auto"></div></div><div class="n">7</div></section>
+
+<section class="s"><div class="k">Measured, not claimed</div><h1>Attack runs that moved the wrong money.</h1>
+  <div class="row" style="align-items:center;gap:140px;flex:none;margin-top:60px"><div><div class="big" style="color:var(--red)">81/228</div><div class="cap">without the POS</div></div><div><div class="big" style="color:var(--green)">0/228</div><div class="cap">with the POS</div></div></div>
+  <p class="l m">Seven models, same scenarios and repeats. A measurement on this scenario set, not a proof about all attacks. Newer models on Vultr resisted the two headline attacks in all 13 runs each, which is good, and exactly why the boundaries can't depend on it.</p><div class="n">8</div></section>
+
+<section class="s"><div class="k">Built on Vultr</div><h1>All of it runs on Vultr.</h1>
+  <ul style="margin-top:44px"><li><b>Vultr Cloud Compute VM</b>: the web app, the POS, the receipts and the Docker daemon.</li><li><b>gVisor on that VM</b>: one throwaway container per model-written parser.</li><li><b>Vultr Serverless Inference</b>: every model call Ivy and Milo make.</li><li><b>Braintree sandbox</b>: where approved refunds really execute.</li></ul>
+  <p class="l" style="margin-top:44px">Running code a model just wrote, for anyone who wants to attack it, takes a machine where we own the container runtime. That is the Vultr VM.</p><p class="l" style="margin-top:30px"><b>192-248-177-161.sslip.io</b> · <span class="m">github.com/kosesena/quiet-page</span></p><div class="n">9</div></section>

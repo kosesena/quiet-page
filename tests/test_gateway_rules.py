@@ -532,7 +532,7 @@ def test_a_reader_field_left_empty_does_not_hide_a_later_mismatch():
     gw, rail, _ = gate()
     ctx = session("CUS-01", "refund", REFUND, iade_kaydi_no=None, para_birimi="EUR")
     out = gw.handle(ctx, "refund", dict(REFUND))
-    assert "para_birimi" in next(f.detail for f in out.findings if f.code == "READER_CALL_MISMATCH")
+    assert "currency" in next(f.detail for f in out.findings if f.code == "READER_CALL_MISMATCH")
 
 
 def test_reader_mismatches_are_all_listed():

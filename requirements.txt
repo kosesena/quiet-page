@@ -1,4 +1,5 @@
 braintree==4.48.0
+cryptography
 openai
 pytest
 python-dotenv
