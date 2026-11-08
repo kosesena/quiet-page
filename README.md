@@ -239,3 +239,5 @@ Open <http://localhost:8765>. With no keys, model cases answer from recorded rea
 ## License
 
 [MIT](LICENSE)
+
+The floor texture is [Laminate Floor 02](https://polyhaven.com/a/laminate_floor_02) from Poly Haven (CC0).

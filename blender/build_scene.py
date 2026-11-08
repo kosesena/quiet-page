@@ -397,49 +397,33 @@ def grooved_panel(name, coll, w, h, loc, mat_, parent=None, rot_z=0.0, pitch=0.0
     return ob
 
 
-# --- oak plank floor (generated texture, planar UVs, 4 m tile)
+# --- natural oak floor: a scanned CC0 texture from Poly Haven (laminate_floor_02), one repeat is 1.7 m, boards run along the room
 import numpy as np
 
-
-def plank_image(px=1024, tile=4.0):
-    """Light warm-grey stone tile (#CFC9C0), long 1.0 x 0.5 m tiles, fine joints, slight mottling."""
-    rng_ = np.random.default_rng(5)
-    v = (np.arange(px) + 0.5) / px * tile
-    u = (np.arange(px) + 0.5) / px * tile
-    U, V = np.meshgrid(u, v)
-    TW, TH = 1.0, 0.5
-    row = np.floor(V / TH).astype(int)
-    off = (row % 2) * 0.5
-    col = np.floor((U + off) / TW).astype(int)
-    tone = rng_.uniform(-0.025, 0.025, (16, 16))
-    base = np.array(hex_srgb("#cfc9c0"))
-    t = 1.0 + tone[row % 16, col % 16]
-    mott = 1.0 + 0.015 * np.sin(U * 7.0 + np.sin(V * 5.0) * 2.0) * np.sin(V * 6.3)
-    img = base[None, None, :] * (t * mott)[..., None]
-    joint = ((V % TH) < 0.006) | (((U + off) % TW) < 0.006)
-    img[joint] *= 0.82
-    rgba = np.ones((px, px, 4), dtype=np.float32)
-    rgba[..., :3] = np.clip(img, 0, 1)
-    im = bpy.data.images.new("QuietPage_FloorTile", px, px, alpha=False)
-    im.pixels.foreach_set(rgba.ravel())
-    im.pack()
-    return im
-
-m_floor = bpy.data.materials.new("M_FloorTile")
+FLOOR_TILE = 1.7
+_floor_dir = os.path.join(OUT, "textures", "laminate_floor_02")
+m_floor = bpy.data.materials.new("M_FloorOak")
 m_floor.use_nodes = True
 _nt = m_floor.node_tree
 _bsdf = next(n for n in _nt.nodes if n.type == "BSDF_PRINCIPLED")
 _tex = _nt.nodes.new("ShaderNodeTexImage")
-_tex.image = plank_image()
+_tex.image = bpy.data.images.load(os.path.join(_floor_dir, "diff.jpg")); _tex.image.pack()
+_ntex = _nt.nodes.new("ShaderNodeTexImage")
+_ntex.image = bpy.data.images.load(os.path.join(_floor_dir, "nor.jpg")); _ntex.image.pack()
+_ntex.image.colorspace_settings.name = "Non-Color"
+_nmap = _nt.nodes.new("ShaderNodeNormalMap")
+_nmap.inputs["Strength"].default_value = 0.8
+_nt.links.new(_ntex.outputs["Color"], _nmap.inputs["Color"])
+_nt.links.new(_nmap.outputs["Normal"], _bsdf.inputs["Normal"])
 _nt.links.new(_tex.outputs["Color"], _bsdf.inputs["Base Color"])
-_bsdf.inputs["Roughness"].default_value = 0.32  # slight sheen
+_bsdf.inputs["Roughness"].default_value = 0.36  # satin lacquer
 floor = rounded_slab("Floor", c_plat, 15.7, 9.7, 0.006, 0.18, (0, 0, -0.0025), m_floor,
                      edge_bevel=0.002)
 floor.data.materials[0] = m_floor
 _uv = floor.data.uv_layers.new(name="UVMap")
 for lp in floor.data.loops:
     co = floor.data.vertices[lp.vertex_index].co
-    _uv.data[lp.index].uv = (co.x / 4.0, co.y / 4.0)
+    _uv.data[lp.index].uv = (co.x / FLOOR_TILE, co.y / FLOOR_TILE)
 
 # ================================================================ 2. Shelves
 c_sh = make_coll("Shelves")
@@ -1609,9 +1593,6 @@ bmesh.ops.create_cone(_bm, cap_ends=False, segments=28, radius1=0.26, radius2=0.
 finish_mesh(_bm, "LoungeCluster_DrumShade", c_lc, M["linen"], (TRI[0], TRI[1], 1.45), lc, 60)
 sphere("LoungeCluster_TripodBulb", c_lc, 0.04, (TRI[0], TRI[1], 1.4), M["bulb"], parent=lc,
        segs=10, rings=6)
-# large warm rug under the lounge seating
-cyl("LoungeCluster_Rug", c_lc, 1.4, 0.008, (0, 0.1, 0.004), M["rust"], segs=48, parent=lc)
-cyl("LoungeCluster_RugInner", c_lc, 1.28, 0.009, (0, 0.1, 0.0045), M["rug_in"], segs=48, parent=lc)
 plant("Lounge", (1.55, 0.95, 0), 0.9, pot="pot_char", parent=lc, coll=c_lc, s=0.9)
 EXTRA_LIGHTS.append(("LoungeTask_Light", (LC_X - 0.9, LC_Y + 0.72, 0.85), 5))
 EXTRA_LIGHTS.append(("LoungeLamp_Light", (LC_X + TRI[0], LC_Y + TRI[1], 1.38), 16))
@@ -2349,13 +2330,6 @@ _co["light_size_m"] = [CT_W - 0.2, 0.05]
 
 
 # ================================================================ 17. Front floor + upper side-wall detail
-# --- large low-pile rug in the front-middle (courier's spot ~1.5 m clear)
-c_fr = make_coll("FrontRug")
-fr = empty("FrontRug", c_fr, (2.2, -2.4, 0))
-box("FrontRug_Border", c_fr, (3.6, 1.6, 0.006), (0, 0, 0.003), mat("M_RugTerracotta", "#c27a55", 0.95),
-    bevel=0.0, parent=fr)
-box("FrontRug_Field", c_fr, (3.44, 1.44, 0.008), (0, 0, 0.004), mat("M_RugNeutral", "#e2d6c3", 0.95),
-    bevel=0.0, parent=fr)
 
 # --- upper side walls: walnut picture rail at 2.1 m + light-oak battens above the wainscot
 c_uw = make_coll("UpperWallDetail")
@@ -3502,7 +3476,6 @@ join_under(O["Wreath"], "Wreath_Mesh")
 join_under(O["WallDetails"], "WallDetails_Mesh")
 join_under(O["Laptop"], "Laptop_Mesh", exclude_roots=(O["Laptop_Screen"], O["Laptop_Sticker"], O["Laptop_Keys"]))
 join_under(O["Customer_Cup"], "Customer_Cup_Mesh")
-join_under(O["FrontRug"], "FrontRug_Mesh")
 join_under(O["UpperWallDetail"], "UpperWallDetail_Mesh")
 join_under(O["BackBar"], "BackBar_Mesh")
 join_under(O["WallCladding"], "WallCladding_Mesh", exclude_roots=(O["WallCladding_Chevron"], O["LoungeWall_Back"], O["LoungeWall_Right"]))
