@@ -2357,31 +2357,6 @@ box("FrontRug_Border", c_fr, (3.6, 1.6, 0.006), (0, 0, 0.003), mat("M_RugTerraco
 box("FrontRug_Field", c_fr, (3.44, 1.44, 0.008), (0, 0, 0.004), mat("M_RugNeutral", "#e2d6c3", 0.95),
     bevel=0.0, parent=fr)
 
-# --- tall potted plants spaced along the open front edge (fiddle-leaf / olive)
-c_fp = make_coll("FrontPlants")
-fpl = empty("FrontPlants", c_fp)
-M["fiddle"] = mat("M_FiddleLeaf", "#3f6b3c", 0.6)
-M["olive"] = mat("M_OliveLeaf", "#8a9a6e", 0.8)
-for i, (px, kind, pot) in enumerate(((-6.3, "fiddle", "rust"), (-2.8, "olive", "black_metal"),
-                                    (2.6, "fiddle", "black_metal"), (4.0, "olive", "rust"))):
-    root = empty(f"FrontPlant_{i}", c_fp, (px, -4.5, 0), parent=fpl)
-    cyl(f"FrontPlant_{i}_Pot", c_fp, 0.16, 0.42, (0, 0, 0.21), M[pot], segs=20, parent=root, r2=0.2)
-    cyl(f"FrontPlant_{i}_Soil", c_fp, 0.185, 0.01, (0, 0, 0.415), M["soil"], segs=20, parent=root)
-    cyl(f"FrontPlant_{i}_Trunk", c_fp, 0.018, 0.75, (0, 0, 0.78), M["wood_dark"], segs=8, parent=root)
-    rng_p = random.Random(20 + i)
-    if kind == "fiddle":
-        for k in range(10):
-            a = k * 2.4
-            z = 0.95 + (k % 5) * 0.08
-            sphere(f"FrontPlant_{i}_Leaf{k}", c_fp, 1.0, (0.13 * math.cos(a), 0.13 * math.sin(a), z), M["fiddle"],
-                   parent=root, scale=(0.11, 0.03, 0.15), segs=10, rings=6).rotation_euler = (
-                math.radians(rng_p.uniform(-25, 25)), 0, a)
-    else:
-        for k, (dx, dy, dz, r) in enumerate(((0, 0, 1.18, 0.2), (0.14, 0.05, 1.05, 0.15), (-0.13, -0.06, 1.08, 0.16),
-                                             (0.03, -0.1, 1.28, 0.13))):
-            sphere(f"FrontPlant_{i}_Crown{k}", c_fp, r, (dx, dy, dz), M["olive"], parent=root,
-                   scale=(1, 1, 0.8), segs=12, rings=8)
-
 # --- upper side walls: walnut picture rail at 2.1 m + light-oak battens above the wainscot
 c_uw = make_coll("UpperWallDetail")
 uw = empty("UpperWallDetail", c_uw)
@@ -3528,7 +3503,6 @@ join_under(O["WallDetails"], "WallDetails_Mesh")
 join_under(O["Laptop"], "Laptop_Mesh", exclude_roots=(O["Laptop_Screen"], O["Laptop_Sticker"], O["Laptop_Keys"]))
 join_under(O["Customer_Cup"], "Customer_Cup_Mesh")
 join_under(O["FrontRug"], "FrontRug_Mesh")
-join_under(O["FrontPlants"], "FrontPlants_Mesh")
 join_under(O["UpperWallDetail"], "UpperWallDetail_Mesh")
 join_under(O["BackBar"], "BackBar_Mesh")
 join_under(O["WallCladding"], "WallCladding_Mesh", exclude_roots=(O["WallCladding_Chevron"], O["LoungeWall_Back"], O["LoungeWall_Right"]))
