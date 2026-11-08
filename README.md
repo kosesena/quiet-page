@@ -1,6 +1,9 @@
 <h1 align="center">The Quiet Page</h1>
 <p align="center"><b>AI agents that read untrusted email and move money, inside two boundaries that never ask a model anything.</b></p>
 
+<p align="center"><a href="https://192-248-177-161.sslip.io"><img src="docs/img/titles/visit.svg" width="880" alt="Come in and try to fool it: open the live demo"></a></p>
+<p align="center"><b><a href="https://youtu.be/5v_wUNcySgE">Watch the video</a></b> · running on a Vultr VM</p>
+
 <p align="center">
   <img src="docs/img/cafe.jpg" width="920" alt="A 3D book café seen from above. Labels mark Ivy at a desk, Milo at the till, Mrs. Hart at her own desk, the Inkwell courier at the door, a glass box on a plinth, the Counterfoil POS and a server cabinet labelled Vultr VM.">
 </p>
@@ -9,7 +12,6 @@
   Built for the Vultr <b>Agent Rush</b> hackathon · track: <b>Blast Radius Zero</b>
 </p>
 
-<p align="center"><b><a href="https://192-248-177-161.sslip.io">Live demo</a></b> · <b><a href="https://youtu.be/5v_wUNcySgE">Watch the video</a></b> · running on a Vultr VM</p>
 
 ---
 
