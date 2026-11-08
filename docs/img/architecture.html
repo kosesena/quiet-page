@@ -1,0 +1,96 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>The Quiet Page: architecture</title>
+<!-- Rendered to architecture.png at 2x. Solid = runs today. Dashed blue = planned Vultr hosting; when the VM is up, make the zone and the inference box solid, drop the "planned" wording and the legend entry, then re-render. -->
+<style>
+  :root { --ink:#1e1c1b; --muted:#6d645a; --paper:#f6efe3; --card:#fffaf1; --line:#d6cbbb; --green:#2F5D50; --rust:#B5553A; --amber:#C98A12; --red:#C4402F; --blue:#3B82C4; }
+  * { box-sizing:border-box; margin:0; }
+  body { width:1400px; height:880px; background:var(--paper); color:var(--ink); font:15px/1.35 -apple-system,"Segoe UI",Inter,system-ui,sans-serif; position:relative; overflow:hidden; }
+  h1 { position:absolute; left:40px; top:26px; font:700 30px/1.1 Georgia,serif; }
+  .sub { position:absolute; left:40px; top:66px; color:var(--muted); font-size:16px; }
+  .key { position:absolute; right:40px; top:34px; display:flex; gap:22px; font-size:13px; color:var(--muted); align-items:center; }
+  .key i { display:inline-block; width:30px; height:0; border-top:2.5px solid var(--ink); margin-right:7px; vertical-align:4px; } .key i.d { border-top:2.5px dashed var(--blue); }
+  .zone { position:absolute; left:270px; top:194px; width:800px; height:536px; border:2px dashed var(--blue); border-radius:22px; background:rgba(59,130,196,.05); }
+  .zone b { position:absolute; left:18px; top:14px; color:var(--blue); font:700 12px/1 ui-monospace,Menlo,monospace; letter-spacing:.07em; text-transform:uppercase; }
+  .n { position:absolute; left:-11px; top:-11px; width:25px; height:25px; border-radius:50%; background:var(--ink); color:#fff; display:grid; place-items:center; font:700 13px/1 ui-monospace,Menlo,monospace; }
+  .b { position:absolute; background:var(--card); border:2px solid var(--line); border-radius:14px; padding:11px 13px; box-shadow:0 2px 0 rgba(30,28,27,.06); }
+  .b h3 { font:700 18px/1.15 Georgia,serif; } .b p { font-size:13px; color:var(--muted); margin-top:4px; }
+  .b .k { font:700 10.5px/1 ui-monospace,Menlo,monospace; letter-spacing:.09em; text-transform:uppercase; margin-bottom:6px; }
+  .ai { border-color:var(--green); } .ai .k { color:var(--green); }
+  .box { border-color:var(--red); border-width:3px; } .box .k { color:var(--red); }
+  .pos { border-color:var(--amber); border-width:3px; } .pos .k { color:var(--amber); }
+  .human { border-color:var(--rust); } .human .k { color:var(--rust); }
+  .planned { border:2px dashed var(--blue); } .planned h3 { color:var(--blue); }
+  .stop { border:2px dashed var(--red); background:#fbeae5; } .stop h3 { color:var(--red); font-size:16px; }
+  .ok { border-color:var(--green); background:#e6f1ea; }
+  .inj { position:absolute; left:40px; top:262px; width:210px; color:var(--red); font-size:13px; font-weight:600; }
+  svg { position:absolute; inset:0; }
+  .lab { position:absolute; font-size:12.5px; color:var(--ink); background:var(--paper); padding:1px 5px; border-radius:5px; white-space:nowrap; }
+  .lab.z { background:#f0ece4; }
+  .rail { position:absolute; left:40px; right:40px; top:752px; height:96px; background:#1e1c1b; border-radius:16px; color:#f6efe3; padding:13px 20px; }
+  .rail .k { font:700 11px/1 ui-monospace,Menlo,monospace; letter-spacing:.09em; text-transform:uppercase; color:#E9B79A; }
+  .links { display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13.5px; }
+  .links span { padding:6px 11px; border:1px solid #5a534c; border-radius:9px; white-space:nowrap; } .links em { color:#E9B79A; font-style:normal; }
+</style>
+<h1>One email, two boundaries</h1>
+<div class="sub">The models can be fooled. Neither boundary asks them anything.</div>
+<div class="key"><span><i></i>runs today</span><span><i class="d"></i>planned Vultr hosting</span></div>
+
+<div class="zone"><b style="left:160px">Vultr VM · planned · today: laptop</b></div>
+
+<svg viewBox="0 0 1400 880" width="1400" height="880">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1e1c1b"/></marker>
+    <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C4402F"/></marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2F5D50"/></marker>
+    <marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C98A12"/></marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#3B82C4"/></marker>
+  </defs>
+  <g fill="none" stroke-width="2.4">
+    <path d="M240 410H306" stroke="#1e1c1b" marker-end="url(#a)"/>
+    <path d="M365 476V564" stroke="#1e1c1b" marker-end="url(#a)"/>
+    <path d="M455 564V476" stroke="#1e1c1b" marker-end="url(#a)"/>
+    <path d="M522 645H592" stroke="#C4402F" marker-end="url(#r)"/>
+    <path d="M522 410H622" stroke="#1e1c1b" marker-end="url(#a)"/>
+    <path d="M410 342V184" stroke="#3B82C4" stroke-dasharray="6 5" marker-end="url(#b)"/>
+    <path d="M700 342V184" stroke="#3B82C4" stroke-dasharray="6 5" marker-end="url(#b)"/>
+    <path d="M782 410H842" stroke="#1e1c1b" marker-end="url(#a)"/>
+    <path d="M945 342V276" stroke="#1e1c1b" marker-end="url(#a)" marker-start="url(#a)"/>
+    <path d="M1048 388H1090Q1104 388 1104 374V276Q1104 262 1118 262H1128" stroke="#C4402F" marker-end="url(#r)"/>
+    <path d="M1048 415H1128" stroke="#2F5D50" marker-end="url(#g)"/>
+    <path d="M945 480V576" stroke="#C98A12" marker-end="url(#h)"/>
+    <path d="M1048 632H1230Q1244 632 1244 618V478" stroke="#2F5D50" marker-end="url(#g)"/>
+    <g stroke="#a59a8c" stroke-width="1.6" stroke-dasharray="3 5">
+      <path d="M140 472V752"/><path d="M1244 632V752"/><path d="M945 690V752"/><path d="M700 478V752"/><path d="M365 710V752"/>
+    </g>
+  </g>
+</svg>
+
+<div class="inj">▼ Prompt injection comes in here: plain text, hidden HTML or the attachment.</div>
+<div class="b" style="left:40px;top:348px;width:200px;height:124px"><span class="n">1</span><div class="k">Outside</div><h3>Email + attachment</h3><p>from anyone: a customer, a supplier, an attacker</p></div>
+
+<div class="b planned" style="left:300px;top:112px;width:510px;height:70px;background:#eef4fa"><h3>Vultr Serverless Inference</h3><p>planned · the recorded runs so far used qwen2.5 locally</p></div>
+
+<div class="b ai" style="left:308px;top:344px;width:214px;height:132px"><span class="n">2</span><div class="k">AI agent</div><h3>Ivy reads</h3><p>turns the email into fixed fields; writes a parser for an attachment</p></div>
+<div class="b box" style="left:308px;top:566px;width:214px;height:144px"><span class="n">3</span><div class="k">Boundary 1 · code</div><h3>The glass box</h3><p>one throwaway container per parser: no network, read-only, hard caps</p></div>
+<div class="lab z" style="left:288px;top:510px">parser code</div>
+<div class="lab z" style="left:462px;top:510px">output</div>
+<div class="b stop" style="left:594px;top:605px;width:176px;height:80px"><h3>Quarantined</h3><p>Milo is never called</p></div>
+
+<div class="lab z" style="left:532px;top:384px">hand-off</div><div class="lab z" style="left:532px;top:420px">email stops</div>
+<div class="b ai" style="left:624px;top:344px;width:158px;height:132px"><span class="n">4</span><div class="k">AI agent</div><h3>Milo pays</h3><p>sees only the hand-off; asks the POS for money</p></div>
+<div class="lab z" style="left:796px;top:420px">call</div>
+
+<div class="b" style="left:846px;top:206px;width:198px;height:68px;background:#fbf4e6"><h3>The books</h3><p>orders, returns, refunds</p></div>
+<div class="b pos" style="left:846px;top:344px;width:202px;height:136px"><span class="n">5</span><div class="k">Boundary 2 · money</div><h3>Counterfoil POS</h3><p>plain code. Every call against the books and Ivy's hand-off</p></div>
+<div class="lab z" style="left:952px;top:522px;color:#9a6a0c">held</div>
+<div class="b human" style="left:846px;top:578px;width:202px;height:112px"><span class="n">6</span><div class="k">The one human</div><h3>Mrs. Hart</h3><p>sees the exact difference; approves or refuses</p></div>
+
+<div class="b stop" style="left:1130px;top:220px;width:230px;height:86px"><h3>Blocked</h3><p>the books rule it out. No money, no person needed</p></div>
+<div class="lab" style="left:1074px;top:328px;color:#C4402F">blocked</div>
+<div class="b ok" style="left:1130px;top:360px;width:230px;height:116px"><div class="k" style="color:var(--green)">Payment rail</div><h3>Braintree sandbox</h3><p>the only place money moves</p></div>
+<div class="lab" style="left:1074px;top:422px;color:#2F5D50">passed</div>
+<div class="lab" style="left:1076px;top:642px;color:#2F5D50">approved: single-use, re-checked</div>
+
+<div class="rail"><div class="k">Receipt · every step, SHA-256 chained: change one entry and every hash after it breaks</div>
+  <div class="links"><span>Email in</span><em>→</em><span>What the box saw</span><em>→</em><span>Ivy's hand-off</span><em>→</em><span>Each POS decision</span><em>→</em><span>Mrs. Hart's decision</span><em>→</em><span>The payment</span></div></div>
