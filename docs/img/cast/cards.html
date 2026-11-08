@@ -1,0 +1,39 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>The Quiet Page: cast cards</title>
+<!-- Source of docs/img/cast/card-*.png, rendered at 2x with transparent corners. Figures are rendered from blender/quiet-page.blend; pos.png is the page's own POS screen. -->
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { background: transparent; display: grid; grid-template-columns: repeat(3, 440px); gap: 24px; padding: 24px; width: max-content; font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif; }
+  .card { width: 440px; height: 650px; border-radius: 26px; overflow: hidden; background: #f6efe3; position: relative; display: flex; flex-direction: column; }
+  .band { height: 50px; flex: none; background: var(--c); color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font: 700 13px/1 ui-monospace, Menlo, monospace; letter-spacing: .13em; }
+  .stage { position: relative; flex: none; height: 396px; overflow: hidden; background: radial-gradient(ellipse 75% 70% at 50% 42%, #fffaf1 0%, color-mix(in srgb, var(--c) 16%, #f6efe3) 100%); }
+  .floor { position: absolute; left: 50%; bottom: 20px; width: 230px; height: 26px; margin-left: -115px; border-radius: 50%; background: radial-gradient(closest-side, rgba(40,28,18,.26), rgba(40,28,18,0)); }
+  .fig { position: absolute; left: 50%; top: -30px; height: 470px; transform: translateX(-50%); }
+  .screen { position: absolute; left: 50%; top: 34px; height: 330px; transform: translateX(-50%); border-radius: 18px; border: 10px solid #2b2f2e; box-shadow: 0 14px 30px rgba(30,20,10,.28); }
+  .text { flex: 1; padding: 16px 24px 0; }
+  .name { font: 700 34px/1.1 Georgia, "Times New Roman", serif; color: #1e1c1b; }
+  .role { margin-top: 5px; font-size: 18px; color: #5d554c; }
+  .real { flex: none; height: 104px; background: #1e1c1b; color: #efe8dc; padding: 16px 24px; font-size: 18px; line-height: 1.33; }
+  .real b { display: block; color: #E9B79A; font: 700 12px/1 ui-monospace, Menlo, monospace; letter-spacing: .13em; margin-bottom: 8px; }
+</style>
+<script>
+const C = [
+  ["ivy", "Ivy", "Reads the mail", "AI AGENT", "#4F7A5E", "A model call. No one sits at this desk."],
+  ["milo", "Milo", "Moves the money", "AI AGENT", "#B5553A", "A second model call. No one stands at this till."],
+  ["hart", "Mrs. Hart", "The only human in the loop", "HUMAN", "#8A3F3F", "The Approve and Refuse buttons. In the demo, that's you."],
+  ["mira", "Mira Velden", "Sends three emails today", "CUSTOMER", "#B07A4F", "An email address. She never walks in."],
+  ["inkwell", "Inkwell Press", "Today's threat", "OUTSIDER", "#3a3633", "An email attachment from outside the café."],
+  ["jonah", "Jonah", "Makes the coffee", "SCENERY", "#2F5D50", "Part of the café, not part of the system."],
+  ["box", "The glass box", "Code an agent writes stays here", "BOUNDARY 1", "#C4402F", "A throwaway Docker + gVisor container."],
+  ["pos", "Counterfoil POS", "Money has to match the books", "BOUNDARY 2", "#B98210", "Plain Python. No model inside."],
+  ["vultr", "Vultr", "Where it all runs", "PLANNED HOST", "#3B82C4", "A Vultr VM, still being set up."],
+];
+document.addEventListener("DOMContentLoaded", () => {
+  document.body.innerHTML = C.map(([id, name, role, tag, c, real]) => `<div class="card" id="${id}" style="--c:${c}">
+    <div class="band"><span>THE QUIET PAGE</span><span>${tag}</span></div>
+    <div class="stage">${id === "pos" ? `<img class="screen" src="pos.png" alt="">` : `<div class="floor"></div><img class="fig" src="${id}.png" alt="" style="top:${{ box: -76, hart: -52, vultr: -44 }[id] ?? -30}px">`}</div>
+    <div class="text"><div class="name">${name}</div><div class="role">${role}</div></div>
+    <div class="real"><b>FOR REAL</b>${real}</div></div>`).join("");
+});
+</script>

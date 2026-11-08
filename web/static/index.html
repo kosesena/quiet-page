@@ -737,7 +737,7 @@ function showCard(id) {
   const x = WHO[id], b = BADGE[id], el = $("#idCard"); if (!x || !b) { el.classList.add("hidden"); return; }
   const system = ["SandboxBox", "Gate", "VultrVM"].includes(id), staff = ["Ivy", "Milo", "MrsHart", "Barista_Espresso"].includes(id);
   el.style.setProperty("--badge", x.c);
-  el.innerHTML = `<div class="idhead"><span>THE QUIET PAGE</span><span>${system ? "SYSTEM" : ["Ivy", "Milo"].includes(id) ? "AI AGENT" : staff ? "STAFF" : "VISITOR"}</span></div>
+  el.innerHTML = `<div class="idhead"><span>THE QUIET PAGE</span><span>${system ? "SYSTEM" : { Ivy: "AI AGENT", Milo: "AI AGENT", MrsHart: "HUMAN", Mira: "CUSTOMER", InkwellCourier: "OUTSIDER" }[id] || (staff ? "STAFF" : "VISITOR")}</span></div>
     ${REAL_ID[id] ? `<div class="idreal"><b>For real</b>${esc(REAL_ID[id])}</div>` : ""}
     <div class="idbody">${portrait(id) ? `<img alt="" src="${portrait(id)}">` : ""}<div><div class="idname">${esc(x.name)}</div><div class="idrole">${esc(x.role)}</div><div class="idkind">${esc([b.kind !== x.role ? b.kind : "", b.runs].filter(Boolean).join(" · "))}</div></div></div>
     ${b.can.length ? `<ul class="idlist">${b.can.map((t) => `<li><span class="ck ok">✓</span>${esc(t)}</li>`).join("")}${b.cannot.map((t) => `<li><span class="ck bad">✕</span>${esc(t)}</li>`).join("")}</ul>` : ""}
